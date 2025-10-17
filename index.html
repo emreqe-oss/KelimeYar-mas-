@@ -36,9 +36,9 @@
             <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
             <input type="text" id="username-input" placeholder="Kullanıcı Adını Gir" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 mb-6 text-center text-white text-lg" maxlength="12">
             <div class="space-y-4">
-                 <button id="single-player-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Tek Kişilik Oyna</button>
-                 <button id="vs-cpu-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Bilgisayara Karşı Oyna</button>
-                 <button id="multiplayer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">İki Kişilik (Online)</button>
+                 <button id="single-player-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Tek Kişilik Oyna</button>
+                 <button id="vs-cpu-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Bilgisayara Karşı Oyna</button>
+                 <button id="multiplayer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>İki Kişilik (Online)</button>
             </div>
         </div>
 
@@ -319,6 +319,7 @@
                 timeLimit = gameData.timeLimit || 45;
                 stopTurnTimer();
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
+                isGameOver = gameData.status === 'finished';
                 
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
@@ -579,7 +580,7 @@
                         currentPlayerId: playerIds[nextPlayerIndex]
                     };
                     
-                    const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0) + 1;
+                    const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0);
                     
                     if (guessWord === secretWord) {
                         updates.status = 'finished';
@@ -602,7 +603,7 @@
                         showScoreboard(localGameData);
                     } else {
                         const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
-                        if (totalGuessesMade >= (gameMode === 'vsCPU' ? GUESS_COUNT * 2 : GUESS_COUNT)) {
+                        if (totalGuessesMade >= GUESS_COUNT) {
                             localGameData.status = 'finished';
                             localGameData.roundWinner = gameMode === 'vsCPU' ? 'cpu' : null;
                             showScoreboard(localGameData);
@@ -752,7 +753,14 @@
                     auth.signInAnonymously()
                         .then(() => {
                             auth.onAuthStateChanged(user => {
-                                if (user) userId = user.uid;
+                                if (user) {
+                                    userId = user.uid;
+                                    document.getElementById('single-player-btn').disabled = false;
+                                    document.getElementById('vs-cpu-btn').disabled = false;
+                                    document.getElementById('multiplayer-btn').disabled = false;
+                                    createBtn.disabled = false;
+                                    joinBtn.disabled = false;
+                                }
                             });
                         })
                         .catch(error => { 
