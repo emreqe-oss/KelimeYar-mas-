@@ -10,15 +10,41 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        html, body { height: 100vh; height: -webkit-fill-available; overflow: hidden; }
+        html, body { 
+            height: 100vh; 
+            height: -webkit-fill-available; /* iOS Safari için tam ekran yüksekliği */
+            overflow: hidden; 
+        }
         body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; }
-        .tile { width: 100%; padding-bottom: 100%; position: relative; border: 2px solid #4b5563; display: flex; justify-content: center; align-items: center; font-size: 2rem; font-weight: bold; text-transform: uppercase; transition: all 0.3s ease; }
-        .tile-inner { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; line-height: 1; }
+        .tile { 
+            width: 100%; 
+            padding-bottom: 100%; 
+            position: relative; 
+            border: 2px solid #4b5563; 
+            display: flex; /* Flexbox eklendi */
+            justify-content: center; 
+            align-items: center; /* Flexbox eklendi */
+            font-size: 2rem; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            transition: all 0.3s ease; 
+        }
+        .tile-inner { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            line-height: 1; /* Satır yüksekliği düzeltildi */
+        }
         .tile.correct { background-color: #10b981; border-color: #10b981; color: white; }
         .tile.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
         .tile.absent { background-color: #374151; border-color: #374151; color: white; }
         .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
-        .keyboard-key { transition: background-color 0.2s; height: 45px; }
+        .keyboard-key { 
+            transition: background-color 0.2s; 
+            height: 45px; /* Klavye tuş yüksekliği azaltıldı */
+        }
         .keyboard-key.correct { background-color: #10b981 !important; color: white; }
         .keyboard-key.present { background-color: #f59e0b !important; color: white; }
         .keyboard-key.absent { background-color: #374151 !important; color: white; }
@@ -118,7 +144,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
-            <script>
+    <script>
         // --- KELİME LİSTELERİ ---
         const wordLists = {
             4: ["ARSA", "BALE", "CEZA", "DERS", "EKŞİ", "FAKS", "GÖLGE", "HANE", "ISKA", "JÖLE", "KALE", "LİRA", "MODA", "NEŞE", "OKUL", "PARA", "ROTA", "SAHA", "ŞANS", "TEMA", "UYKU", "VİDA", "YAZI", "ZEKA"],
@@ -134,7 +160,6 @@
         };
         
         window.addEventListener('load', () => {
-            // --- DOM Elements ---
             const modeSelectionScreen = document.getElementById('mode-selection-screen');
             const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
             const gameScreen = document.getElementById('game-screen');
@@ -152,15 +177,12 @@
             const gameIdDisplay = document.getElementById('game-id-display');
             const startGameBtn = document.getElementById('start-game-btn');
             
-            // --- Global State ---
             let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
             let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
             
-            // --- Scoring ---
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
 
-            // --- Sound Effects ---
             const sounds = {
                 click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
                 error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(),
@@ -179,7 +201,6 @@
                 }
             }
 
-            // --- Firebase Config ---
             const firebaseConfig = {
                 apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ",
                 authDomain: "kelime-oyunu-flaneur.firebaseapp.com",
@@ -190,7 +211,6 @@
                 measurementId: "G-RVD6YZ8JYV"
             };
 
-            // --- Utility Functions ---
             function showToast(message, isError = false) {
                 if (isError) playSound('error');
                 toast.textContent = message;
@@ -210,7 +230,6 @@
                 document.getElementById(screenId).classList.remove('hidden');
             }
 
-            // --- Game Creation & Joining ---
             function setupAndStartGame(mode) {
                 gameMode = mode;
                 wordLength = parseInt(document.getElementById('word-length-select').value);
@@ -308,7 +327,6 @@
                 showScreen('mode-selection-screen');
             }
 
-            // --- Game State Rendering ---
             function renderGameState(gameData) {
                 showScreen('game-screen');
 
@@ -720,7 +738,10 @@
                 if (getUsername()) setupAndStartGame('vsCPU');
             });
             document.getElementById('multiplayer-btn').addEventListener('click', () => {
-                if (getUsername()) showScreen('multiplayer-setup-screen');
+                if (getUsername()) {
+                    gameMode = 'multiplayer';
+                    showScreen('multiplayer-setup-screen');
+                }
             });
             document.getElementById('back-to-mode-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
 
