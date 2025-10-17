@@ -74,9 +74,9 @@
             <h1 class="text-3xl font-bold text-center mb-6">İki Kişilik Oyun</h1>
             <div class="mb-4">
                 <h2 class="text-2xl font-semibold mb-3">Yeni Oyun Kur</h2>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label for="word-length-select" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
+                        <label for="word-length-select" class="block text-sm font-medium text-gray-400">Harf</label>
                         <select id="word-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
                             <option value="4">4</option>
                             <option value="5" selected>5</option>
@@ -85,11 +85,21 @@
                         </select>
                     </div>
                      <div>
-                        <label for="time-select" class="block text-sm font-medium text-gray-400">Süre (sn)</label>
+                        <label for="time-select" class="block text-sm font-medium text-gray-400">Süre</label>
                         <select id="time-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="30">30</option>
-                            <option value="45" selected>45</option>
-                            <option value="60">60</option>
+                            <option value="30">30sn</option>
+                            <option value="45" selected>45sn</option>
+                            <option value="60">60sn</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="match-length-select" class="block text-sm font-medium text-gray-400">Tur</label>
+                        <select id="match-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="1">1</option>
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
                         </select>
                     </div>
                 </div>
@@ -108,6 +118,7 @@
              <div class="w-full bg-gray-800 p-2 rounded-lg shadow flex items-center justify-between flex-shrink-0">
                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
                 <div class="text-center w-1/5">
+                    <p id="round-counter" class="text-xs text-gray-400"></p>
                     <p id="turn-display" class="font-bold text-md"></p>
                     <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
                 </div>
@@ -129,10 +140,11 @@
         
         <!-- Maç Sonucu Ekranı -->
         <div id="scoreboard-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h2 id="round-winner-display" class="text-3xl font-bold mb-4"></h2>
+            <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
+            <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
             <p class="mb-4">Doğru Kelime: <strong id="correct-word-display" class="text-green-400"></strong></p>
             <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-            <button id="new-round-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonraki Kelime</button>
+            <button id="new-round-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Tur</button>
             <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
         </div>
 
@@ -160,6 +172,7 @@
         };
         
         window.addEventListener('load', () => {
+            // --- DOM Elements ---
             const modeSelectionScreen = document.getElementById('mode-selection-screen');
             const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
             const gameScreen = document.getElementById('game-screen');
@@ -176,13 +189,17 @@
             const leaveGameBtn = document.getElementById('leave-game-button');
             const gameIdDisplay = document.getElementById('game-id-display');
             const startGameBtn = document.getElementById('start-game-btn');
+            const roundCounter = document.getElementById('round-counter');
             
+            // --- Global State ---
             let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
-            let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
+            let currentRow = 0, isMyTurn = false, wordLength = 5, timeLimit = 45;
             
+            // --- Scoring ---
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
 
+            // --- Sound Effects ---
             const sounds = {
                 click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
                 error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(),
@@ -201,6 +218,7 @@
                 }
             }
 
+            // --- Firebase Config ---
             const firebaseConfig = {
                 apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ",
                 authDomain: "kelime-oyunu-flaneur.firebaseapp.com",
@@ -211,6 +229,7 @@
                 measurementId: "G-RVD6YZ8JYV"
             };
 
+            // --- Utility Functions ---
             function showToast(message, isError = false) {
                 if (isError) playSound('error');
                 toast.textContent = message;
@@ -230,6 +249,7 @@
                 document.getElementById(screenId).classList.remove('hidden');
             }
 
+            // --- Game Creation & Joining ---
             function setupAndStartGame(mode) {
                 gameMode = mode;
                 wordLength = parseInt(document.getElementById('word-length-select').value);
@@ -239,7 +259,7 @@
                 const secretWord = wordLists[wordLength][Math.floor(Math.random() * wordLists[wordLength].length)];
                 
                 localGameData = {
-                    wordLength, secretWord, timeLimit,
+                    wordLength, secretWord, timeLimit, currentRound: 1, matchLength: 1,
                     players: { [userId]: { username, guesses: [], score: 0 } },
                     currentPlayerId: userId, status: 'playing'
                 };
@@ -258,11 +278,13 @@
                 const username = getUsername();
                 const selectedLength = parseInt(document.getElementById('word-length-select').value);
                 const selectedTime = parseInt(document.getElementById('time-select').value);
+                const selectedMatchLength = parseInt(document.getElementById('match-length-select').value);
                 const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
                 const secretWord = wordLists[selectedLength][Math.floor(Math.random() * wordLists[selectedLength].length)];
 
                 const gameData = {
                     gameId, wordLength: selectedLength, secretWord, timeLimit: selectedTime, creatorId: userId,
+                    matchLength: selectedMatchLength, currentRound: 1,
                     players: { [userId]: { username, guesses: [], score: 0 } },
                     currentPlayerId: userId, status: 'waiting', roundWinner: null, createdAt: new Date(),
                 };
@@ -277,6 +299,7 @@
                 if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
                 if (!gameId) return showToast("Lütfen bir Oyun ID'si girin.", true);
                 
+                gameMode = 'multiplayer';
                 const username = getUsername();
                 const gameRef = db.collection("games").doc(gameId);
                 
@@ -287,7 +310,7 @@
                     const gameData = gameDoc.data();
                     
                     if (Object.keys(gameData.players).length === 1 && !gameData.players[userId]) {
-                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: gameData.players[gameData.creatorId].score } });
+                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: 0 } });
                     } else if (!gameData.players[userId]) {
                         return showToast("Bu oyun dolu veya başlamış.", true);
                     }
@@ -327,17 +350,22 @@
                 showScreen('mode-selection-screen');
             }
 
+            // --- Game State Rendering ---
             function renderGameState(gameData) {
                 showScreen('game-screen');
 
                 document.getElementById('game-id-display').textContent = gameMode === 'multiplayer' ? gameData.gameId : 'Tek Kişilik';
                 document.getElementById('game-info-bar').style.display = gameMode === 'multiplayer' ? 'flex' : 'none';
+                if (gameMode === 'multiplayer') {
+                    roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
+                } else {
+                    roundCounter.textContent = '';
+                }
                 
                 wordLength = gameData.wordLength;
                 timeLimit = gameData.timeLimit || 45;
                 stopTurnTimer();
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
-                isGameOver = gameData.status === 'finished';
                 
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
@@ -381,7 +409,7 @@
                     if(p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
                 }
                  if (playerIds.length > 1) {
-                    const p2Id = playerIds.find(id => id !== gameData.creatorId);
+                    const p2Id = playerIds.find(id => id !== (gameData.creatorId || playerIds[0]));
                     const p2 = gameData.players[p2Id];
                     if(p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
                 } else {
@@ -503,34 +531,51 @@
             async function handleTimeUp() {
                 if (!isMyTurn) return;
                 showToast("Süren doldu! Sıra rakibe geçti.", true);
-                
-                const gameRef = db.collection("games").doc(currentGameId);
-                const gameDoc = await gameRef.get();
-                if (!gameDoc.exists) return;
-                const gameData = gameDoc.data();
 
-                const failedGuess = { word: ''.padEnd(wordLength, ' '), colors: Array(wordLength).fill('failed') };
-                const playerGuesses = gameData.players[userId].guesses || [];
-                playerGuesses.push(failedGuess);
+                const newGuess = { word: ''.padEnd(wordLength, ' '), colors: Array(wordLength).fill('failed') };
                 
-                const playerIds = Object.keys(gameData.players);
-                const myIndex = playerIds.indexOf(userId);
-                const nextPlayerIndex = (myIndex + 1) % playerIds.length;
-                
-                const updates = {
-                    [`players.${userId}.guesses`]: playerGuesses,
-                    currentPlayerId: playerIds[nextPlayerIndex]
-                };
+                if (gameMode === 'multiplayer') {
+                    const gameRef = db.collection("games").doc(currentGameId);
+                    const gameDoc = await gameRef.get();
+                    if (!gameDoc.exists) return;
+                    const gameData = gameDoc.data();
 
-                const totalGuesses = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0);
-                 if (totalGuesses >= GUESS_COUNT * playerIds.length) {
-                    updates.status = 'finished';
+                    const playerGuesses = gameData.players[userId].guesses || [];
+                    playerGuesses.push(newGuess);
+                    
+                    const playerIds = Object.keys(gameData.players);
+                    const myIndex = playerIds.indexOf(userId);
+                    const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+                    
+                    const updates = {
+                        [`players.${userId}.guesses`]: playerGuesses,
+                        currentPlayerId: playerIds[nextPlayerIndex]
+                    };
+
+                    const totalGuesses = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0) + 1;
+                    if (totalGuesses >= GUESS_COUNT * playerIds.length) {
+                        updates.status = 'finished';
+                    }
+                    await gameRef.update(updates);
+                } else {
+                    localGameData.players[userId].guesses.push(newGuess);
+                    const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
+                    if (totalGuessesMade >= (gameMode === 'vsCPU' ? GUESS_COUNT * 2 : GUESS_COUNT)) {
+                        localGameData.status = 'finished';
+                        showScoreboard(localGameData);
+                    } else if (gameMode === 'vsCPU') {
+                        localGameData.currentPlayerId = 'cpu';
+                        renderGameState(localGameData);
+                        setTimeout(cpuTurn, 1500);
+                    } else {
+                        renderGameState(localGameData);
+                    }
                 }
-                await gameRef.update(updates);
             }
 
             function handleKeyPress(key) {
-                if (isGameOver || !isMyTurn) return;
+                if (localGameData && localGameData.status === 'finished') return;
+                if (!isMyTurn) return;
                 playSound('click');
                 const processedKey = key.toLocaleUpperCase('tr-TR');
                 if (processedKey === 'ENTER') submitGuess();
@@ -559,7 +604,7 @@
             }
 
             async function submitGuess() {
-                if (!isMyTurn || isGameOver) return;
+                if (!isMyTurn) return;
                 
                 let guessWord = '';
                 for (let i = 0; i < wordLength; i++) {
@@ -598,12 +643,12 @@
                         currentPlayerId: playerIds[nextPlayerIndex]
                     };
                     
-                    const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0);
+                    const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0) + 1;
                     
                     if (guessWord === secretWord) {
                         updates.status = 'finished';
                         updates.roundWinner = userId;
-                        const scoreToAdd = scorePoints[currentRow] || 0;
+                        const scoreToAdd = scorePoints[Math.floor(currentRow / playerIds.length)] || 0;
                         updates[`players.${userId}.score`] = (gameData.players[userId].score || 0) + scoreToAdd;
                     } else if (totalGuessesMade >= GUESS_COUNT * playerIds.length) {
                         updates.status = 'finished';
@@ -611,28 +656,27 @@
                     }
                     await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
                 } else {
+                     // Single Player & vs CPU logic
                     localGameData.players[userId].guesses.push(newGuess);
-                    
+                    const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
+
                     if (guessWord === secretWord) {
                         localGameData.status = 'finished';
                         localGameData.roundWinner = userId;
-                        const scoreToAdd = scorePoints[currentRow] || 0;
+                        const scoreToAdd = scorePoints[localGameData.players[userId].guesses.length - 1] || 0;
                         localGameData.players[userId].score += scoreToAdd;
                         showScoreboard(localGameData);
+                    } else if (totalGuessesMade >= (gameMode === 'vsCPU' ? GUESS_COUNT * 2 : GUESS_COUNT)) {
+                        localGameData.status = 'finished';
+                        localGameData.roundWinner = null;
+                        showScoreboard(localGameData);
                     } else {
-                        const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
-                        if (totalGuessesMade >= GUESS_COUNT) {
-                            localGameData.status = 'finished';
-                            localGameData.roundWinner = gameMode === 'vsCPU' ? 'cpu' : null;
-                            showScoreboard(localGameData);
+                        if (gameMode === 'vsCPU') {
+                            localGameData.currentPlayerId = 'cpu';
+                            renderGameState(localGameData);
+                            setTimeout(cpuTurn, 1500);
                         } else {
-                            if (gameMode === 'vsCPU') {
-                                localGameData.currentPlayerId = 'cpu';
-                                renderGameState(localGameData);
-                                setTimeout(cpuTurn, 1500);
-                            } else {
-                                renderGameState(localGameData);
-                            }
+                            renderGameState(localGameData);
                         }
                     }
                     keyboardContainer.style.pointerEvents = 'auto';
@@ -646,6 +690,7 @@
                 const roundWinnerDisplay = document.getElementById('round-winner-display');
                 const correctWordDisplay = document.getElementById('correct-word-display');
                 const finalScores = document.getElementById('final-scores');
+                const matchWinnerDisplay = document.getElementById('match-winner-display');
                 
                 if(gameData.roundWinner === userId) playSound('win');
                 else if(gameData.roundWinner === null) playSound('draw');
@@ -655,28 +700,38 @@
 
                 if (gameData.roundWinner) {
                     const winnerName = gameData.players[gameData.roundWinner].username;
-                    roundWinnerDisplay.textContent = `${winnerName} Kazandı!`;
+                    roundWinnerDisplay.textContent = `${winnerName} Turu Kazandı!`;
                 } else {
                     roundWinnerDisplay.textContent = "Berabere!";
                 }
 
                 finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">${gameMode === 'multiplayer' ? 'Toplam Puan' : 'Puan'}</h3>`;
-                Object.values(gameData.players).forEach(player => {
+                const sortedPlayers = Object.values(gameData.players).sort((a,b) => b.score - a.score);
+                sortedPlayers.forEach(player => {
                     const scoreEl = document.createElement('p');
                     scoreEl.className = 'text-lg';
                     scoreEl.textContent = `${player.username}: ${player.score} Puan`;
                     finalScores.appendChild(scoreEl);
                 });
                 
-                if (gameMode === 'multiplayer') {
-                    if (userId === gameData.creatorId) {
-                        newRoundBtn.classList.remove('hidden');
+                matchWinnerDisplay.textContent = '';
+                newRoundBtn.textContent = (gameMode === 'multiplayer') ? 'Yeni Tur' : 'Yeni Kelime';
+
+                if (gameMode === 'multiplayer' && gameData.currentRound >= gameData.matchLength) {
+                    newRoundBtn.classList.add('hidden');
+                    const p1 = sortedPlayers[0];
+                    const p2 = sortedPlayers[1];
+                    if (p1.score > p2.score) {
+                         matchWinnerDisplay.textContent = `MAÇI ${p1.username} KAZANDI!`;
+                    } else if (p2.score > p1.score) {
+                         matchWinnerDisplay.textContent = `MAÇI ${p2.username} KAZANDI!`;
                     } else {
-                        newRoundBtn.classList.add('hidden');
+                         matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
                     }
-                } else {
-                    newRoundBtn.textContent = 'Yeni Kelime';
+                } else if (userId === gameData.creatorId || gameMode !== 'multiplayer') {
                     newRoundBtn.classList.remove('hidden');
+                } else {
+                    newRoundBtn.classList.add('hidden');
                 }
             }
             
@@ -695,12 +750,14 @@
 
                     const updates = {
                         secretWord: newSecretWord, players: newPlayersState,
-                        currentPlayerId: localGameData.creatorId, status: 'waiting', roundWinner: null
+                        currentPlayerId: localGameData.creatorId, status: 'waiting', roundWinner: null,
+                        currentRound: localGameData.currentRound + 1
                     };
                     const gameRef = db.collection("games").doc(currentGameId);
                     await gameRef.update(updates);
                 } else {
-                    // Single player new round
+                    localGameData.players[userId].score = 0; // Reset score for non-multiplayer
+                    if(localGameData.players['cpu']) localGameData.players['cpu'].score = 0;
                     setupAndStartGame(gameMode);
                 }
             }
@@ -764,34 +821,30 @@
             newRoundBtn.addEventListener('click', startNewRound);
 
             // --- Game Startup Logic ---
-            if (typeof firebase === 'undefined') {
-                showToast("Gerekli dosyalar yüklenemedi. Sayfayı yenileyin.", true);
-            } else {
-                try {
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.firestore();
-                    auth = firebase.auth();
-                    auth.signInAnonymously()
-                        .then(() => {
-                            auth.onAuthStateChanged(user => {
-                                if (user) {
-                                    userId = user.uid;
-                                    document.getElementById('single-player-btn').disabled = false;
-                                    document.getElementById('vs-cpu-btn').disabled = false;
-                                    document.getElementById('multiplayer-btn').disabled = false;
-                                    createBtn.disabled = false;
-                                    joinBtn.disabled = false;
-                                }
-                            });
-                        })
-                        .catch(error => { 
-                            console.error("Anonymous sign-in failed:", error); 
-                            showToast("Bağlantı hatası!", true);
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                auth = firebase.auth();
+                auth.signInAnonymously()
+                    .then(() => {
+                        auth.onAuthStateChanged(user => {
+                            if (user) {
+                                userId = user.uid;
+                                document.getElementById('single-player-btn').disabled = false;
+                                document.getElementById('vs-cpu-btn').disabled = false;
+                                document.getElementById('multiplayer-btn').disabled = false;
+                                createBtn.disabled = false;
+                                joinBtn.disabled = false;
+                            }
                         });
-                } catch (e) {
-                    console.error("Firebase initialization failed:", e);
-                    showToast("Uygulama başlatılamadı.", true);
-                }
+                    })
+                    .catch(error => { 
+                        console.error("Anonymous sign-in failed:", error); 
+                        showToast("Bağlantı hatası!", true);
+                    });
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                showToast("Uygulama başlatılamadı.", true);
             }
         });
     </script>
