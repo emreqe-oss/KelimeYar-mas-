@@ -10,41 +10,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        html, body { 
-            height: 100vh; 
-            height: -webkit-fill-available; /* iOS Safari için tam ekran yüksekliği */
-            overflow: hidden; 
-        }
+        html, body { height: 100vh; height: -webkit-fill-available; overflow: hidden; }
         body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; }
-        .tile { 
-            width: 100%; 
-            padding-bottom: 100%; 
-            position: relative; 
-            border: 2px solid #4b5563; 
-            display: flex; /* Flexbox eklendi */
-            justify-content: center; 
-            align-items: center; /* Flexbox eklendi */
-            font-size: 2rem; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            transition: all 0.3s ease; 
-        }
-        .tile-inner { 
-            position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            line-height: 1; /* Satır yüksekliği düzeltildi */
-        }
+        .tile { width: 100%; padding-bottom: 100%; position: relative; border: 2px solid #4b5563; display: flex; justify-content: center; align-items: center; font-size: 2rem; font-weight: bold; text-transform: uppercase; transition: all 0.3s ease; }
+        .tile-inner { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; line-height: 1; }
         .tile.correct { background-color: #10b981; border-color: #10b981; color: white; }
         .tile.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
         .tile.absent { background-color: #374151; border-color: #374151; color: white; }
         .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
-        .keyboard-key { 
-            transition: background-color 0.2s; 
-            height: 45px; /* Klavye tuş yüksekliği azaltıldı */
-        }
+        .keyboard-key { transition: background-color 0.2s; height: 45px; }
         .keyboard-key.correct { background-color: #10b981 !important; color: white; }
         .keyboard-key.present { background-color: #f59e0b !important; color: white; }
         .keyboard-key.absent { background-color: #374151 !important; color: white; }
@@ -56,19 +30,44 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
     <div id="app" class="w-full max-w-md mx-auto flex flex-col h-full p-2">
-        <!-- Kurulum Ekranı -->
-        <div id="setup-screen" class="text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+        
+        <!-- Oyun Modu Seçim Ekranı -->
+        <div id="mode-selection-screen" class="text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
+            <input type="text" id="username-input" placeholder="Kullanıcı Adını Gir" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 mb-6 text-center text-white text-lg" maxlength="12">
+            <div class="space-y-4">
+                 <button id="single-player-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Tek Kişilik Oyna</button>
+                 <button id="vs-cpu-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Bilgisayara Karşı Oyna</button>
+                 <button id="multiplayer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">İki Kişilik (Online)</button>
+            </div>
+        </div>
+
+        <!-- Çok Oyunculu Kurulum Ekranı -->
+        <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+             <button id="back-to-mode-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
+            <h1 class="text-3xl font-bold text-center mb-6">İki Kişilik Oyun</h1>
             <div class="mb-4">
-                <input type="text" id="username-input" placeholder="Kullanıcı Adını Gir" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-4 text-center text-white" maxlength="12">
                 <h2 class="text-2xl font-semibold mb-3">Yeni Oyun Kur</h2>
-                <select id="word-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-white">
-                    <option value="4">4 Harfli</option>
-                    <option value="5" selected>5 Harfli</option>
-                    <option value="6">6 Harfli</option>
-                    <option value="7">7 Harfli</option>
-                </select>
-                <button id="create-game-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyun Kur</button>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="word-length-select" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
+                        <select id="word-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="4">4</option>
+                            <option value="5" selected>5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label for="time-select" class="block text-sm font-medium text-gray-400">Süre (sn)</label>
+                        <select id="time-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="30">30</option>
+                            <option value="45" selected>45</option>
+                            <option value="60">60</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="create-game-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyun Kur</button>
             </div>
             <hr class="my-4 border-gray-600">
             <div>
@@ -77,6 +76,7 @@
                 <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyuna Katıl</button>
             </div>
         </div>
+
         <!-- Oyun Ekranı -->
         <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
              <div class="w-full bg-gray-800 p-2 rounded-lg shadow flex items-center justify-between flex-shrink-0">
@@ -88,7 +88,7 @@
                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
             </div>
             
-            <div class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
+            <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
                  <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
                  <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
             </div>
@@ -106,28 +106,37 @@
             <h2 id="round-winner-display" class="text-3xl font-bold mb-4"></h2>
             <p class="mb-4">Doğru Kelime: <strong id="correct-word-display" class="text-green-400"></strong></p>
             <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-            <button id="new-round-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Tura Başla</button>
-            <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menüye Dön</button>
+            <button id="new-round-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonraki Kelime</button>
+            <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
         </div>
 
     </div>
     <div id="toast" class="toast"></div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
-    <script>
-        // --- GENİŞLETİLMİŞ KELİME LİSTELERİ ---
+            <script>
+        // --- KELİME LİSTELERİ ---
         const wordLists = {
-            4: ["ABLA","ACAR","AFET","AĞAÇ","AĞRI","AİLE","AKAR","AKIL","AKIM","AKIN","AKİS","AKLI","AKOR","AKSU","ALAN","ALAY","ALEM","ALET","ALEV","ALGI","ALIM","AMCA","AMEL","AMİN","AMİR","ANKA","ANLAM","ANNE","ARAP","ARDA","ARGO","ARKA","ARMA","ARPA","ARSA","ASAL","ASAP","ASIK","ASIL","ASIM","ASIR","ASİT","ASKI","ASLA","ASLI","ASMA","AŞÇI","AŞIK","AŞIM","AŞIRI","AŞK","AŞMA","ATAK","ATEŞ","ATIF","ATIK","ATIL","ATIM","ATIŞ","ATKI","ATLI","ATMA","ATOM","AVCI","AVLU","AYAK","AYAN","AYAR","AYAZ","AYET","AYIN","AYIP","AYLI","AYNA","AYNI","AYRI","AYVA","AZAP","AZAT","AZI","AZİM","BABA","BACA","BAĞI","BAKI","BALE","BANA","BANK","BANT","BARI","BARO","BASI","BAŞI","BATI","BEL","BELA","BENT","BERE","BERK","BESİ","BEY","BİLE","BİNA","BİRA","BOĞA","BOKS","BOM","BORÇ","BORU","BOŞ","BOYA","BURÇ","BURS","BÜRO","CADI","CAM","CAN","CARİ","CELP","CENK","CEP","CEZA","CİLT","CİPS","CUMA","ÇABA","ÇAĞ","ÇAKI","ÇALI","ÇAM","ÇAN","ÇAP","ÇARK","ÇATI","ÇAY","ÇENE","ÇERİ","ÇETE","ÇIKI","ÇITA","ÇİZİ","ÇOK","ÇÖL","DAHA","DAHİ","DAİM","DAİR","DAMA","DANA","DANS","DARA","DARP","DAVA","DAYI","DEDE","DEFO","DEĞİ","DELİ","DEM","DENİ","DENK","DEPO","DERE","DERİ","DERS","DERT","DEVA","DİNÇ","DİNİ","DİSK","DİŞİ","DİZİ","DOĞA","DOĞU","DOKU","DOLU","DONE","DORU","DOST","DÖRT","DRAM","DUA","DUL","DURU","DUŞ","DUYU","DÜN","DÜŞ","DÜZ","ECZA","EDA","EDAT","EDEP","EĞİM","EĞİR","EĞRİ","EKİM","EKİN","EKLİ","EKME","EKSİ","ELÇİ","ELDE","ELEK","ELEM","ELİF","ELİM","ELLİ","ELMA","EMEK","EMEL","EMİN","EMİR","EMMİ","ENEZ","ENİK","ENSE","EPEY","ERİK","ERİL","ERİM","ERİN","ERKE","ERME","ESAS","ESER","ESİN","ESİR","ESKİ","ESMA","ESME","EŞEK","EŞEY","EŞİK","EŞİT","EŞLİ","EŞME","ETAP","ETÇİ","ETEK","ETİK","ETİL","ETKİ","ETLİ","ETÜT","EVCE","EVCİ","EVET","EVİN","EVLİ","EZAN","EZEL","EZGİ","EZİK","FABl","FAİK","FAİL","FAİZ","FAKS","FANİ","FARK","FARS","FARZ","FAUL","FEDA","FENA","FERÇ","FERİ","FERT","FİDE","FİİL","FİLE","FİLM","FİLO","FİRE","FİŞE","FLAŞ","FOK","FOL","FONT","FORA","FORM","FORS","FOŞA","FOTA","FOTO","FOYA","FREN","FUAR","GALA","GAMA","GASP","GAYE","GAZA","GAZİ","GECE","GEÇE","GELİ","GEMİ","GENÇ","GENE","GERİ","GEZİ","GIDA","GİBİ","GİŞE","GOLF","GÖÇ","GÖK","GÖL","GÖRE","GÖRK","GÖZ","GREV","GRİ","GÜCE","GÜÇ","GÜL","GÜN","GÜR","GÜZ","HACI","HAİL","HAK","HAKİ","HALA","HALE","HALI","HALK","HALT","HAMİ","HANE","HAPİ","HARA","HARÇ","HARF","HARP","HAS","HAŞA","HATA","HAVA","HAVİ","HAYR","HAZ","HEBA","HECE","HELE","HER","HERK","HEVES","HIZ","HİBE","HİLE","HİS","HOCA","HORA","HOŞ","HULK","HUY","HÜDA","HÜKM","İADE","İAŞE","İCAT","İÇEL","İÇİM","İÇİN","İÇİT","İÇKİ","İÇLİ","İDAM","İDEA","İFSA","İHYA","İKAZ","İKNA","İKON","İLAÇ","İLAH","İLAM","İLAN","İLÇE","İLGE","İLGİ","İLKE","İLLE","İLLİ","İLME","İMAL","İMAM","İMAN","İMAR","İMHA","İMLA","İNCE","İNCİ","İNEK","İNHA","İNK","İNME","İNTİ","İPÇİ","İPEK","İPOTEK","İRAN","İRİN","İRİS","İRJA","İRSİ","İSAL","İSİM","İSLİ","İSOT","İSVE","İŞTE","İTAP","İTÇE","İTFA","İTME","İYİ","İZALE","İZAN","JANT","JAPON","JEST","JİLE","JÖLE","JÜRİ","KABA","KABE","KABİ","KABl","KAFA","KAFE","KAİL","KAİM","KALA","KALE","KALP","KAMA","KAME","KAMP","KAMU","KANA","KANİ","KANO","KAPI","KARA","KARE","KARI","KARO","KARS","KART","KASA","KASE","KAŞE","KATI","KAVİ","KAZA","KAZI","KEÇE","KEÇİ","KEDİ","KEFE","KEKA","KEKE","KELE","KEME","KENE","KENT","KERE","KESİ","KEZA","KİLE","KİLO","KİMİ","KİRA","KİVİ","KLASİK","KLON","KOCA","KOÇ","KOKA","KOKU","KOLA","KOLİ","KOMA","KOMBİ","KOMİ","KONA","KONT","KONU","KONYA","KOPÇA","KOPYA","KORA","KORO","KORT","KOŞA","KOŞU","KOTA","KÖLE","KÖRE","KÖSE","KÖŞE","KÖŞK","KÖTÜ","KÖY","KREM","KREP","KROM","KRON","KROS","KULE","KULP","KUMA","KUPA","KURA","KURT","KURU","KUTU","KUZU","KÜFE","KÜLT","KÜME","KÜNH","KÜPE","KÜRE","LALE","LAMA","LAVA","LAZA","LEKE","LENF","LENS","LİCE","LİDER","LİGA","LİKA","LİME","LİNÇ","LİRA","LİSE","LOBİ","LODA","LOGO","LORT","LUTR","LÜKS","MAAŞ","MABAT","MABET","MACUN","MAÇ","MADA","MADD","MADDİ","MAL","MALA","MALÇ","MALİ","MALT","MANA","MANİ","MANO","MAPA","MARJ","MARK","MARS","MARŞ","MASA","MAŞA","MAVİ","MAZI","MEAL","MEKE","MENİ","MENÜ","MERA","MERİ","MEŞE","META","MİAT","MİÇO","MİDE","MİKA","MİNE","MİNİ","MİNK","MİRA","MİSO","MODA","MOKA","MOLA","MONT","MOR","MORG","MOTO","MUAF","MUİN","MUTİ","MÜFT","MÜLK","MÜZE","NAAT","NABİ","NAÇİ","NAFİ","NAİL","NAİP","NAKI","NAKİ","NAL","NANE","NARA","NARH","NAŞİ","NATO","NAZİ","NECA","NECE","NECİ","NEFT","NEHİ","NEMA","NENE","NEON","NERE","NESİ","NEŞE","NEZT","NİCE","NİDA","NİNE","NİSA","NİŞA","NİTE","NİYE","NİZA","NOTA","NOVA","NÖTR","NÜKS","OBJE","OBUA","OBUR","OCAK","ODAK","ODUN","OFİS","OĞAN","OĞUL","OKAR","OKEY","OKKA","OKUL","OKUR","OLAN","OLAY","OLDU","OLGU","OLMA","OLTA","OLUK","OLUR","OMCA","OMUR","OMUZ","ONAR","ONAT","ONAY","ONCA","ONİKS","ONLU","ONMA","ONUR","OPAK","OPAL","OPERA","ORAK","ORAL","ORAN","ORSA","ORTA","ORUÇ","ORYA","OTÇU","OTEL","OTLU","OTSU","OVAL","OVMA","OYMA","OYSA","OYUK","OYUM","OYUN","OZAN","ÖBÜR","ÖDEM","ÖDEV","ÖDÜN","ÖFKE","ÖĞLE","ÖĞÜN","ÖKÇE","ÖLÇÜ","ÖLME","ÖLÜ","ÖMÜR","ÖNAL","ÖNCE","ÖNCÜ","ÖNEL","ÖNEM","ÖYKÜ","ÖYLE","ÖZDE","ÖZEN","ÖZET","ÖZGE","ÖZGÜ","ÖZNE","ÖZÜ","PARA","PARK","PARS","PASO","PATİ","PİKE","PİLE","PİPO","PİRİ","PİSİ","PİST","PLAJ","PLAN","POTA","POZ","PRENS","PRES","PRİM","PRİZ","PUAN","PUMA","PUNT","PUPA","PUSU","RAKİ","RAMP","RANT","RAST","REEL","REİS","RENK","REPO","REVA","REYE","RING","RİNA","RİSK","RİYA","ROBA","ROKA","ROTA","ROZA","RÖLE","RUAM","RUBA","RULO","RUM","RUT","SAAT","SABA","SABO","SAÇ","SADE","SAFİ","SAGA","SAĞI","SAHA","SAHİ","SAİK","SAİR","SAKA","SAKİ","SAL","SALA","SALİ","SALT","SANA","SANI","SAPA","SARA","SARF","SARI","SARP","SATİ","SAVA","SAYE","SAYI","SEÇİ","SEDA","SEFA","SEKS","SELE","SELİ","SEMA","SEME","SEMT","SENA","SENE","SENT","SEPET","SERA","SERE","SERF","SERİ","SERT","SESİ","SEVİ","SEVK","SEYİ","SEZİ","SIHH","SIKI","SILA","SIRA","SIRP","SİLO","SİMA","SİNE","SİNİ","SİRK","SİTE","SOBA","SOBE","SODA","SOFA","SOFİ","SOFU","SOKA","SOLO","SOMA","SONA","SONE","SONG","SORU","SOYA","SPOR","SPOT","STİL","STOK","STOR","SUBAY","SULF","SULH","SUMA","SUNA","SUNİ","SUNU","SURA","SURE","SÜET","SÜJE","SÜNE","SÜRE","ŞAİR","ŞALE","ŞALİ","ŞAMA","ŞANS","ŞARK","ŞART","ŞASE","ŞASİ","ŞAYİ","ŞEF","ŞEHİ","ŞEKİ","ŞEMS","ŞERH","ŞERİ","ŞEVK","ŞEYH","ŞİFA","ŞİKE","ŞİLE","ŞİLT","ŞİRK","ŞİŞE","ŞOKE","ŞORT","ŞOSE","ŞOVM","ŞUBE","ŞULE","ŞURA","ŞUUR","TABİ","TABL","TABU","TAÇ","TAHT","TAKA","TAKI","TANE","TANK","TAPA","TAPI","TAPU","TARA","TART","TASA","TAŞI","TAUN","TAVA","TAYF","TAYİ","TELA","TEMA","TERE","TERS","TEST","TEŞR","TİFO","TİKE","TİNER","TİPİ","TİRE","TİTR","TOKA","TON","TOP","TOST","TRİO","TROL","TUBA","TUL","TURA","TUTU","TÜFE","TÜL","TÜYO","UCUZ","UÇAK","UÇMA","UÇUK","UÇUŞ","UĞRA","UĞRU","UKDE","ULAŞ","ULEMA","ULU","ULUS","UMDE","UMMA","UMRE","UMUM","UMUR","UNSUR","UTAN","UYAK","UYDU","UYMA","UYUR","UZAY","ÜÇLü","ÜÇÜZ","ÜLEN","ÜLKE","ÜLKER","ÜNİTE","ÜREM","ÜSTE","ÜVEY","VADE","VADİ","VAHA","VAHİ","VAİZ","VAKA","VAKİ","VAKS","VALE","VALİ","VANA","VARİ","VARO","VARŞ","VASİ","VATO","VİDA","VİDO","VİRA","VİZE","VOLE","VOLİ","VOLT","YABA","YAKA","YAKI","YALI","YAMA","YARI","YASA","YAŞA","YAVE","YAYA","YAZI","YEDİ","YEİS","YEKE","YELE","YEME","YENİ","YİNE","YİRM","YİV","YOGA","YOLA","YONT","YÖRE","YURT","YUVA","ZATİ","ZEKA","ZERK","ZEVK","ZİNA","ZİRA","ZİRVE","ZULA"],
-            5: ["ABONE","ACEMİ","ACİBE","ACİYO","ADALE","ADETA","AFİŞE","AJİTE","AKABE","AKİDE","AKLEN","AKRAN","AKTİF","AKTÖR","ALAKA","ALARM","ALBÜM","ALENİ","ALEVİ","ALEYH","ALİZE","ALKAL","ALKİL","ALLAH","ALLEM","ALMAÇ","ALMAK","ALMAN","ALMAŞ","ALMUS","ALTIN","ALTIZ","AMADE","AMBAR","AMBER","AMELE","AMORF","AMPER","AMPİR","AMPUL","ANACA","ANALI","ANCAK","ANDIÇ","ANDIZ","ANELE","ANEMİ","ANİDE","ANİME","ANJİN","ANKET","ANLAK","ANLAM","ANLIK","ANMAK","ANONS","ANSIZ","ANTEN","ANTET","ANTİK","ANTRE","ANYON","APACI","APLİK","APORT","APOŞİ","APRİL","APŞO","ARABİ","ARACI","ARALI","ARAMA","ARAZİ","ARBED","ARDAK","ARDIÇ","ARDIL","ARENA","ARGAÇ","ARGIN","ARGIT","ARICI","ARIZA","ARIZİ","ARİFE","ARİYA","ARKAÇ","ARKIT","ARKTI","ARMUT","AROMA","ARPÇI","ARSIN","ARŞIN","ARTÇI","ARTEZ","ARTIK","ARTIM","ARTIN","ARTIR","ARTMA","ASABİ","ASHAP","ASİDE","ASKAT","ASKER","ASLEN","ASLIK","ASMAK","AŞAĞI","AŞAMA","AŞEVİ","AŞLIK","AŞMAK","ATAMA","ATARİ","ATAŞE","ATFEN","ATICI","ATILI","ATMAK","AVANE","AVANS","AVARE","AVDET","AVİZE","AVLAK","AVRAT","AVRET","AVŞAR","AYDIN","AYEVİ","AYGIT","AYLAK","AYLIK","AYMAK","AYMAZ","AYRAÇ","AYRAN","AYRIÇ","AYRIM","AYRIT","AYSAR","AYSIZ","AYVAN","AZADE","AZAMİ","AZGIN","AZILI","AZİZE","AZLIK","AZMAK","AZMAN","AZNİF","BABAÇ","BACAK","BADAS","BADIÇ","BADİK","BADYA","BAFRA","BAGAJ","BAĞAN","BAĞCI","BAĞDA","BAĞIL","BAĞIM","BAĞIN","BAĞIR","BAĞIŞ","BAĞIT","BAĞLI","BAHAİ","BAHAR","BAHİR","BAHİS","BAHRİ","BAKAÇ","BAKAM","BAKAN","BAKIM","BAKIR","BAKIŞ","BAKLA","BAKMA","BALAR","BALAT","BALCI","BALDO","BALET","BALIK","BALİL","BALKI","BALLI","BALOZ","BALTA","BALYA","BAMBU","BANDO","BANJO","BANKA","BANKO","BANMA","BANYO","BARAJ","BARAN","BARBA","BARCI","BARDA","BARDO","BAREM","BARET","BARIŞ","BARKA","BAROK","BARON","BARUT","BASAK","BASAR","BASEN","BASIK","BASIM","BASIN","BASIŞ","BASİT","BASKI","BASMA","BASSO","BASTİ","BAŞAK","BAŞAT","BAŞÇI","BAŞKA","BAŞLI","BAŞTA","BATAR","BATIK","BATIL","BATIN","BATIŞ","BATİK","BATKI","BATMA","BAVCI","BAVLI","BAYAN","BAYAT","BAYIR","BAYMA","BAZAL","BAZEN","BAZİK","BAZİT","BEBEK","BECET","BEDEL","BEDEN","BEDİK","BEDİR","BEGÜM","BEHER","BEHEY","BEKAS","BEKÇİ","BEKAR","BEKRİ","BELCE","BELDE","BELEK","BELEN","BELEŞ","BELGE","BELGİ","BELİK","BELİT","BELKİ","BELLİ","BENCE","BENCİ","BENDE","BENEK","BENGİ","BENİZ","BENLİ","BERAT","BERİL","BERRİ","BESİN","BESTE","BEŞER","BEŞİK","BEŞİZ","BEŞLİ","BEŞME","BETER","BETİK","BETİM","BETON","BEYAN","BEYAZ","BEYİN","BEYİT","BEYZİ","BEZCİ","BEZEK","BEZEN","BEZİR","BEZİŞ","BEZME","BIÇAK","BIÇIK","BIÇKI","BIKMA","BIYIK","BİBER","BİBLO","BİCİK","BİÇEM","BİÇİM","BİÇİŞ","BİÇKİ","BİÇME","BİDAR","BİDON","BİLEK","BİLET","BİLGE","BİLGİ","BİLİM","BİLİR","BİLİŞ","BİLME","BİLYE","BİNDİ","BİNEK","BİNER","BİNGİ","BİNİŞ","BİNİT","BİRAZ","BİRER","BİREY","BİRİM","BİRLİ","BİTEY","BİTİK","BİTİM","BİTİŞ","BİTKİ","BİTLİ","BİTME","BİYEZ","BİZCE","BİZON","BLOKE","BOBİN","BOCUK","BOÇÇA","BODRUM","BOĞAK","BOĞAZ","BOĞMA","BOĞUK","BOĞUM","BOHÇA","BOKLU","BOLCA","BOMBA","BOMBE","BORAK","BORAN","BORAT","BORDA","BORDO","BORİK","BORSA","BOYAR","BOYCA","BOYDA","BOYLU","BOYNA","BOYUN","BOYUT","BOZCA","BOZMA","BOZUK","BOZUM","BÖCEK","BÖLEN","BÖLGE","BÖLME","BÖLÜK","BÖLÜM","BÖLÜT","BÖREK","BÖYLE","BRANŞ","BRAVO","BRİÇ","BRODE","BROM","BRONZ","BROVE","BRÜT","BUCAK","BUÇUK","BUDAK","BUDUN","BUĞRA","BUĞU","BUĞUZ","BUHAR","BUHUR","BUKET","BUKLE","BULAK","BULGU","BULLA","BULMA","BULUT","BUNAK","BUNCA","BUNMA","BURAK","BURCU","BURGU","BURMA","BURSA","BURUK","BURUN","BUTİK","BUTLU","BUTON","BUYMA","BUZCU","BUZLA","BUZLU","BUZUL","BÜCÜR","BÜKEN","BÜKME","BÜKÜÇ","BÜKÜK","BÜKÜM","BÜKÜN","BÜKÜŞ","BÜLBO","BÜNYE","BÜRGÜ","BÜRÜK","BÜRÜN","BÜTÇE","BÜTÜN","BÜYÜK","BÜYÜL","BÜZGÜ","BÜZME","BÜZÜK","CACIK","CADDE","CAHİL","CAİZE","CALİP","CAMCI","CAMEV","CAMİA","CAMİT","CAMLI","CAMSI","CANAN","CANİK","CANİP","CANLI","CANSI","CAZLI","CEBBAR","CEBEL","CEBİN","CEBİR","CEBRE","CEDİT","CEHİL","CEHRE","CEKET","CELAL","CELBE","CELEP","CELİL","CELSE","CEMAL","CEMAN","CEMİL","CEMRE","CENAH","CENAP","CENİN","CENUP","CEPÇİ","CEPHE","CEREN","CESET","CESİM","CESUR","CEVAP","CEVAZ","CEVİR","CEVİZ","CEVRİ","CEYLAN","CEZBE","CEZİR","CEZRİ","CİBİN","CİBRE","CİDAL","CİDAR","CİDDİ","CİĞER","CİHAN","CİHAT","CİHAZ","CİHET","CİLVE","CİMRİ","CİNAİ","CİNAS","CİNCİ","CİNİK","CİNLİ","CİNSİ","CİRİM","CİRİT","CİSİM","CİVAN","CİVAR","CİZYE","COŞKU","COŞMA","COŞUM","CUNDA","CUNTA","CÜBBE","CÜLUS","CÜMLE","CÜNHA","CÜNUN","CÜNÜP","CÜRET","CÜRÜM","CÜSSE","ÇABUK","ÇADIR","ÇAĞLA","ÇAĞMA","ÇAĞRI","ÇAKAL","ÇAKAR","ÇAKER","ÇAKIL","ÇAKIM","ÇAKIN","ÇAKIR","ÇAKIŞ","ÇAKMA","ÇALAK","ÇALAR","ÇALGI","ÇALIK","ÇALIM","ÇALIŞ","ÇALKI","ÇALMA","ÇALTI","ÇAMUR","ÇANAK","ÇANCI","ÇANDI","ÇANLI","ÇANTA","ÇAPAK","ÇAPAR","ÇAPLA","ÇAPLI","ÇAPMA","ÇAPUL","ÇAPUT","ÇARIK","ÇARKA","ÇARPI","ÇARŞI","ÇATAK","ÇATAL","ÇATIK","ÇATIŞ","ÇATKI","ÇATMA","ÇAVLI","ÇAVMA","ÇAVUN","ÇAVUŞ","ÇAYAN","ÇAYCI","ÇAYIR","ÇAYLI","ÇEDİK","ÇEHRE","ÇEKAP","ÇEKEL","ÇEKEM","ÇEKER","ÇEKİÇ","ÇEKİK","ÇEKİM","ÇEKİŞ","ÇEKME","ÇELEK","ÇELEN","ÇELGİ","ÇELİK","ÇELİM","ÇELLO","ÇELME","ÇEMİÇ","ÇEMİŞ","ÇENEK","ÇENET","ÇENGİ","ÇEPEL","ÇEPER","ÇEPNİ","ÇERAĞ","ÇERGE","ÇEŞİT","ÇEŞME","ÇETİN","ÇEVİK","ÇEVİR","ÇEVRE","ÇEYİZ","ÇIBAN","ÇIDAM","ÇIFIT","ÇIKAK","ÇIKAN","ÇIKAR","ÇIKIK","ÇIKIN","ÇIKIT","ÇIKIŞ","ÇIKMA","ÇIKRA","ÇİÇEK","ÇİFTE","ÇİGAN","ÇİĞDE","ÇİĞİN"],
-            6: ["ABARTI","ABESLE","ACEMCE","ACİZLİK","ADALET","ADİLANE","AFAKİL","AFERİN","AİLECE","AKAMET","AKARET","AKIBET","AKSİNE","AKTİFİ","ALAMET","ALAYCI","ALEVLİ","ALEYHE","AMBALE","AMNEZİ","ANALİZ","ANINDA","ANKET","ANTİKA","APAREY","ARBEDE","ARMONİ","ASALET","ASAYİŞ","ASKERİ","ASLINA","AŞİKAR","ATÖLYE","AVANTA","AZAMET","AZAPLI","AZONAL","BABACA","BADİRE","BAHANE","BAKİYE","BAKLİY","BANYO","BARDAK","BARİYER","BASİRE","BASKET","BAŞARI","BAŞKAN","BAŞLIK","BAŞROL","BATARYA","BAYRAM","BAZALI","BEDAVA","BEDAYİ","BEGAYE","BEKARE","BELAGİ","BENDİR","BENLİK","BENMAR","BENZİN","BERAAT","BERBAT","BERBER","BERTİK","BESİLE","BESTEC","BEŞERİ","BEYGİR","BEYHUDE","BEYLİK","BİÇARE","BİENAL","BİGUDİ","BİKAM","BİLDİK","BİLEŞİ","BİLGECE","BİLHASS","BİLİNÇ","BİLMEC","BİRAZİ","BİRLİK","BİRTAK","BİSTUR","BİYELİ","BİYOLO","BİZANS","BİZZAT","BOHÇA","BOKSÖR","BOMBE","BORDÜR","BOŞLUK","BOYKOT","BOYUT","BOZGUN","BOZKIR","BÖCEKL","BÖLÜNT","BÖREKL","BRANŞL","BROKOL","BRONŞİ","BRONZL","BUHARA","BUHRAN","BUKAĞI","BULANİ","BULGUR","BUNALİ","BURSİY","BURSLU","BURULG","BÜNYAN","BÜYÜTE","CACIKL","CADALO","CAHİLİ","CAHİL","CAİZE","CAKA","CAMBAZ","CAMDAN","CAMEKA","CAMGÖZ","CAMİA","CANDAN","CANFES","CANHİR","CANLI","CARLI","CARIYE","CARSA","CAVLA","CAYMA","CAYIŞ","CAZİBE","CAZİP","CEBBAR","CEBELİ","CEBREN","CEDEL","CEDİT","CEDRE","CEFAKA","CEHENN","CEKETL","CELALİ","CELİLE","CEMEVİ","CEMİLE","CEMİY","CEMRE","CENAZE","CENDERE","CENGEL","CENNET","CEPHAN","CEPHES","CERAH","CERBEZ","CEREME","CERRAR","CESARE","CESUR","CETVEL","CEVAP","CEVHER","CEZAEN","CİBİNL","CİDDİ","CİGAR","CİHANN","CİHAR","CİHAT","CİHET","CİLAL","CİLTL","CİLVEY","CİMRİ","CİNAYE","CİNNET","CİNSL","CİPSL","CİRİM","CİSİM","CİVAN","CİVAR","CİVCİV","CİYAK","CİZYE","COĞRAF","COKAY","COPCU","COŞKU","COŞMA","COŞUM","CÖMERT","CUMHUR","CÜBBEL","CÜCE","CÜCÜK","CÜDA","CÜLUS","CÜMLE","CÜPPEL","CÜRET","CÜRÜM","CÜSSE","ÇABUC","ÇADIR","ÇAĞDAŞ","ÇAĞLA","ÇAĞRI","ÇAKIL","ÇALGIL","ÇALIŞ","ÇAPRAZ","ÇARŞAF","ÇATLAK","ÇAVDAR","ÇAYDAN","ÇEKİNG","ÇELİŞK","ÇEMBER","ÇENGEL","ÇERÇEV","ÇEŞİTL","ÇETREF","ÇEVREN","ÇEVRİM","ÇEYREK","ÇIKMAZ","ÇIPLAK","ÇIRAKM","ÇİFTLİ","ÇİĞDEM","ÇİKOLA","ÇİLEKL","ÇİMENT","ÇİNGEN","ÇİNKO","ÇİVİLİ","ÇİZELG","ÇİZME","ÇOCUKÇ","ÇOĞUL","ÇORAK","ÇÖMLEK","ÇÖZELT","ÇUBUKL","ÇUKUR","ÇULLUK","ÇÜRÜME","DABAN","DACİK","DADAŞ","DAĞCIK","DAĞDAŞ","DAĞLIK","DAİMA","DAİRE","DAİREV","DAKİK","DALAV","DALCI","DALDA","DALGA","DALGIÇ","DALGIN","DALIZ","DALIŞ","DALKAV","DALMA","DALSI","DALYA","DAMAC","DAMAK","DAMAL","DAMAR","DAMAT","DAMGA","DAMIT","DAMLA","DANIŞ","DANSÖR","DANTEL","DARBE","DARGIN","DARICA","DARPH","DARÜL","DASİT","DATÇA","DAVACI","DAVAR","DAVET","DAVUL","DAVYA","DAYAK","DAYALI","DAYAN","DAYE","DEBDEB","DECİLE","DEFANS","DEFİNE","DEFNET","DEFOYL","DEGÜS","DEHHA","DEİZM","DEKAN","DEKAR","DEKOR","DELAL","DELGİ","DELİL","DELME","DEMEÇ","DEMEK","DEMET","DEMİN","DEMİR","DEMLİ","DEMODE","DENEME","DENET","DENEY","DENGE","DENİM","DENİZ","DENK","DENLİ","DEPAR","DEPOZİ","DEPREM","DEREC","DERGİ","DERHAL","DERİN","DERLEM","DERMAN","DERNEK","DERSİM","DERTÇ","DERTLİ","DERVİŞ","DESEN","DESTE","DESTEK","DEVAİR","DEVAM","DEVCİL","DEVİR","DEVLET","DEVRAN","DEVRİK","DEYİM","DİAGRA","DİBACE","DİDAR","DİDİK","DİDON","DİGİTA","DİĞER","DİKALA","DİKENC","DİKEY","DİKGEN","DİKİLİ","DİKİNE","DİKİŞ","DİKİZ","DİKME","DİKTE","DİLALT","DİLBAZ","DİLCİK","DİLEK","DİLEM","DİLENC","DİLEYİ","DİLFİR","DİLHUN","DİLMAÇ","DİLSİZ","DİNÇ","DİNDAR","DİNEK","DİNGİL","DİNGİN","DİNMEK","DİPLOM","DİRGEN","DİRHEM","DİRİLİ","DİRİLM","DİRSEK","DİSKO","DİSPEÇ","DİŞÇİL","DİŞEME","DİŞLEK","DİVAN","DİYET","DİZDAR","DİZEG","DİZEL","DİZEM","DİZGE","DİZGİN","DİZİLİ","DİZME","DOĞAÇ","DOĞAL","DOĞRAM","DOĞULU","DOĞUM","DOKSAN","DOKTOR","DOKUMA","DOLAP","DOLAY","DOLGU","DOLMA","DOLMUŞ","DOLUSU","DOMBAY","DOMİN","DOMUZ","DONANIM","DÖKME","DÖKÜM","DÖNEÇ","DÖNEL","DÖNEM","DÖNENCE","DÖNER","DÖNGÜ","DÖNME","DÖNÜŞ","DÖŞEK","DÖVME","DÖVÜŞ","DRAMA","DRAMAT","DRİPL","DUBAR","DUBLE","DUDULL","DUHUL","DUYARL","DUYGUN","DUYGUS","DUYMA","DUYURU","DÜELL","DÜĞME","DÜĞÜM","DÜĞÜN","DÜLGER","DÜMDÜZ","DÜNÜR","DÜRBİN","DÜRMEC","DÜRÜM","DÜRÜST","DÜŞEŞ","DÜŞEY","DÜŞKÜN","DÜŞLEM","DÜŞME","DÜŞSEL","DÜŞÜNC","DÜŞÜŞ","DÜZELT","DÜZEN","DÜZEY","DÜZGÜN","DÜZİNE","DÜZLEM","DÜZME","ECDAT","ECNEB","EDEBİ","EDİNİ","EDİRN","EFEKTL","EFEND","EFLATU","EFSAN","EĞİLİ","EĞİTİ","EGEMEN","EGZOTİ","EKİNOK","EKMEKL","EKSEN","EKSİKL","ELAMAN","ELBİSE","ELÇİLİ","ELDİVE","ELEBAŞ","ELEGEÇ","ELEKTR","ELEMEK","ELİYLE","ELLER","ELMA","ELYAF","EMANET","EMARET","EMAYEL","EMİSYO","EMLAKÇ","EMRİND","EMZİKL","ENDER","ENDÜS","ENERJİ","ENEZE","ENFEST","ENGERE","ENGİN","ENİKON","ENİŞTE","ENKAZ","ENLEM","ENTEGR","ENTELE","ERBAP","ERDEML","EREĞL","ERGAN","ERGEN","ERİME","ERİNÇ","ERİŞİ","ERİTE","ERKEKL","ERMEN","EROİN","EROZY","ERSEME","ERSİZ","ERTEK","ERTES","ERZİNC","ESARET","ESASEN","ESASLI","ESKİC","ESKİD","ESKİME","ESKRİ","ESMER","ESNAFL","ESNEKL","ESPRİL","ESSAH","ESTAMP","EŞEKL","EŞİTL","EŞKİY","EŞOFMA","ETAMİN","ETİKET","ETKİLE","ETKİL","ETRAFL","EVHAML","EVLİL","EVVELA","EYALET","EYERLİ","EYLEML","EZBERE","EZGİL","EZİYET"],
-            7: ["ABARTMA","ACİZLİK","ADALETL","ADAPTÖR","ADEMCİL","ADIMLIK","AFORİZM","AĞAÇSIL","AĞIRLIK","AĞLAMAK","AHLAKEN","AHLAKLI","AHTAPOT","AİLECEK","AKADEMİ","AKCİĞER","AKLINCA","AKPELİN","AKRİLİK","AKROBAT","AKSİYON","AKTİFLİ","AKTRİSA","ALABALİ","ALAKALI","ALARM","ALBATRO","ALBÜMİN","ALÇAKÇA","ALDATMA","ALEVLEN","ALEYHTA","ALFASAY","ALİMANE","ALKOLİK","ALLAHÇI","ALLAME","ALMAÇLI","ALMANCA","ALTILIK","ALTINSI","ALTYAPI","ALYUVAR","AMABİLE","AMATÖRL","AMBALAJ","AMBULAN","AMERİKA","AMİGDA","AMİPLİ","AMONYAK","AMORTİS","AMPİRİK","ANADOLU","ANAFORA","ANAHTAR","ANANEVİ","ANARŞİK","ANATOMİ","ANÇÜEZ","ANDAVAL","ANDIZLI","ANEKDOT","ANEMİLİ","ANGARYA","ANIMSAT","ANITSAL","ANKEBÛT","ANKESÖR","ANLAMAK","ANLAMDA","ANLAŞMA","ANLATIM","ANLAYIŞ","ANTEPLİ","ANTETLİ","ANTİKOR","ANTİMON","ANTİPAT","ANTREPO","ANTSAL","APARMAK","APARTMA","APLİKAS","APSEVİ","APSİYON","ARABACI","ARABESK","ARAKÇIL","ARALAMA","ARALIK","ARANMAK","ARAPGİR","ARAPÇA","ARAŞTIR","ARAZBAR","ARAZİLİ","ARBALET","ARBEDEC","ARDIŞIK","ARENALI","ARGANCI","ARGÜMAN","ARITMAK","ARİTMET","ARKADAŞ","ARKALIK","ARMAĞAN","ARMUTLU","AROMALI","ARSENİK","ARŞİDUC","ARŞİNLİ","ARTIKLI","ARTİSTL","ARTVİNL","ARUZ","ARZUHÂL","ASABİYE","ASALAK","ASAR","ASBEST","ASİLZAD","ASİSTAN","ASKERLİ","ASKILIK","ASLANI","ASPARAG","ASPİRİN","ASTARLI","ASTRAGA","ASTROLO","ASTRONO","ASUMAN","AŞAĞILI","AŞÇI","AŞILAMA","AŞINMAK","AŞIRMAK","AŞİYAN","ATARAKS","ATARDAM","ATARLIL","ATILGAN","ATILMAK","ATIP","ATIŞMAK","ATLAMAK","ATLETİK","ATMOSFE","ATOMİZE","ATONAL","AVANTÜR","AVDET","AVİZE","AVLAMAK","AVOKADO","AVUNMAK","AVURTLU","AYAKKAB","AYAKLIK","AYAKSIZ","AYARLAM","AYARTMA","AYAZLIK","AYBASTI","AYDINLI","AYGIRLI","AYIKLAM","AYIRTMA","AYIRTMA","AYRICAL","AYRIKSI","AYRILIK","AYRILMA","AYRINTI","AYTIŞMA","AZALTMA","AZGINLI","AZİMLİ","AZİMKÂR","AZMETME","BABACAN","BABALIK","BACANAK","BADEMLİ","BAĞBOZU","BAĞCIKL","BAĞDAŞI","BAĞIMLI","BAĞIRMA","BAĞIŞIK","BAĞLAMA","BAĞNAZL","BAHARAT","BAHARLI","BAHÇELİ","BAHİSÇİ","BAHŞETM","BAHTSİZ","BAKANAK","BAKANLI","BAKARAK","BAKIMEV","BAKIMLI","BAKIMSI","BAKİREM","BAKİYE","BAKLACI","BAKLALI","BAKRAÇ","BALALAY","BALDIR","BALIKÇI","BALİNA","BALKIMA","BALLAMA","BALTAL","BAMTELİ","BANDAJL","BANDIR","BANDOCU","BANGIR","BANKACI","BANKER","BANYOLU","BAPTİST","BARBARL","BARDAKC","BARET","BARIŞÇI","BARİTL","BARİZ","BAROK","BARSEL","BASAMAK","BASBAYA","BASILMA","BASIMEV","BASİTL","BASKETB","BASKICI","BASKILI","BASTIR","BAŞAKÇ","BAŞARIM","BAŞKALA","BAŞLAMA","BAŞLICA","BAŞYAPA","BATAKÇI","BATANYA","BATARYA","BATIRMA","BATTANİ","BAVL","BAYATLI","BAYILMA","BAYRAML","BAZGİRT","BECERME","BEDBİNL","BEDDUAL","BEĞENME","BEHEM","BEKÇİ","BEKİTME","BELAGAT","BELÇİKA","BELGELİ","BELİRME","BELİRSİ","BELİRTİ","BELKEMİ","BELLEME","BELLİK","BENCİL","BENDE","BENDE","BENİÇİN","BENİM","BENİMKİ","BENİM","BENLİK","BENZEŞ","BENZİN","BERAAT","BERDEL","BEREKET","BERİVAN","BERRAKL","BERTAR","BESBED","BESİCİL","BESLEME","BESTEKÂ","BEŞAMEL","BETONAR","BETONCU","BEYANAT","BEYAZ","BEYGİR","BEYHUDE","BEYKOZ","BEYLİKB","BEYOĞLU","BEZCİLİ","BEZEMEC","BİBERON","BİBLİYO","BİÇİLME","BİÇİMCE","BİÇİMLİ","BİÇKİ","BİDON","BİFAYD","BİGANET","BİKİNI","BİLAKİS","BİLDİRİ","BİLE","BİLEĞ","BİLEŞEN","BİLETE","BİLETLİ","BİLEYCİ","BİLGECE","BİLGİÇ","BİLGİLİ","BİLGİS","BİLGİYA","BİLİM","BİLİMCİ","BİLİNÇ","BİLİNEN","BİLİNME","BİLİRKİ","BİLİŞİM","BİLLUR","BİNİCİL","BİNİNCİ","BİRAZ","BİRER","BİREYSE","BİRİCİK","BİRİKİM","BİRİKME","BİRLİKT","BİSAM","BİSKÜVİ","BİTEK","BİTİK","BİTİM","BİTİMLİ","BİTİRİM","BİTİŞİK","BİTMEK","BİTÜMLÜ","BİYELİ","BİYOGAZ","BİYOLOG","BİYOM","BİYOPSİ","BOCCAC","BOĞDUR","BOĞMACA","BOĞUMSU","BOKSİT","BOKSÖR","BOLDİL","BOL","BOMBEL","BOMBELE","BONCUK","BORDRO","BORNOZ","BORSA","BORSA","BORSA","BOSTAN","BOŞALMA","BOŞANMA","BOŞBOĞA","BOŞNAK","BOYACIL","BOYAHAN","BOYAMAK","BOYDAŞ","BOYNUZ","BOYUNLU","BOZARİK","BOZDOĞA","BOZGUN","BOZKURT","BOZULMA","BOZUŞMA","BÖCEKÇİ","BÖCEKEV","BÖĞÜRME","BÖLEN","BÖLÜNME","BÖN","BÖREKÇİ","BRAHMAN","BRANDA","BRANŞL","BRE","BRİÇ","BRİFİN","BROKER","BROMÜR","BRONŞİT","BROŞÜR","BRÜLÖR","BUCACIK","BUÇUKLU","BUDAKL","BUDİZM","BUD","BUHURDA","BUKLET","BULANIK","BULAŞIK","BULGURL","BULMACA","BULUNAK","BULUNMA","BULUŞMA","BUNALIM","BUNAKLI","BUNGUN","BURADAN","BURGAÇ","BURKUCU","BURSALI","BURUŞUK","BUTAFOR","BUTİK","BUYURMA","BÜLBÜL","BÜNYECE","BÜRÜMEK","BÜRÜNGÜ","BÜTÇESİ","BÜYÜKÇE","BÜYÜLÜ","BÜYÜTME","CAZ","CAZ","CAZGIRL","CEBELLE","CEBİNDE","CEDELCİ","CEFAL","CEHALET","CELB","CEMBİYE","CEMEVİ","CENAHLI","CENİNLİ","CENNET","CENTİLM","CEPÇİLİ","CEPHANE","CEPHESİ","CERAHAT","CİĞERLİ","CİHATÇI","CİHETLİ","CİHANGİ","CİLALAM","CİLTLEN","CİLVESİ","CİMBAR","CİMRİLİ","CİNA","CİNDERE","CİN","CİNSLİK","CİRİTLİ","CİSİMLİ","CİVİLTİ","CİZ","COĞRAFİ","COK","COPLAMAK","COŞKULU","CUMARTES","CUMHURCU","CÜMLETEN","ÇABALAM","ÇABASIZ","ÇADIR","ÇAĞANOZ","ÇAĞILTI","ÇAĞIRMA","ÇAĞLAYA","ÇAKALBO","ÇAKAR","ÇAKILTA","ÇAKINLI","ÇAKIŞMA","ÇALDIRM","ÇALGICI","ÇALIMLI","ÇALINMA","ÇALIŞKA","ÇALIŞMA","ÇALKAMA","ÇALPARA","ÇAM","ÇAMAŞIR","ÇAMFİST","ÇAMURCU","ÇAMURLU","ÇANAKÇI","ÇANDARL","ÇANGALL","ÇANKIRI","ÇAPANOĞ","ÇAPKINL","ÇAPRAŞI","ÇAPULCU","ÇARÇUR","ÇARDAKL","ÇARIKLI","ÇARKIFE","ÇARLİST","ÇARPILI","ÇARPIŞM","ÇARŞILI","ÇATALLI","ÇATAN","ÇATIŞMA","ÇATLAMA","ÇAVDAR","ÇAYCUMA","ÇAYIR","ÇAYKARA","ÇAYLAK","ÇAYL","ÇEDAR","ÇEKİCİL","ÇEKİÇ","ÇEKİLİŞ","ÇEKİLME","ÇEKİMSER","ÇEKİNGEN","ÇEKİRDE","ÇEKİŞME","ÇEKTİRME","ÇELEBİL","ÇELENKL","ÇELİKHAN","ÇELİKSİ","ÇELİŞKİ","ÇELİŞME","ÇELLİST","ÇEMENLİ","ÇEN","ÇENEBAZ","ÇENTMEK","ÇEPELSİ","ÇERÇEV","ÇERÇÖP","ÇEREZCİ","ÇERKEZC","ÇERKEZL","ÇERMİKL","ÇEŞİTLİ","ÇEŞMECİ","ÇETEBAŞ","ÇETREFİ","ÇEVİK","ÇEVİRGE","ÇEVİRİM","ÇEVİRME","ÇEVRELİ","ÇEYREKL","ÇIBANBA","ÇIĞIRMA","ÇIKAGEL","ÇIKAR","ÇIKARLI","ÇIKARMA","ÇIKINTI","ÇIKRIK","ÇILBIR","ÇILDIR","ÇINARLI","ÇINGIRA","ÇIPILT","ÇIRA","ÇIRAKLI","ÇIRPINM","ÇIT","ÇIT","ÇIT","ÇIT","Çİçekçi","ÇİFTEHA","ÇİFTTE","ÇİĞNEME","ÇİKOLAT","ÇİLEKEŞ","ÇİMENTOL","ÇİNCE","ÇİNGENE","ÇİNKO","ÇİN","ÇİVİTLE","ÇİZGİLİ","ÇİZMECİ","ÇOBANLI","ÇOCUKLU","ÇOĞULCU","ÇOĞULLU","ÇOK","ÇOK","ÇOKAL","ÇOK","ÇOK","ÇOKRAĞA","ÇOK","ÇORUM","ÇÖKERTME","ÇÖLLÜK","ÇÖPLENME","ÇUKUR","ÇULLANMA","ÇÜRÜTME","DADAİST","DAĞITIM","DAHİLİY","DAİRESE","DAL","DAL","DALAVER","DALAVERE","DALBASTI","DAL","DAL","DAL","DAL","DAL","DAMAR","DAM","DAM","DAM","DANIŞMA","DANİSKA","DANS","DANS","DARBE","Darbe","DAR","DAR","DAR","DAR","DAR","DAVRANI","DAYANIK","DAYANMA","DEBİL","DEFNETM","DEĞİL","DEĞNEKL","DEHLİZ","DEHŞETL","DEJENERE","DEKANLI","DEKORCU","DEKUPAJ","DELALET","DELİKAN","DELİRME","DELİ","DEM","DEM","DEM","DEM","DEM","DENEME","DEN","DEN","DEN","DEN","DEPOLAM","DEPRESİ","DERECEL","DERİLME","DERİN","DERK","DERLEMC","DERLEYİ","DERTLİ","DESİBEL","DESPOT","DESTE","DESTE","DETAYLI","DETEKTİ","DETERJA","DEVASIZ","DEVELİK","DEVİMS","DEVRALM","DEYİM","DEYYUS","DIŞ","DIŞ","DIŞARID","DIŞAVUR","DIŞBÜKE","DIŞINDA","DIŞKILA","DİBEK","DİFTERİ","DİJİTAL","DİKELME","DİKİLME","DİKKATL","DİKLEME","DİKSİYO","DİL","DİLALT","DİLENCİ","DİLEMM","DİL","DİL","DİNAMİT","DİNAMO","DİNGİLD","DİRENME","DİREY","DİRİLME","DİSK","DİSK","DİSPANÇ","DİSPONİ","DİSTO","DİŞ","DİŞ","DİŞ","DİŞ","DİŞ","DİZİL","DOĞAÇL","DOĞAL","DOĞRAMA","DOĞRUD","DOĞURMA","DOKUMAC","DOLANDI","DOLAPLI","DOLAYLI","DOLDURM","DOLMEN","DOLM","DOL","DOMALT","DOMİNAT","DONATIM","DONDURM","DOPİNG","DOSTANE","DOY","DOY","DOY","DOY","DÖKÜMH","DÖNÜŞLÜ","DRAMATİ","DUBLEKS","DURAKSA","DURULMA","DURUMLU","DUV","DUYARLI","DUYULMA","DÜET","DÜMEN","DÜN","DÜNKÜ","DÜRBÜNL","DÜŞE","DÜŞE","DÜŞEYSE","DÜŞLEME","DÜŞÜNÜR","DÜZ","DÜZAYAK","DÜZENB","DÜZENLE","DÜZENLİ","EBEDÎ","ECZACI","EDEPSİZ","EDİLGEN","EDİMSEL","EDİTÖR","EGOİST","EĞİTİMC","EĞLENCE","EKİLME","EKMEKÇİ","EKOLOJİ","EKONOMİ","EKRAN","EKSİKLİ","EKÜMEN","ELAZIĞ","ELBİSEL","ELEBAŞI","ELEK","ELEK","ELEKTRO","ELEKTRİ","ELEM","ELİNDE","ELİPS","ELİT","ELLEME","ELMAS","ELVERME","EMANET","EMAY","EMEKÇİ","EMEKLİL","EMİLME","EMİRLİK","EMSAL","EMZİK","ENAYİLİ","ENDEK","ENDÜSTR","ENFES","ENFLASY","ENGELLİ","ENİK","ENLEM","ENSE","ENTEGRE","ENTER","ENTERN","ENTİPÜF","ENVA","ENZİM","ERİME","ERİNÇ","ERİŞTE","ERKEKÇE","ERKEKLİ","EROTİZM","ERSELİK","ERTESİ","ESENLİK","ESİNTİL","ESİR","ESKİ","ESKRİM","ESNEKLİ","ESPRİTÜ","ESRAR","ESS","ESTETİK","ESTET","EŞ","EŞ","EŞDEĞE","EŞEYSEL","EŞİT","EŞKENAR","EŞ","EŞZAMAN","ETKİLEŞ","ETKİN","EV","EV","EVCEĞİZ","EVİNDE","EVİRGEN","EVLATLI","EVLİLİK","EVRİLME","EVVELCE","EYERCİ","EZBERCİ","EZELÎ","EZİKLİK"]
+            4: ["ARSA", "BALE", "CEZA", "DERS", "EKŞİ", "FAKS", "GÖLGE", "HANE", "ISKA", "JÖLE", "KALE", "LİRA", "MODA", "NEŞE", "OKUL", "PARA", "ROTA", "SAHA", "ŞANS", "TEMA", "UYKU", "VİDA", "YAZI", "ZEKA"],
+            5: ["AJANS", "BALIK", "CEVİZ", "DÜNYA", "ELMAS", "FIRIN", "GAZAP", "HABER", "İHALE", "JETON", "KALEM", "LİMON", "MOTOR", "NEFES", "PİLOT", "RADYO", "SEBZE", "ŞEKER", "TAVUK", "UZMAN", "VAGON", "YENGE", "ZAMAN", "ERKEK"],
+            6: ["ADALET", "BAHANE", "CİNAYET", "DİKKAT", "EFSANE", "FELAKET", "GELENEK", "HİKAYE", "İSKELE", "JAPONYA", "KELİME", "LOKANTA", "MARKET", "NUMARA", "OTOMAT", "PARFÜM", "REKLAM", "SANDAL", "ŞAMPİYON", "TERAZİ", "UFUKLAR", "VİTAMİN", "YAPRAK", "ZİYARET"],
+            7: ["BAKLAVA", "CESARET", "DOKTOR", "FESTİVAL", "GALERİ", "HAZİRAN", "İHTİYAÇ", "JENERİK", "KARANFİL", "MAKİNİST", "NİSAN", "OKYANUS", "PANTOLON", "REÇETE", "SALINCAK", "ŞEMSİYE", "TELEFON", "UYGARLIK", "VİTRİN", "YARDIMCI", "ZARAFET"]
+        };
+        const validWords = {
+            4: [...new Set(wordLists[4].concat(["ALAN", "ALAY", "ALGI", "ALIM", "AYAK", "AYAR", "AYET", "AYIP", "AYNI", "AZAR", "BANT", "BARI", "BATI", "BİNA", "BORÇ", "CİLT", "ÇATI", "ÇITA", "DAMA", "DANS", "DAVA", "DENK", "DİSK", "EBAT", "EDAT", "EKİM", "EMİR", "ESER", "ETAP", "ETİK", "FAİZ", "FİİL", "FİLM", "GAZA", "GEMİ", "GIDA", "GÖÇ", "GREV", "GÜÇ", "HACI", "HALI", "HARÇ", "HATA", "İKNA", "İLAÇ", "İMAL", "İMAR", "İSİM", "İŞÇİ", "KAPI", "KARE", "KASA", "KIŞ", "KITA", "LİSE", "MAAŞ", "MOLA", "NAR", "NOT", "ODA", "ODUN", "OLAY", "OLTA", "ONAY", "ORAN", "ÖDÜL", "ÖLÇÜ", "ÖMÜR", "ÖYKÜ", "POTA", "RANT", "RİSK", "SAVA", "SAYI", "SEÇİM", "SOBA", "ŞİİR", "TANE", "TEST", "TİPİ", "TREN", "VAAT", "VERİ", "YAKA", "YARI", "YASA", "YURT", "ZARF", "ETKİ", "YAPI"]))],
+            5: [...new Set(wordLists[5].concat(["ADRES", "AHLAK", "AKŞAM", "ALBÜM", "ALKOL", "ALTIN", "ARABA", "AROMA", "ASİT", "ATLET", "AYDIN", "BAHAR", "BANKA", "BARDAK", "BAŞLIK", "BEYAZ", "BİLET", "BİLGİ", "BİREY", "BORSA", "BÖLGE", "CAMİ", "CEVAP", "CİHAZ", "ÇADIR", "ÇANTA", "ÇARŞI", "ÇİÇEK", "DAİRE", "DEKAN", "DENİZ", "DERGİ", "DİVAN", "DOĞA", "DOĞRU", "DOLAR", "DRAMA", "DÜZEN", "EGOİST", "EKRAN", "EMLAK", "ENERJİ", "EVRAK", "FATURA", "FİNAL", "FOTO", "GAZETE", "GELİR", "GİTAR", "GÖMLEK", "GÖREV", "GÜNEŞ", "HAKEM", "HAKİM", "HALK", "HARİTA", "HASTA", "HEDEF", "HESAP", "HUKUK", "İÇERİK", "İKLİM", "İNSAN", "İPTAL", "İŞLEM", "KADIN", "KAHVE", "KANAL", "KANUN", "KARAR", "KARGO", "KASKO", "KAVRAM", "KAYIT", "KİTAP", "KLİMA", "KOLTUK", "KREDİ", "KURAL", "KURUM", "LİDER", "LİSTE", "MARKA", "MASA", "MODEL", "MÜZİK", "NÜFUS", "OPERA", "OTEL", "ÖNERİ", "ÖZEL", "PASTA", "PERDE", "PLAKA", "POLİS", "POSTA", "PROJE", "RAKAM", "RAPOR", "ROMAN", "SAAT", "SABAH", "SAHNE", "SANAT", "SATIR", "SEANS", "SEFER", "SENET", "SERGİ", "SEVİYE", "SINAV", "SİNEMA", "SİSTEM", "SOKAK", "SPOR", "STRES", "ŞARAP", "ŞEHİR", "ŞİRKET", "TABLO", "TARİH", "TASARI", "TATİL", "TEKLİF", "TEKNİK", "TERMOS", "VİDEO", "VİLLA", "YASAL", "YAZAR", "YEMEK", "ZEMİN", "ÇEVRE", "GARAJ", "METRO", "PLAJ"]))],
+            6: [...new Set(wordLists[6].concat(["AİLECE", "ANALİZ", "ANKET", "ARŞİV", "ATÖLYE", "BANYO", "BASKET", "BENZİN", "BERBER", "CADDE", "CENAZE", "CERRAH", "CETVEL", "CÜZDAN", "ÇÖZÜM", "DEKOR", "DERNEK", "DİPLOMA", "DOLMUŞ", "DÖVİZ", "DÜKKAN", "ECZANE", "EĞİTİM", "ENDİŞE", "FELSEFE", "FİHRİST", "FİZİK", "FUTBOL", "GARSON", "GELECEK", "GENETİK", "GİRİŞİM", "GÖZLÜK", "GRAFİK", "GRAMER", "GÜMRÜK", "HABERCİ", "HALKLA", "HAMSİ", "HAREKET", "HASTANE", "HAYALET", "HAYVAN", "HAZİNE", "HEDİYE", "HEKİM", "HEMŞİRE", "HEYECAN", "HİZMET", "HÜKÜMET", "İÇECEK", "İHRACAT", "İMALAT", "İMTİHAN", "İNANÇ", "İNŞAAT", "İPUCU", "İŞARET", "İTHALAT", "İTİRAZ", "JEST", "JOKEY", "JÜRİ", "KABİNE", "KADEME", "KALORİ", "KAMERA", "KANSER", "KAYNAK", "KAZANÇ", "KİMYA", "KİRALIK", "KLASÖR", "KORİDOR", "KOSTÜM", "KULÜP", "KURBAN", "KURYE", "KÜLTÜR", "LİSANS", "LOKMA", "MAKALE", "MAKYAJ", "MANZARA", "MEKANİK", "MEKTUP", "MEMUR", "MERKEZ", "MESAFE", "MESLEK", "MEVZUAT", "MİMAR", "MİSAFİR", "MÜZE", "NEMRUT", "OTOBÜS", "ÖLÇEK", "ÖNERGE", "ÖNSÖZ", "ÖRNEK", "REÇEL", "REFAKAT", "REHBER", "REJİM", "RUHSAT", "SAĞLIK", "SANAYİ", "SANTRAL", "SEKTÖR", "SEMİNER", "SENDİKA", "SERMAYE", "SEYAHAT", "SİNYAL", "SİPARİŞ", "SİYASET", "SÖZLÜK", "ŞANTAJ", "ŞEFFAF", "ŞİKAYET", "TAKVİM", "TALİMAT", "TAMİR", "TARİFE", "TEBLİĞ", "TEDAVİ", "TEHLİKE", "TEKSTİL", "TEMİNAT", "TEORİ", "TERCİH", "TERÖR", "TESİS", "TİCARET", "TRAFİK", "TÜRKÇE", "ÜCRET", "ÜNİTE", "ÜRETİM", "ÜSLUP", "VAKIF", "VERGİ", "VİZE", "YABANCI", "YARIŞMA", "YATIRIM", "YAZILIM", "YETENEK", "TEŞVİK", "BİLGİN", "CİVCİV", "FORMÜL", "GAZETE", "MÜZEVİR", "ENGELLİ", "EVLİLİK", "GÜVENLİK", "İŞLETME"]))],
+            7: [...new Set(wordLists[7].concat(["ADLİYE", "AİDAT", "AJANDA", "AKRABA", "AKSİYON", "ALERJİ", "ALFABE", "AMATÖR", "AMBALAJ", "ANAYASA", "ASANSÖR", "ASİSTAN", "ATÖLYE", "AVUKAT", "BAŞARI", "BAŞKENT", "BAŞVURU", "BİLANÇO", "BÜTÇE", "CANAVAR", "CİMRİLİK", "ÇAMAŞIR", "ÇİFTLİK", "ÇİZELGE", "ÇOCUK", "DENEYİM", "DESTEK", "DETAYLI", "DEVLET", "DİKKATLİ", "DİNAMİK", "DİPLOMAT", "DİREKTÖR", "DİZAYN", "DOMATES", "DÖNEM", "DÜŞÜNCE", "ECZACI", "EDİTÖR", "EGZERSİZ", "EKİPMAN", "EKOLOJİ", "ELBİSE", "EMEKLİ", "EMNİYET", "EMPATİ", "ERGENLİK", "ESTETİK", "ETİKET", "FİNANS", "FREKANS", "GELİŞİM", "GENÇLİK", "GEREKÇE", "GEZEGEN", "GÖSTERGE", "GÖZLEM", "GRAM", "GREV", "GÜNDEM", "GÜVEN", "HAKİKAT", "HARABE", "HATIRA", "HAYAL", "HAYAT", "HEMŞERİ", "HİJYEN", "HİKAYE", "HİSSE", "HOBİ", "HOŞGÖRÜ", "HÜRRİYET", "IŞIK", "İÇERİK", "İDEOLOJİ", "İHALE", "İHTİMAL", "İSKELET", "İSTİFA", "İSTİKRAR", "İŞLETİM", "JEST", "JEOLOJİ", "KALİTE", "KAMUOYU", "KANIT", "KARAKOL", "KARDEŞ", "KASABA", "KAVGA", "KAYGI", "KELEBEK", "KİMLİK", "KLASİK", "KOMEDİ", "KONFOR", "KONSEY", "KORUMA", "KOZMİK", "KRİTER", "KURULUŞ", "KÜRESEL", "LOBİ", "MAKİNE", "MALİYET", "MANEVRA", "MASKE", "MEDYA", "MELODİ", "MENAJER", "MESAİ", "MEVSİM", "MEYDAN", "MİSYON", "MODERN", "MÜLAKAT", "NAKLİYE", "NEGATİF", "NESİL", "NİHAYET", "NÖTR", "OBJE", "OFİS", "OKSİJEN", "OTORİTE", "ÖĞÜT", "ÖNCELİK", "ÖZLEM", "PAKET", "PANİK", "PARALEL", "PARAZİT", "PARFÜM", "PARTİ", "PASİF", "PEYZAJ", "PİRAMİT", "POLEMİK", "POPÜLER", "PORTFÖY", "POZİTİF", "PRENSİP", "PRESTİJ", "PROGRAM", "PROTEİN", "PROVA", "RADİKAL", "REALİTE", "REKABET", "REPLİKA", "RİTİM", "RUTİN", "RÜŞVET", "SABOTAJ", "SADAKAT", "SALDIRI", "SANDVİÇ", "SAVAŞÇI", "SENARYO", "SEMBOL", "SEMPATİ", "SENTEZ", "SERVİS", "SEVİMLİ", "SEZON", "SIHHAT", "SİGARA", "SİLÜET", "SİVİL", "SLOGAN", "SOSYAL", "SÖYLEM", "SPONSOR", "STATÜ", "STİL", "SÜREÇ", "ŞÖVALYE", "TAAHHÜT", "TABİAT", "TAKDİR", "TAKIM", "TAKVİYE", "TALEP", "TASARIM", "TAVSİYE", "TECRÜBE", "TEDARİK", "TEHDİT", "TEKST", "TEMA", "TEMEL", "TERAPİ", "TERİM", "TESADÜF", "TRAJEDİ", "TRANSİT", "TÜNEL", "UYDU", "UYUM", "ÜNİFORM", "ÜSLUP", "VADE", "VAHŞET", "VAKUM", "VARLIK", "YAYINCI", "YETKİ", "YILAN", "YORUMCU", "YÜZDE", "ZANAAT", "ZARİF", "EPİDEMİ", "İŞLETİM", "MARATON", "VİTAMİN", "GANİMET", "FAKÜLTE", "ŞELALE", "SİYASET", "TİYATRO"]))]
         };
         
         window.addEventListener('load', () => {
-            const setupScreen = document.getElementById('setup-screen');
+            // --- DOM Elements ---
+            const modeSelectionScreen = document.getElementById('mode-selection-screen');
+            const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
             const gameScreen = document.getElementById('game-screen');
             const scoreboardScreen = document.getElementById('scoreboard-screen');
             const guessGrid = document.getElementById('guess-grid');
@@ -135,19 +144,42 @@
             const toast = document.getElementById('toast');
             const turnDisplay = document.getElementById('turn-display');
             const timerDisplay = document.getElementById('timer-display');
-            const startGameBtn = document.getElementById('start-game-btn');
             const createBtn = document.getElementById('create-game-btn');
             const joinBtn = document.getElementById('join-game-btn');
             const mainMenuBtn = document.getElementById('main-menu-btn');
             const newRoundBtn = document.getElementById('new-round-btn');
             const leaveGameBtn = document.getElementById('leave-game-button');
             const gameIdDisplay = document.getElementById('game-id-display');
-
-            let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null;
-            let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, localGameData = null;
+            const startGameBtn = document.getElementById('start-game-btn');
+            
+            // --- Global State ---
+            let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
+            let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
+            
+            // --- Scoring ---
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
-            
+
+            // --- Sound Effects ---
+            const sounds = {
+                click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
+                error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(),
+                win: new Tone.PolySynth(Tone.Synth).toDestination(),
+                lose: new Tone.PolySynth(Tone.Synth).toDestination(),
+                draw: new Tone.PolySynth(Tone.Synth).toDestination()
+            };
+            function playSound(sound) {
+                if (Tone.context.state !== 'running') { Tone.context.resume(); }
+                switch(sound) {
+                    case 'click': sounds.click.triggerAttackRelease('C5', '8n'); break;
+                    case 'error': sounds.error.triggerAttackRelease('C3', '8n'); break;
+                    case 'win': sounds.win.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n', Tone.now()); break;
+                    case 'lose': sounds.lose.triggerAttackRelease(['C4', 'A3', 'F3', 'D3'], '8n', Tone.now()); break;
+                    case 'draw': sounds.draw.triggerAttackRelease(['C4', 'G4'], '8n', Tone.now()); break;
+                }
+            }
+
+            // --- Firebase Config ---
             const firebaseConfig = {
                 apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ",
                 authDomain: "kelime-oyunu-flaneur.firebaseapp.com",
@@ -158,7 +190,9 @@
                 measurementId: "G-RVD6YZ8JYV"
             };
 
-            function showToast(message) {
+            // --- Utility Functions ---
+            function showToast(message, isError = false) {
+                if (isError) playSound('error');
                 toast.textContent = message;
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 3000);
@@ -166,61 +200,83 @@
             
             function getUsername() {
                 let username = document.getElementById('username-input').value.trim();
-                if (!username) {
-                    username = `Oyuncu${Math.floor(Math.random() * 900) + 100}`;
+                return username ? username.slice(0, 12) : `Oyuncu${Math.floor(Math.random() * 900) + 100}`;
+            }
+
+            function showScreen(screenId) {
+                ['mode-selection-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen'].forEach(id => {
+                    document.getElementById(id).classList.add('hidden');
+                });
+                document.getElementById(screenId).classList.remove('hidden');
+            }
+
+            // --- Game Creation & Joining ---
+            function setupAndStartGame(mode) {
+                gameMode = mode;
+                wordLength = parseInt(document.getElementById('word-length-select').value);
+                timeLimit = parseInt(document.getElementById('time-select').value);
+                const username = getUsername();
+                
+                const secretWord = wordLists[wordLength][Math.floor(Math.random() * wordLists[wordLength].length)];
+                
+                localGameData = {
+                    wordLength, secretWord, timeLimit,
+                    players: { [userId]: { username, guesses: [], score: 0 } },
+                    currentPlayerId: userId, status: 'playing'
+                };
+
+                if (gameMode === 'vsCPU') {
+                    localGameData.players['cpu'] = { username: 'Bilgisayar', guesses: [], score: 0 };
                 }
-                return username.slice(0, 12);
+                
+                showScreen('game-screen');
+                renderGameState(localGameData);
             }
 
             async function createGame() {
-                if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.");
+                if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
                 
                 const username = getUsername();
                 const selectedLength = parseInt(document.getElementById('word-length-select').value);
+                const selectedTime = parseInt(document.getElementById('time-select').value);
                 const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const wordList = wordLists[selectedLength];
-                if (!wordList || wordList.length === 0) return showToast("Bu uzunlukta kelime listesi bulunamadı.");
-                
-                const secretWord = wordList[Math.floor(Math.random() * wordList.length)];
+                const secretWord = wordLists[selectedLength][Math.floor(Math.random() * wordLists[selectedLength].length)];
 
                 const gameData = {
-                    gameId, wordLength: selectedLength, secretWord, creatorId: userId,
+                    gameId, wordLength: selectedLength, secretWord, timeLimit: selectedTime, creatorId: userId,
                     players: { [userId]: { username, guesses: [], score: 0 } },
-                    currentPlayerId: userId, status: 'waiting', winner: null, roundWinner: null, createdAt: new Date(),
+                    currentPlayerId: userId, status: 'waiting', roundWinner: null, createdAt: new Date(),
                 };
                 
                 try {
                     await firebase.firestore().collection("games").doc(gameId).set(gameData);
                     await joinGame(gameId);
-                } catch (error) { console.error("Error creating game:", error); showToast("Oyun oluşturulamadı!"); }
+                } catch (error) { console.error("Error creating game:", error); showToast("Oyun oluşturulamadı!", true); }
             }
 
             async function joinGame(gameId) {
-                if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.");
-                if (!gameId) return showToast("Lütfen bir Oyun ID'si girin.");
+                if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
+                if (!gameId) return showToast("Lütfen bir Oyun ID'si girin.", true);
                 
                 const username = getUsername();
                 const gameRef = db.collection("games").doc(gameId);
                 
                 try {
                     const gameDoc = await gameRef.get();
-                    if (!gameDoc.exists) return showToast("Oyun bulunamadı!");
+                    if (!gameDoc.exists) return showToast("Oyun bulunamadı!", true);
 
                     const gameData = gameDoc.data();
                     
                     if (Object.keys(gameData.players).length === 1 && !gameData.players[userId]) {
-                        const newPlayers = { ...gameData.players, [userId]: { username, guesses: [], score: 0 } };
-                        await gameRef.update({ players: newPlayers });
+                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: gameData.players[gameData.creatorId].score } });
                     } else if (!gameData.players[userId]) {
-                        return showToast("Bu oyun dolu veya başlamış.");
+                        return showToast("Bu oyun dolu veya başlamış.", true);
                     }
 
                     currentGameId = gameId;
-                    setupScreen.classList.add('hidden');
-                    scoreboardScreen.classList.add('hidden');
-                    gameScreen.classList.remove('hidden');
+                    showScreen('game-screen');
                     listenToGameUpdates(gameId);
-                } catch (error) { console.error("Error joining game:", error); showToast("Oyuna katılırken hata oluştu."); }
+                } catch (error) { console.error("Error joining game:", error); showToast("Oyuna katılırken hata oluştu.", true); }
             }
 
             function listenToGameUpdates(gameId) {
@@ -248,39 +304,47 @@
                 gameUnsubscribe = null;
                 currentGameId = null;
                 localGameData = null;
-                
-                gameScreen.classList.add('hidden');
-                scoreboardScreen.classList.add('hidden');
-                setupScreen.classList.remove('hidden');
+                gameMode = null;
+                showScreen('mode-selection-screen');
             }
 
+            // --- Game State Rendering ---
             function renderGameState(gameData) {
-                gameScreen.classList.remove('hidden');
-                scoreboardScreen.classList.add('hidden');
+                showScreen('game-screen');
 
-                gameIdDisplay.textContent = gameData.gameId;
+                document.getElementById('game-id-display').textContent = gameMode === 'multiplayer' ? gameData.gameId : 'Tek Kişilik';
+                document.getElementById('game-info-bar').style.display = gameMode === 'multiplayer' ? 'flex' : 'none';
+                
                 wordLength = gameData.wordLength;
+                timeLimit = gameData.timeLimit || 45;
                 stopTurnTimer();
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
+                
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
                 createGrid();
 
-                const allPlayerIds = Object.keys(gameData.players);
+                const playerIds = Object.keys(gameData.players);
                 let totalGuesses = 0;
-                for(let i = 0; i < GUESS_COUNT * allPlayerIds.length; i++) {
-                    const playerIdForThisTurn = allPlayerIds[i % allPlayerIds.length];
-                    const guessIndex = Math.floor(i / allPlayerIds.length);
-                    const playerGuesses = gameData.players[playerIdForThisTurn]?.guesses;
-                    
-                    if (playerGuesses && playerGuesses[guessIndex]) {
-                        const { word, colors } = playerGuesses[guessIndex];
-                        renderGuess(totalGuesses, word, colors);
-                        totalGuesses++;
+                let turnOrder = playerIds;
+                
+                if(gameData.creatorId && playerIds.indexOf(gameData.creatorId) > 0) {
+                    turnOrder = [gameData.creatorId, ...playerIds.filter(p => p !== gameData.creatorId)];
+                }
+
+                for(let i = 0; i < GUESS_COUNT; i++) {
+                    for(const playerId of turnOrder) {
+                        const player = gameData.players[playerId];
+                        if(player.guesses && player.guesses[i]) {
+                            const { word, colors } = player.guesses[i];
+                            renderGuess(totalGuesses, word, colors);
+                            totalGuesses++;
+                        }
                     }
                 }
-                currentRow = totalGuesses;
                 
+                currentRow = totalGuesses;
+
                 createKeyboard();
                 updateKeyboard(gameData);
 
@@ -293,12 +357,14 @@
                 const p2ScoreEl = document.getElementById('player2-score');
 
                 if (playerIds.length > 0) {
-                    const p1 = gameData.players[playerIds[0]];
-                    p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
+                    const p1Id = gameData.creatorId || playerIds[0];
+                    const p1 = gameData.players[p1Id];
+                    if(p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
                 }
                  if (playerIds.length > 1) {
-                    const p2 = gameData.players[playerIds[1]];
-                    p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
+                    const p2Id = playerIds.find(id => id !== gameData.creatorId);
+                    const p2 = gameData.players[p2Id];
+                    if(p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
                 } else {
                     p2ScoreEl.innerHTML = '';
                 }
@@ -398,13 +464,13 @@
             
             function startTurnTimer() {
                 stopTurnTimer();
-                let timeLeft = 25;
+                let timeLeft = timeLimit;
                 timerDisplay.textContent = timeLeft;
                 timerDisplay.classList.remove('text-red-500');
                 turnTimerInterval = setInterval(async () => {
                     timeLeft--;
                     timerDisplay.textContent = timeLeft;
-                    if (timeLeft <= 3) timerDisplay.classList.add('text-red-500');
+                    if (timeLeft <= 5) timerDisplay.classList.add('text-red-500');
                     if (timeLeft <= 0) { stopTurnTimer(); await handleTimeUp(); }
                 }, 1000);
             }
@@ -417,7 +483,7 @@
 
             async function handleTimeUp() {
                 if (!isMyTurn) return;
-                showToast("Süren doldu! Sıra rakibe geçti.");
+                showToast("Süren doldu! Sıra rakibe geçti.", true);
                 
                 const gameRef = db.collection("games").doc(currentGameId);
                 const gameDoc = await gameRef.get();
@@ -438,7 +504,7 @@
                 };
 
                 const totalGuesses = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0);
-                if (totalGuesses >= GUESS_COUNT) {
+                 if (totalGuesses >= GUESS_COUNT * playerIds.length) {
                     updates.status = 'finished';
                 }
                 await gameRef.update(updates);
@@ -446,6 +512,7 @@
 
             function handleKeyPress(key) {
                 if (isGameOver || !isMyTurn) return;
+                playSound('click');
                 const processedKey = key.toLocaleUpperCase('tr-TR');
                 if (processedKey === 'ENTER') submitGuess();
                 else if (processedKey === '⌫' || processedKey === 'BACKSPACE') deleteLetter();
@@ -479,62 +546,91 @@
                 for (let i = 0; i < wordLength; i++) {
                     const tile = document.getElementById(`tile-${currentRow}-${i}`);
                     const tileInner = tile.querySelector('.tile-inner');
-                    if (!tileInner || tileInner.textContent === '') { showToast("Kelime yeterince uzun değil!"); return; }
+                    if (!tileInner || tileInner.textContent === '') { showToast("Kelime yeterince uzun değil!", true); return; }
                     guessWord += tileInner.textContent;
                 }
                 
                 if (!validWords[wordLength] || !validWords[wordLength].includes(guessWord)) {
-                    showToast("Kelime sözlükte bulunamadı!");
+                    showToast("Kelime sözlükte bulunamadı!", true);
                     return;
                 }
                 
                 keyboardContainer.style.pointerEvents = 'none';
                 stopTurnTimer();
-
-                const gameRef = db.collection("games").doc(currentGameId);
-                const gameDoc = await gameRef.get();
-                const gameData = gameDoc.data();
                 
-                const secretWord = gameData.secretWord;
+                const secretWord = localGameData.secretWord;
                 const colors = calculateColors(guessWord, secretWord);
-                
                 const newGuess = { word: guessWord, colors: colors };
-                const playerGuesses = gameData.players[userId].guesses || [];
-                playerGuesses.push(newGuess);
 
-                const playerIds = Object.keys(gameData.players);
-                const myIndex = playerIds.indexOf(userId);
-                const nextPlayerIndex = (myIndex + 1) % playerIds.length;
-                
-                const updates = {
-                    [`players.${userId}.guesses`]: playerGuesses,
-                    currentPlayerId: playerIds[nextPlayerIndex]
-                };
-                
-                const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0);
+                if (gameMode === 'multiplayer') {
+                    const gameRef = db.collection("games").doc(currentGameId);
+                    const gameDoc = await gameRef.get();
+                    const gameData = gameDoc.data();
+                    
+                    const playerGuesses = gameData.players[userId].guesses || [];
+                    playerGuesses.push(newGuess);
 
-                if (guessWord === secretWord) {
-                    updates.status = 'finished';
-                    updates.roundWinner = userId;
-                    const scoreToAdd = scorePoints[currentRow] || 0;
-                    updates[`players.${userId}.score`] = (gameData.players[userId].score || 0) + scoreToAdd;
-                } else if (totalGuessesMade >= GUESS_COUNT) {
-                     updates.status = 'finished';
-                     updates.roundWinner = null; 
+                    const playerIds = Object.keys(gameData.players);
+                    const myIndex = playerIds.indexOf(userId);
+                    const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+                    
+                    const updates = {
+                        [`players.${userId}.guesses`]: playerGuesses,
+                        currentPlayerId: playerIds[nextPlayerIndex]
+                    };
+                    
+                    const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0) + 1;
+                    
+                    if (guessWord === secretWord) {
+                        updates.status = 'finished';
+                        updates.roundWinner = userId;
+                        const scoreToAdd = scorePoints[currentRow] || 0;
+                        updates[`players.${userId}.score`] = (gameData.players[userId].score || 0) + scoreToAdd;
+                    } else if (totalGuessesMade >= GUESS_COUNT * playerIds.length) {
+                        updates.status = 'finished';
+                        updates.roundWinner = null; 
+                    }
+                    await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
+                } else {
+                    localGameData.players[userId].guesses.push(newGuess);
+                    
+                    if (guessWord === secretWord) {
+                        localGameData.status = 'finished';
+                        localGameData.roundWinner = userId;
+                        const scoreToAdd = scorePoints[currentRow] || 0;
+                        localGameData.players[userId].score += scoreToAdd;
+                        showScoreboard(localGameData);
+                    } else {
+                        const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
+                        if (totalGuessesMade >= (gameMode === 'vsCPU' ? GUESS_COUNT * 2 : GUESS_COUNT)) {
+                            localGameData.status = 'finished';
+                            localGameData.roundWinner = gameMode === 'vsCPU' ? 'cpu' : null;
+                            showScoreboard(localGameData);
+                        } else {
+                            if (gameMode === 'vsCPU') {
+                                localGameData.currentPlayerId = 'cpu';
+                                renderGameState(localGameData);
+                                setTimeout(cpuTurn, 1500);
+                            } else {
+                                renderGameState(localGameData);
+                            }
+                        }
+                    }
+                    keyboardContainer.style.pointerEvents = 'auto';
                 }
-
-                await gameRef.update(updates).finally(() => { 
-                    if(keyboardContainer) keyboardContainer.style.pointerEvents = 'auto'; 
-                });
             }
             
             function showScoreboard(gameData) {
-                gameScreen.classList.add('hidden');
-                scoreboardScreen.classList.remove('hidden');
+                stopTurnTimer();
+                showScreen('scoreboard-screen');
 
                 const roundWinnerDisplay = document.getElementById('round-winner-display');
                 const correctWordDisplay = document.getElementById('correct-word-display');
                 const finalScores = document.getElementById('final-scores');
+                
+                if(gameData.roundWinner === userId) playSound('win');
+                else if(gameData.roundWinner === null) playSound('draw');
+                else playSound('lose');
 
                 correctWordDisplay.textContent = gameData.secretWord;
 
@@ -545,7 +641,7 @@
                     roundWinnerDisplay.textContent = "Berabere!";
                 }
 
-                finalScores.innerHTML = '<h3 class="text-xl font-bold mb-2 text-center">Toplam Puan</h3>';
+                finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">${gameMode === 'multiplayer' ? 'Toplam Puan' : 'Puan'}</h3>`;
                 Object.values(gameData.players).forEach(player => {
                     const scoreEl = document.createElement('p');
                     scoreEl.className = 'text-lg';
@@ -553,39 +649,41 @@
                     finalScores.appendChild(scoreEl);
                 });
                 
-                if (userId === gameData.creatorId) {
-                    newRoundBtn.classList.remove('hidden');
+                if (gameMode === 'multiplayer') {
+                    if (userId === gameData.creatorId) {
+                        newRoundBtn.classList.remove('hidden');
+                    } else {
+                        newRoundBtn.classList.add('hidden');
+                    }
                 } else {
-                    newRoundBtn.classList.add('hidden');
+                    newRoundBtn.textContent = 'Yeni Kelime';
+                    newRoundBtn.classList.remove('hidden');
                 }
             }
             
             async function startNewRound() {
-                if (!localGameData) return;
-                
-                const newWordList = wordLists[localGameData.wordLength];
-                const newSecretWord = newWordList[Math.floor(Math.random() * newWordList.length)];
-                
-                const playerIds = Object.keys(localGameData.players);
-                const newPlayersState = {};
-                playerIds.forEach(pid => {
-                    newPlayersState[pid] = {
-                        ...localGameData.players[pid],
-                        guesses: [] 
+                if (gameMode === 'multiplayer') {
+                     if (!localGameData) return;
+                    
+                    const newWordList = wordLists[localGameData.wordLength];
+                    const newSecretWord = newWordList[Math.floor(Math.random() * newWordList.length)];
+                    
+                    const playerIds = Object.keys(localGameData.players);
+                    const newPlayersState = {};
+                    playerIds.forEach(pid => {
+                        newPlayersState[pid] = { ...localGameData.players[pid], guesses: [] };
+                    });
+
+                    const updates = {
+                        secretWord: newSecretWord, players: newPlayersState,
+                        currentPlayerId: localGameData.creatorId, status: 'waiting', roundWinner: null
                     };
-                });
-
-                const updates = {
-                    secretWord: newSecretWord,
-                    players: newPlayersState,
-                    currentPlayerId: localGameData.creatorId,
-                    status: 'waiting',
-                    winner: null,
-                    roundWinner: null
-                };
-
-                const gameRef = db.collection("games").doc(currentGameId);
-                await gameRef.update(updates);
+                    const gameRef = db.collection("games").doc(currentGameId);
+                    await gameRef.update(updates);
+                } else {
+                    // Single player new round
+                    setupAndStartGame(gameMode);
+                }
             }
 
 
@@ -613,6 +711,18 @@
                 return colors;
             }
             
+            // --- EVENT LISTENERS ---
+            document.getElementById('single-player-btn').addEventListener('click', () => {
+                if (getUsername()) setupAndStartGame('single');
+            });
+            document.getElementById('vs-cpu-btn').addEventListener('click', () => {
+                if (getUsername()) setupAndStartGame('vsCPU');
+            });
+            document.getElementById('multiplayer-btn').addEventListener('click', () => {
+                if (getUsername()) showScreen('multiplayer-setup-screen');
+            });
+            document.getElementById('back-to-mode-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
+
             leaveGameBtn.onclick = leaveGame;
             createBtn.addEventListener('click', createGame);
             joinBtn.addEventListener('click', () => {
@@ -620,7 +730,7 @@
                 joinGame(gameId);
             });
             startGameBtn.addEventListener('click', async () => {
-                if (!currentGameId) return;
+                if (!currentGameId || gameMode !== 'multiplayer') return;
                 const gameRef = db.collection("games").doc(currentGameId);
                 await gameRef.update({ status: 'playing' });
             });
@@ -632,33 +742,27 @@
             newRoundBtn.addEventListener('click', startNewRound);
 
             // --- Game Startup Logic ---
-            if (typeof kelimeler4 === 'undefined' || typeof firebase === 'undefined') {
-                showToast("Gerekli dosyalar yüklenemedi. Sayfayı yenileyin.");
+            if (typeof firebase === 'undefined') {
+                showToast("Gerekli dosyalar yüklenemedi. Sayfayı yenileyin.", true);
             } else {
-                wordLists = { 4: kelimeler4, 5: kelimeler5, 6: kelimeler6, 7: kelimeler7 };
-                validWords = { 4: gecerliKelimeler4, 5: gecerliKelimeler5, 6: gecerliKelimeler6, 7: gecerliKelimeler7 };
-
                 try {
                     firebase.initializeApp(firebaseConfig);
                     db = firebase.firestore();
                     auth = firebase.auth();
+                    auth.signInAnonymously()
+                        .then(() => {
+                            auth.onAuthStateChanged(user => {
+                                if (user) userId = user.uid;
+                            });
+                        })
+                        .catch(error => { 
+                            console.error("Anonymous sign-in failed:", error); 
+                            showToast("Bağlantı hatası!", true);
+                        });
                 } catch (e) {
                     console.error("Firebase initialization failed:", e);
-                    showToast("Uygulama başlatılamadı.");
+                    showToast("Uygulama başlatılamadı.", true);
                 }
-
-                auth.signInAnonymously().then(() => {
-                    auth.onAuthStateChanged(user => {
-                        if (user) {
-                            userId = user.uid;
-                            createBtn.disabled = false;
-                            joinBtn.disabled = false;
-                        }
-                    });
-                }).catch(error => {
-                    console.error("Anonymous sign-in failed:", error); 
-                    showToast("Bağlantı hatası!");
-                });
             }
         });
     </script>
