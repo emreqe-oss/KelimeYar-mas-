@@ -6,7 +6,7 @@
     <title>Kelime Oyunu - Çok Oyunculu</title>
     <meta name="theme-color" content="#111827"/>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%2xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%20width='192'%20height='192'%3E%3Crect%20width='192'%20height='192'%20rx='32'%20fill='%23111827'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='120'%20font-family='Arial,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -21,9 +21,9 @@
             padding-bottom: 100%; 
             position: relative; 
             border: 2px solid #4b5563; 
-            display: flex; /* Flexbox eklendi */
+            display: flex;
             justify-content: center; 
-            align-items: center; /* Flexbox eklendi */
+            align-items: center;
             font-size: 2rem; 
             font-weight: bold; 
             text-transform: uppercase; 
@@ -35,7 +35,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            line-height: 1; /* Satır yüksekliği düzeltildi */
+            line-height: 1;
         }
         .tile.correct { background-color: #10b981; border-color: #10b981; color: white; }
         .tile.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
@@ -43,7 +43,7 @@
         .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
         .keyboard-key { 
             transition: background-color 0.2s; 
-            height: 45px; /* Klavye tuş yüksekliği azaltıldı */
+            height: 45px;
         }
         .keyboard-key.correct { background-color: #10b981 !important; color: white; }
         .keyboard-key.present { background-color: #f59e0b !important; color: white; }
@@ -242,8 +242,14 @@
                 });
                 document.getElementById(screenId).classList.remove('hidden');
             }
+            
+            function requestFullScreen() {
+                // This function is disabled in the dev environment to prevent errors.
+                // It will work on the live site (Vercel/Netlify).
+            }
 
             function setupAndStartGame(mode) {
+                requestFullScreen();
                 gameMode = mode;
                 wordLength = parseInt(document.getElementById('word-length-select').value);
                 timeLimit = parseInt(document.getElementById('time-select').value);
@@ -254,7 +260,7 @@
                 localGameData = {
                     wordLength, secretWord, timeLimit, currentRound: 1, matchLength: 1,
                     players: { [userId]: { username, guesses: [], score: 0 } },
-                    currentPlayerId: userId, status: 'playing'
+                    currentPlayerId: userId, status: 'playing', turnStartTime: new Date()
                 };
 
                 if (gameMode === 'vsCPU') {
@@ -268,6 +274,7 @@
             async function createGame() {
                 if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
                 
+                requestFullScreen();
                 gameMode = 'multiplayer';
                 const username = getUsername();
                 const selectedLength = parseInt(document.getElementById('word-length-select').value);
@@ -281,6 +288,7 @@
                     matchLength: selectedMatchLength, currentRound: 1,
                     players: { [userId]: { username, guesses: [], score: 0 } },
                     currentPlayerId: userId, status: 'waiting', roundWinner: null, createdAt: new Date(),
+                    turnStartTime: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
                 try {
@@ -293,6 +301,7 @@
                 if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
                 if (!gameId) return showToast("Lütfen bir Oyun ID'si girin.", true);
                 
+                requestFullScreen();
                 gameMode = 'multiplayer';
                 const username = getUsername();
                 const gameRef = db.collection("games").doc(gameId);
@@ -344,7 +353,6 @@
                 showScreen('mode-selection-screen');
             }
 
-            // --- Game State Rendering ---
             function renderGameState(gameData) {
                 showScreen('game-screen');
 
@@ -358,8 +366,8 @@
                 
                 wordLength = gameData.wordLength;
                 timeLimit = gameData.timeLimit || 45;
-                stopTurnTimer();
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
+                isGameOver = gameData.status === 'finished';
                 
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
@@ -369,7 +377,7 @@
                 let totalGuesses = 0;
                 let turnOrder = playerIds;
                 
-                if(gameData.creatorId && playerIds.indexOf(gameData.creatorId) > 0) {
+                if(gameData.creatorId && playerIds.length > 1 && playerIds.indexOf(gameData.creatorId) > 0) {
                     turnOrder = [gameData.creatorId, ...playerIds.filter(p => p !== gameData.creatorId)];
                 }
 
@@ -389,24 +397,25 @@
                 createKeyboard();
                 updateKeyboard(gameData);
 
-                if (isMyTurn) { startTurnTimer(); }
+                startTurnTimer();
             }
             
             function updateScores(gameData) {
                 const playerIds = Object.keys(gameData.players);
                 const p1ScoreEl = document.getElementById('player1-score');
                 const p2ScoreEl = document.getElementById('player2-score');
+                let p1Id = playerIds[0];
+                if(gameData.creatorId) p1Id = gameData.creatorId;
 
                 if (playerIds.length > 0) {
-                    const p1Id = gameData.creatorId || playerIds[0];
                     const p1 = gameData.players[p1Id];
                     if(p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
                 }
                  if (playerIds.length > 1) {
-                    const p2Id = playerIds.find(id => id !== (gameData.creatorId || playerIds[0]));
+                    const p2Id = playerIds.find(id => id !== p1Id);
                     const p2 = gameData.players[p2Id];
                     if(p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
-                } else {
+                } else if(gameMode !== 'single'){
                     p2ScoreEl.innerHTML = '';
                 }
             }
@@ -467,7 +476,12 @@
 
             function createKeyboard() {
                 keyboardContainer.innerHTML = '';
-                const keyRows = [['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'], ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'], ['ENTER', 'Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç', '⌫']];
+                const keyRows = [
+                    ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
+                    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'],
+                    ['Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç']
+                ];
+
                 keyRows.forEach(row => {
                     const rowDiv = document.createElement('div');
                     rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-1');
@@ -475,13 +489,32 @@
                         const keyButton = document.createElement('button');
                         keyButton.textContent = key;
                         keyButton.classList.add('keyboard-key', 'rounded-md', 'font-semibold', 'uppercase', 'bg-gray-500', 'flex-1');
-                        if (key === 'ENTER' || key === '⌫') { keyButton.classList.add('px-1', 'text-xs'); keyButton.style.flex = '1.5'; }
                         keyButton.onclick = () => handleKeyPress(key);
                         rowDiv.appendChild(keyButton);
                     });
                     keyboardContainer.appendChild(rowDiv);
                 });
+
+                const specialKeysRow = document.createElement('div');
+                specialKeysRow.classList.add('flex', 'justify-center', 'gap-1', 'my-1');
+                
+                const enterKey = document.createElement('button');
+                enterKey.textContent = 'ENTER';
+                enterKey.classList.add('keyboard-key', 'rounded-md', 'font-semibold', 'uppercase', 'bg-gray-600', 'flex-grow');
+                enterKey.style.flexGrow = 2.5;
+                enterKey.onclick = () => handleKeyPress('ENTER');
+                specialKeysRow.appendChild(enterKey);
+
+                const backspaceKey = document.createElement('button');
+                backspaceKey.textContent = '⌫';
+                backspaceKey.classList.add('keyboard-key', 'rounded-md', 'font-semibold', 'uppercase', 'bg-gray-600');
+                backspaceKey.style.width = '60px';
+                backspaceKey.onclick = () => handleKeyPress('⌫');
+                specialKeysRow.appendChild(backspaceKey);
+
+                keyboardContainer.appendChild(specialKeysRow);
             }
+
 
             function updateKeyboard(gameData) {
                 const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
@@ -505,14 +538,24 @@
             
             function startTurnTimer() {
                 stopTurnTimer();
-                let timeLeft = timeLimit;
-                timerDisplay.textContent = timeLeft;
-                timerDisplay.classList.remove('text-red-500');
+                if(localGameData.status !== 'playing') return;
+
+                let turnStartTime = localGameData.turnStartTime?.toDate() || new Date();
+
                 turnTimerInterval = setInterval(async () => {
-                    timeLeft--;
-                    timerDisplay.textContent = timeLeft;
+                    let now = new Date();
+                    let elapsed = Math.floor((now - turnStartTime) / 1000);
+                    let timeLeft = timeLimit - elapsed;
+                    
+                    if(timerDisplay) timerDisplay.textContent = timeLeft > 0 ? timeLeft : 0;
+                    
                     if (timeLeft <= 5) timerDisplay.classList.add('text-red-500');
-                    if (timeLeft <= 0) { stopTurnTimer(); await handleTimeUp(); }
+                    else timerDisplay.classList.remove('text-red-500');
+
+                    if (timeLeft <= 0 && isMyTurn) { 
+                        stopTurnTimer(); 
+                        await failTurn(''); // Pass empty string for timeout
+                    }
                 }, 1000);
             }
 
@@ -521,13 +564,17 @@
                 turnTimerInterval = null;
                 if (timerDisplay) timerDisplay.textContent = '';
             }
-
-            async function handleTimeUp() {
+            
+            async function failTurn(guessWord = '') {
                 if (!isMyTurn) return;
-                showToast("Süren doldu! Sıra rakibe geçti.", true);
+                stopTurnTimer();
+                keyboardContainer.style.pointerEvents = 'none';
 
-                const newGuess = { word: ''.padEnd(wordLength, ' '), colors: Array(wordLength).fill('failed') };
-                
+                const newGuess = { 
+                    word: guessWord.padEnd(wordLength, ' '), 
+                    colors: Array(wordLength).fill('failed') 
+                };
+
                 if (gameMode === 'multiplayer') {
                     const gameRef = db.collection("games").doc(currentGameId);
                     const gameDoc = await gameRef.get();
@@ -543,33 +590,40 @@
                     
                     const updates = {
                         [`players.${userId}.guesses`]: playerGuesses,
-                        currentPlayerId: playerIds[nextPlayerIndex]
+                        currentPlayerId: playerIds[nextPlayerIndex],
+                        turnStartTime: firebase.firestore.FieldValue.serverTimestamp()
                     };
 
-                    const totalGuesses = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0);
-                     if (totalGuesses >= GUESS_COUNT * playerIds.length) {
+                    const totalGuesses = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0) + 1;
+                    if (totalGuesses >= GUESS_COUNT * playerIds.length) {
                         updates.status = 'finished';
+                        updates.roundWinner = null;
                     }
-                    await gameRef.update(updates);
+                    await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
                 } else {
                     localGameData.players[userId].guesses.push(newGuess);
                     const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
-                    if (totalGuessesMade >= (gameMode === 'vsCPU' ? GUESS_COUNT * 2 : GUESS_COUNT)) {
+
+                    const maxGuesses = gameMode === 'vsCPU' ? GUESS_COUNT * 2 : GUESS_COUNT;
+                    if (totalGuessesMade >= maxGuesses) {
                         localGameData.status = 'finished';
                         showScoreboard(localGameData);
-                    } else if (gameMode === 'vsCPU') {
-                        localGameData.currentPlayerId = 'cpu';
-                        renderGameState(localGameData);
-                        setTimeout(cpuTurn, 1500);
                     } else {
-                        renderGameState(localGameData);
+                        if (gameMode === 'vsCPU') {
+                            localGameData.currentPlayerId = 'cpu';
+                            renderGameState(localGameData);
+                            setTimeout(cpuTurn, 1500);
+                        } else {
+                           renderGameState(localGameData);
+                        }
                     }
+                    keyboardContainer.style.pointerEvents = 'auto';
                 }
             }
 
+
             function handleKeyPress(key) {
-                if (localGameData && localGameData.status === 'finished') return;
-                if (!isMyTurn) return;
+                if (isGameOver || !isMyTurn) return;
                 playSound('click');
                 const processedKey = key.toLocaleUpperCase('tr-TR');
                 if (processedKey === 'ENTER') submitGuess();
@@ -610,6 +664,7 @@
                 
                 if (!validWords[wordLength] || !validWords[wordLength].includes(guessWord)) {
                     showToast("Kelime sözlükte bulunamadı!", true);
+                    await failTurn(guessWord);
                     return;
                 }
                 
@@ -634,7 +689,8 @@
                     
                     const updates = {
                         [`players.${userId}.guesses`]: playerGuesses,
-                        currentPlayerId: playerIds[nextPlayerIndex]
+                        currentPlayerId: playerIds[nextPlayerIndex],
+                        turnStartTime: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
                     const totalGuessesMade = Object.values(gameData.players).reduce((sum, p) => sum + p.guesses.length, 0) + 1;
@@ -642,9 +698,9 @@
                     if (guessWord === secretWord) {
                         updates.status = 'finished';
                         updates.roundWinner = userId;
-                        const scoreToAdd = scorePoints[currentRow] || 0;
+                        const scoreToAdd = scorePoints[Math.floor(currentRow / playerIds.length)] || 0;
                         updates[`players.${userId}.score`] = (gameData.players[userId].score || 0) + scoreToAdd;
-                    } else if (totalGuessesMade >= GUESS_COUNT) {
+                    } else if (totalGuessesMade >= GUESS_COUNT * playerIds.length) {
                         updates.status = 'finished';
                         updates.roundWinner = null; 
                     }
@@ -652,25 +708,27 @@
                 } else {
                      // Single Player & vs CPU logic
                     localGameData.players[userId].guesses.push(newGuess);
-                    const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
-
+                    
                     if (guessWord === secretWord) {
                         localGameData.status = 'finished';
                         localGameData.roundWinner = userId;
                         const scoreToAdd = scorePoints[currentRow] || 0;
                         localGameData.players[userId].score += scoreToAdd;
                         showScoreboard(localGameData);
-                    } else if (totalGuessesMade >= GUESS_COUNT) {
-                        localGameData.status = 'finished';
-                        localGameData.roundWinner = gameMode === 'vsCPU' ? 'cpu' : null;
-                        showScoreboard(localGameData);
                     } else {
-                        if (gameMode === 'vsCPU') {
-                            localGameData.currentPlayerId = 'cpu';
-                            renderGameState(localGameData);
-                            setTimeout(cpuTurn, 1500);
+                        const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
+                        if (totalGuessesMade >= GUESS_COUNT) {
+                            localGameData.status = 'finished';
+                            localGameData.roundWinner = null;
+                            showScoreboard(localGameData);
                         } else {
-                            renderGameState(localGameData);
+                            if (gameMode === 'vsCPU') {
+                                localGameData.currentPlayerId = 'cpu';
+                                renderGameState(localGameData);
+                                setTimeout(cpuTurn, 1500);
+                            } else {
+                                renderGameState(localGameData);
+                            }
                         }
                     }
                     keyboardContainer.style.pointerEvents = 'auto';
@@ -714,7 +772,7 @@
                 if (gameMode === 'multiplayer' && gameData.currentRound >= gameData.matchLength) {
                     newRoundBtn.classList.add('hidden');
                     const p1 = sortedPlayers[0];
-                    const p2 = sortedPlayers[1];
+                    const p2 = sortedPlayers.length > 1 ? sortedPlayers[1] : {score: -1};
                     if (p1.score > p2.score) {
                          matchWinnerDisplay.textContent = `MAÇI ${p1.username} KAZANDI!`;
                     } else if (p2.score > p1.score) {
@@ -745,13 +803,14 @@
                     const updates = {
                         secretWord: newSecretWord, players: newPlayersState,
                         currentPlayerId: localGameData.creatorId, status: 'waiting', roundWinner: null,
-                        currentRound: localGameData.currentRound + 1
+                        currentRound: localGameData.currentRound + 1,
+                        turnStartTime: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     const gameRef = db.collection("games").doc(currentGameId);
                     await gameRef.update(updates);
                 } else {
                     if(localGameData.currentRound >= localGameData.matchLength){
-                         localGameData.players[userId].score = 0; // Reset score for non-multiplayer
+                         localGameData.players[userId].score = 0; 
                          if(localGameData.players['cpu']) localGameData.players['cpu'].score = 0;
                     }
                     setupAndStartGame(gameMode);
@@ -807,7 +866,7 @@
             startGameBtn.addEventListener('click', async () => {
                 if (!currentGameId || gameMode !== 'multiplayer') return;
                 const gameRef = db.collection("games").doc(currentGameId);
-                await gameRef.update({ status: 'playing' });
+                await gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
             });
             document.addEventListener('keydown', (e) => {
                 if (e.ctrlKey || e.altKey || e.metaKey) return;
