@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kelime-oyunu-v12'; // Cache versiyonu güncellendi
+const CACHE_NAME = 'kelime-oyunu-v13'; // Cache versiyonu güncellendi
 const urlsToCache = [
   '/',
   '/index.html'
