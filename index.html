@@ -138,7 +138,7 @@
             </div>
             
             <div class="w-full flex-grow flex flex-col justify-center min-h-0">
-                <div id="guess-grid" class="grid gap-1 w-full" style="max-width: 320px; margin: 0 auto;"></div>
+                <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
             </div>
 
             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
@@ -163,11 +163,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
     <script>
-        // --- KELİME SÖZLÜĞÜ DIŞARIDAN YÜKLENECEK ---
         let kelimeSozlugu = {};
         
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
             const modeSelectionScreen = document.getElementById('mode-selection-screen');
             const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
             const gameScreen = document.getElementById('game-screen');
@@ -187,15 +185,12 @@
             const startGameBtn = document.getElementById('start-game-btn');
             const roundCounter = document.getElementById('round-counter');
             
-            // --- Global State ---
             let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
             let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
             
-            // --- Scoring ---
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
 
-            // --- Sound Effects ---
             const sounds = {
                 click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
                 error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(),
@@ -214,7 +209,6 @@
                 }
             }
 
-            // --- Firebase Config ---
             const firebaseConfig = {
                 apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ",
                 authDomain: "kelime-oyunu-flaneur.firebaseapp.com",
@@ -225,7 +219,6 @@
                 measurementId: "G-RVD6YZ8JYV"
             };
 
-            // --- Utility Functions ---
             function showToast(message, isError = false) {
                 if (isError) playSound('error');
                 toast.textContent = message;
@@ -359,6 +352,16 @@
                 }
                 
                 wordLength = gameData.wordLength;
+
+                // --- YENİ EKLENEN KOD BAŞLANGICI ---
+                // Kelime uzunluğuna göre grid'in maksimum genişliğini ayarla
+                if (wordLength === 4) {
+                    guessGrid.style.maxWidth = '260px'; 
+                } else {
+                    guessGrid.style.maxWidth = '320px'; 
+                }
+                // --- YENİ EKLENEN KOD SONU ---
+
                 timeLimit = gameData.timeLimit || 45;
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
                 isGameOver = gameData.status === 'finished';
