@@ -303,6 +303,19 @@
                 document.getElementById(screenId).classList.remove('hidden');
             }
 
+            function initializeGameUI(gameData) {
+                wordLength = gameData.wordLength;
+                if (wordLength === 4) {
+                    guessGrid.style.maxWidth = '220px';
+                } else if (wordLength === 5) {
+                    guessGrid.style.maxWidth = '280px';
+                } else {
+                    guessGrid.style.maxWidth = '320px';
+                }
+                createGrid();
+                createKeyboard();
+            }
+
             function setupAndStartGame(mode) {
                 gameMode = mode;
                 if (mode === 'single' || mode === 'vsCPU') {
@@ -324,6 +337,7 @@
                 }
                 
                 showScreen('game-screen');
+                initializeGameUI(localGameData);
                 renderGameState(localGameData);
             }
 
@@ -378,6 +392,7 @@
                     localStorage.setItem('activeGameId', gameId);
                     currentGameId = gameId;
                     showScreen('game-screen');
+                    initializeGameUI(gameData);
                     startHeartbeat();
                     listenToGameUpdates(gameId);
                 } catch (error) { console.error("Error joining game:", error); showToast("Oyuna katılırken hata oluştu.", true); }
@@ -417,8 +432,11 @@
             }
 
             function renderGameState(gameData) {
-                showScreen('game-screen');
-
+                // Bu fonksiyon artık grid veya klavye oluşturmuyor, sadece güncelliyor.
+                if (document.getElementById('game-screen').classList.contains('hidden')) {
+                    showScreen('game-screen');
+                }
+                
                 document.getElementById('game-id-display').textContent = gameMode === 'multiplayer' ? gameData.gameId : 'Tek Kişilik';
                 document.getElementById('game-info-bar').style.display = gameMode === 'multiplayer' ? 'flex' : 'none';
                 if (gameMode === 'multiplayer') {
@@ -428,23 +446,19 @@
                     roundCounter.textContent = '';
                 }
                 
-                wordLength = gameData.wordLength;
-
-                if (wordLength === 4) {
-                    guessGrid.style.maxWidth = '220px';
-                } else if (wordLength === 5) {
-                    guessGrid.style.maxWidth = '280px';
-                } else {
-                    guessGrid.style.maxWidth = '320px';
-                }
-
                 timeLimit = gameData.timeLimit || 45;
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
                 isGameOver = gameData.status === 'finished';
                 
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
-                createGrid();
+
+                // Grid'i sıfırdan oluşturmak yerine sadece dolu olanları render et
+                const allTiles = document.querySelectorAll('.tile');
+                allTiles.forEach(tile => {
+                    tile.querySelector('.tile-inner').textContent = '';
+                    tile.classList.remove('correct', 'present', 'absent', 'failed');
+                });
 
                 const playerIds = Object.keys(gameData.players);
                 let turnOrder = playerIds;
@@ -460,7 +474,6 @@
                 for (let guessIndex = 0; guessIndex < maxGuessesPerPlayer; guessIndex++) {
                     for (const playerId of turnOrder) {
                         if (totalGuessesRendered >= GUESS_COUNT) break;
-
                         const player = gameData.players[playerId];
                         if (player && player.guesses && player.guesses[guessIndex]) {
                             const { word, colors } = player.guesses[guessIndex];
@@ -472,8 +485,6 @@
                 }
                 
                 currentRow = totalGuessesRendered;
-
-                createKeyboard();
                 updateKeyboard(gameData);
 
                 if (gameData.status === 'playing') {
@@ -967,6 +978,7 @@
                     };
                     const gameRef = db.collection("games").doc(currentGameId);
                     await gameRef.update(updates);
+                    initializeGameUI(updates); // Yeni turda UI'ı yeniden oluştur
                 } else {
                     if(localGameData.currentRound >= localGameData.matchLength){
                          localGameData.players[userId].score = 0; 
