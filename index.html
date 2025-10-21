@@ -61,7 +61,7 @@
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         
         /* Açık Tema Stilleri */
-        body.theme-light { background-color: #fdba74; color: #1f2937; } /* Arka plan mat turuncuya çevrildi */
+        body.theme-light { background-color: #f1c0e8; color: #1f2937; }
         body.theme-light .bg-gray-800, body.theme-light .bg-gray-900 { background-color: #ffffff; }
         body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
         body.theme-light .text-gray-400 { color: #6b7280; }
@@ -85,7 +85,7 @@
             </div>
             <div class="mt-6 flex justify-center items-center gap-4">
                 <p class="text-sm text-gray-400">Tema:</p>
-                <button id="theme-light-btn" class="w-8 h-8 rounded-full bg-orange-500 border-2 border-gray-500"></button>
+                <button id="theme-light-btn" class="w-8 h-8 rounded-full border-2 border-gray-500" style="background-color: #f1c0e8;"></button>
                 <button id="theme-dark-btn" class="w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-500"></button>
             </div>
             <p id="loading-words" class="text-gray-400 mt-4">Kelimeler yükleniyor...</p>
@@ -166,7 +166,7 @@
             <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
             <p class="mb-4">Doğru Kelime: <strong id="correct-word-display" class="text-green-400"></strong></p>
             <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-            <button id="new-round-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Tur</button>
+            <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Tur</button>
             <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
         </div>
 
@@ -555,7 +555,7 @@
                 });
                 document.querySelectorAll('.keyboard-key').forEach(btn => {
                     const keyId = btn.dataset.key;
-                    if (keyId === 'ENTER' || keyId === '⌫') return; // Skip coloring for ENTER and Backspace
+                    if (keyId === 'ENTER' || keyId === '⌫') return;
 
                     const state = keyStates[keyId];
                     btn.classList.remove('correct', 'present', 'absent');
@@ -853,7 +853,7 @@
                 });
                 
                 matchWinnerDisplay.textContent = '';
-                newRoundBtn.textContent = (gameMode === 'multiplayer') ? 'Yeni Tur' : 'Yeni Kelime';
+                newRoundBtn.textContent = (gameMode === 'multiplayer') ? 'Yeni Tur' : 'Yeni Oyun';
                 newRoundBtn.classList.add('hidden');
 
                 if (gameMode === 'multiplayer') {
