@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <link rel="icon" type="image/png" href="/path/to/your/icon.png">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Kelime Oyunu - Çok Oyunculu</title>
@@ -42,10 +42,10 @@
         .tile.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
         .tile.absent { background-color: #374151; border-color: #374151; color: white; }
         .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
-        .keyboard-key { 
-            transition: background-color 0.2s; 
-            height: 40px; 
-            font-size: 0.8rem;
+        .keyboard-key {
+            transition: background-color 0.2s;
+            height: 55px; /* Tuş yüksekliği artırıldı */
+            font-size: 1rem; /* Yazı tipi boyutu artırıldı */
             padding: 0;
             display: flex;
             align-items: center;
@@ -120,7 +120,7 @@
         </div>
 
         <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
-             <div class="w-full bg-gray-800 p-2 rounded-lg shadow flex items-center justify-between flex-shrink-0">
+             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0">
                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
                 <div class="text-center w-1/5">
                     <p id="round-counter" class="text-xs text-gray-400"></p>
@@ -354,14 +354,13 @@
                 
                 wordLength = gameData.wordLength;
 
-                // --- YENİ EKLENEN KOD BAŞLANGICI ---
-                // Kelime uzunluğuna göre grid'in maksimum genişliğini ayarla
                 if (wordLength === 4) {
-                    guessGrid.style.maxWidth = '260px'; 
+                    guessGrid.style.maxWidth = '220px';
+                } else if (wordLength === 5) {
+                    guessGrid.style.maxWidth = '280px';
                 } else {
-                    guessGrid.style.maxWidth = '320px'; 
+                    guessGrid.style.maxWidth = '320px';
                 }
-                // --- YENİ EKLENEN KOD SONU ---
 
                 timeLimit = gameData.timeLimit || 45;
                 isMyTurn = gameData.currentPlayerId === userId && gameData.status === 'playing';
@@ -416,12 +415,12 @@
 
                 if (playerIds.length > 0) {
                     const p1 = gameData.players[p1Id];
-                    if(p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
+                    if(p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}:</span> ${p1.score} Puan`;
                 }
                  if (playerIds.length > 1) {
                     const p2Id = playerIds.find(id => id !== p1Id);
                     const p2 = gameData.players[p2Id];
-                    if(p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
+                    if(p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}:</span> ${p2.score} Puan`;
                 } else {
                     p2ScoreEl.innerHTML = '';
                 }
@@ -492,7 +491,7 @@
 
                 keyRows.forEach(row => {
                     const rowDiv = document.createElement('div');
-                    rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-1', 'w-full');
+                    rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-2', 'w-full');
                     row.forEach(key => {
                         const keyButton = document.createElement('button');
                         keyButton.textContent = key;
