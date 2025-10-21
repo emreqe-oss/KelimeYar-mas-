@@ -44,8 +44,8 @@
         .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
         .keyboard-key {
             transition: background-color 0.2s;
-            height: 55px; /* Tuş yüksekliği artırıldı */
-            font-size: 1rem; /* Yazı tipi boyutu artırıldı */
+            height: 48px; /* Yüksekliği 4 satıra uyum için ayarlandı */
+            font-size: 1rem;
             padding: 0;
             display: flex;
             align-items: center;
@@ -484,9 +484,10 @@
             function createKeyboard() {
                 keyboardContainer.innerHTML = '';
                 const keyRows = [
-                    ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü', '⌫'],
-                    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ', 'ENTER'],
-                    ['Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç']
+                    ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+                    ['A', 'S', 'D', 'F', 'G', 'H', 'J', '⌫'],
+                    ['K', 'L', 'Ş', 'İ', 'Z', 'C', 'V', 'ENTER'],
+                    ['B', 'N', 'M', 'Ö', 'Ç', 'Ğ', 'Ü']
                 ];
 
                 keyRows.forEach(row => {
