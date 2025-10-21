@@ -61,7 +61,7 @@
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         
         /* Açık Tema Stilleri */
-        body.theme-light { background-color: #ffedd5; color: #1f2937; }
+        body.theme-light { background-color: #fdba74; color: #1f2937; } /* Arka plan mat turuncuya çevrildi */
         body.theme-light .bg-gray-800, body.theme-light .bg-gray-900 { background-color: #ffffff; }
         body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
         body.theme-light .text-gray-400 { color: #6b7280; }
@@ -508,17 +508,18 @@
                 keyRows.forEach((row, rowIndex) => {
                     const rowDiv = document.createElement('div');
                     rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-1', 'w-full');
-                    if (rowIndex === 3) {
-                        rowDiv.classList.add('gap-2');
+                    if(rowIndex === 3){
+                         rowDiv.classList.add('gap-2');
                     }
 
                     row.forEach(key => {
                         const keyButton = document.createElement('button');
-                        
+                        keyButton.dataset.key = key;
+
                         if (key === '⌫') {
                             keyButton.textContent = 'Sil';
                         } else if (key === 'ENTER') {
-                            keyButton.textContent = 'Gönder';
+                            keyButton.innerHTML = `<svg class="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4l10 6-10 6V4z"/></svg>`;
                         } else {
                             keyButton.textContent = key;
                         }
@@ -526,10 +527,10 @@
                         keyButton.classList.add('keyboard-key', 'rounded', 'font-semibold', 'uppercase', 'bg-gray-500');
 
                         if (rowIndex === 3) {
-                            keyButton.style.flex = '6';
-                            keyButton.classList.add('bg-gray-600');
+                             keyButton.style.flex = '6';
+                             keyButton.classList.add('bg-gray-600');
                         } else {
-                            keyButton.style.flex = '1';
+                             keyButton.style.flex = '1';
                         }
 
                         keyButton.onclick = () => handleKeyPress(key);
@@ -553,11 +554,9 @@
                     }
                 });
                 document.querySelectorAll('.keyboard-key').forEach(btn => {
-                    let keyId = btn.textContent;
-                    // Handle special keys with different text
-                    if (keyId === 'GÖNDER') keyId = 'ENTER';
-                    if (keyId === 'SİL') keyId = '⌫';
-                    
+                    const keyId = btn.dataset.key;
+                    if (keyId === 'ENTER' || keyId === '⌫') return; // Skip coloring for ENTER and Backspace
+
                     const state = keyStates[keyId];
                     btn.classList.remove('correct', 'present', 'absent');
                     if (state) btn.classList.add(state);
