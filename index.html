@@ -250,8 +250,6 @@
             let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
             let singlePlayerMode = null;
             let gameIdFromUrl = null;
-            let heartbeatInterval = null;
-            let presenceCheckInterval = null;
             
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
@@ -355,7 +353,7 @@
                 const gameData = {
                     gameId, wordLength: selectedLength, secretWord, timeLimit: selectedTime, creatorId: userId,
                     matchLength: selectedMatchLength, currentRound: 1,
-                    players: { [userId]: { username, guesses: [], score: 0, lastSeen: firebase.firestore.FieldValue.serverTimestamp() } },
+                    players: { [userId]: { username, guesses: [], score: 0 } }, // lastSeen kaldırıldı
                     currentPlayerId: userId, status: 'waiting', roundWinner: null, createdAt: new Date(),
                     turnStartTime: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -384,7 +382,7 @@
                     const gameData = gameDoc.data();
                     
                     if (Object.keys(gameData.players).length === 1 && !gameData.players[userId]) {
-                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: 0, lastSeen: firebase.firestore.FieldValue.serverTimestamp() } });
+                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: 0 } }); // lastSeen kaldırıldı
                     } else if (!gameData.players[userId]) {
                         return showToast("Bu oyun dolu veya başlamış.", true);
                     }
@@ -393,7 +391,6 @@
                     currentGameId = gameId;
                     showScreen('game-screen');
                     initializeGameUI(gameData);
-                    startHeartbeat();
                     listenToGameUpdates(gameId);
                 } catch (error) { console.error("Error joining game:", error); showToast("Oyuna katılırken hata oluştu.", true); }
             }
@@ -419,8 +416,6 @@
             
             function leaveGame() {
                 if (gameUnsubscribe) gameUnsubscribe();
-                stopHeartbeat();
-                stopPresenceCheck();
                 stopTurnTimer();
                 localStorage.removeItem('activeGameId');
                 gameUnsubscribe = null;
@@ -436,7 +431,6 @@
                 document.getElementById('game-info-bar').style.display = gameMode === 'multiplayer' ? 'flex' : 'none';
                 if (gameMode === 'multiplayer') {
                     roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
-                    startPresenceCheck();
                 } else {
                     roundCounter.textContent = '';
                 }
@@ -448,16 +442,11 @@
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
 
-                // Sadece geçmiş tahminleri çiz, mevcut satıra dokunma.
-                for (let i = 0; i < GUESS_COUNT; i++) {
-                    for (let j = 0; j < wordLength; j++) {
-                        const tile = document.getElementById(`tile-${i}-${j}`);
-                        if (tile) {
-                            tile.querySelector('.tile-inner').textContent = '';
-                            tile.classList.remove('correct', 'present', 'absent', 'failed');
-                        }
-                    }
-                }
+                const allTiles = document.querySelectorAll('.tile');
+                allTiles.forEach(tile => {
+                    tile.querySelector('.tile-inner').textContent = '';
+                    tile.classList.remove('correct', 'present', 'absent', 'failed');
+                });
 
                 const playerIds = Object.keys(gameData.players);
                 let turnOrder = playerIds;
@@ -893,7 +882,6 @@
             }
             
             async function showScoreboard(gameData) {
-                stopPresenceCheck();
                 stopTurnTimer();
                 showScreen('scoreboard-screen');
 
@@ -1054,53 +1042,6 @@
                         });
                     } catch (error) { console.error('Paylaşım hatası:', error); }
                 } else { showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true); }
-            }
-
-            function startHeartbeat() {
-                stopHeartbeat();
-                heartbeatInterval = setInterval(() => {
-                    if (currentGameId && db) {
-                        db.collection("games").doc(currentGameId).update({
-                            [`players.${userId}.lastSeen`]: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                }, 10000);
-            }
-            function stopHeartbeat() { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-
-            function startPresenceCheck() {
-                stopPresenceCheck();
-                presenceCheckInterval = setInterval(() => {
-                    if (!localGameData || localGameData.status !== 'playing' || isGameOver) {
-                        stopPresenceCheck(); return;
-                    }
-                    const playerIds = Object.keys(localGameData.players);
-                    if (playerIds.length < 2) return;
-
-                    const opponentId = playerIds.find(id => id !== userId);
-                    const opponent = localGameData.players[opponentId];
-
-                    if (opponent && opponent.lastSeen) {
-                        const lastSeenDate = opponent.lastSeen.toDate();
-                        const secondsSinceLastSeen = (new Date().getTime() - lastSeenDate.getTime()) / 1000;
-                        if (secondsSinceLastSeen > 25) {
-                            handleOpponentDisconnect(opponentId);
-                        }
-                    }
-                }, 15000);
-            }
-            function stopPresenceCheck() { clearInterval(presenceCheckInterval); presenceCheckInterval = null; }
-
-            async function handleOpponentDisconnect(opponentId) {
-                if (isGameOver) return;
-                stopPresenceCheck();
-                showToast(`${localGameData.players[opponentId].username} oyundan ayrıldı!`, true);
-
-                const gameRef = db.collection("games").doc(currentGameId);
-                const updates = { status: 'finished', roundWinner: userId };
-                const scoreToAdd = scorePoints[0];
-                updates[`players.${userId}.score`] = (localGameData.players[userId].score || 0) + scoreToAdd;
-                await gameRef.update(updates);
             }
             
             // --- EVENT LISTENERS ---
