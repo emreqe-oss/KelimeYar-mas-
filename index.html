@@ -91,6 +91,7 @@
                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                      <span>İki Kişilik (Online)</span>
                  </button>
+                 <button id="rejoin-game-btn" class="hidden w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 px-4 rounded-lg text-lg mt-4">Devam Et</button>
             </div>
             <div class="mt-6 flex justify-center items-center gap-4">
                 <p class="text-sm text-gray-400">Tema:</p>
@@ -356,7 +357,10 @@
                 
                 try {
                     const gameDoc = await gameRef.get();
-                    if (!gameDoc.exists) return showToast("Oyun bulunamadı!", true);
+                    if (!gameDoc.exists) {
+                        localStorage.removeItem('activeGameId');
+                        return showToast("Oyun bulunamadı!", true);
+                    }
 
                     const gameData = gameDoc.data();
                     
@@ -366,6 +370,7 @@
                         return showToast("Bu oyun dolu veya başlamış.", true);
                     }
 
+                    localStorage.setItem('activeGameId', gameId);
                     currentGameId = gameId;
                     showScreen('game-screen');
                     listenToGameUpdates(gameId);
@@ -394,6 +399,7 @@
             function leaveGame() {
                 if (gameUnsubscribe) gameUnsubscribe();
                 stopTurnTimer();
+                localStorage.removeItem('activeGameId');
                 gameUnsubscribe = null;
                 currentGameId = null;
                 localGameData = null;
@@ -488,14 +494,14 @@
 
             function updateTurnDisplay(gameData) {
                 const numPlayers = Object.keys(gameData.players).length;
-                shareGameBtn.classList.add('hidden'); // Her zaman gizle, sonra gerekirse göster
+                shareGameBtn.classList.add('hidden');
                 
                 if (gameData.status === 'waiting') {
                     stopTurnTimer();
                     if (numPlayers < 2) {
                         turnDisplay.textContent = "Rakip bekleniyor...";
                         startGameBtn.classList.add('hidden');
-                        shareGameBtn.classList.remove('hidden'); // Rakip yoksa Paylaş butonunu göster
+                        shareGameBtn.classList.remove('hidden');
                     } else {
                         if (userId === gameData.creatorId) {
                             turnDisplay.textContent = "Rakip katıldı!";
@@ -906,6 +912,7 @@
 
                 if (gameMode === 'multiplayer') {
                      if (gameData.currentRound >= gameData.matchLength) {
+                        localStorage.removeItem('activeGameId'); // Maç bittiğinde hafızayı temizle
                         const p1 = sortedPlayers[0];
                         const p2 = sortedPlayers.length > 1 ? sortedPlayers[1] : {score: -1};
                         if (p1.score > p2.score) {
@@ -1001,24 +1008,21 @@
                         const shareUrl = `${window.location.origin}${window.location.pathname}?gameId=${currentGameId}`;
                         await navigator.share({
                             title: 'Kelime Yarışması',
-                            text: `Kelime Yarışması oyunuma katıl! ID: ${currentGameId}`,
+                            text: `Kelime Yarışması oyunuma katıl!`,
                             url: shareUrl,
                         });
                     } catch (error) {
                         console.error('Paylaşım hatası:', error);
                     }
                 } else {
-                    showToast('Bu tarayıcı paylaşım özelliğini desteklemiyor. ID\'yi kopyalayın.', true);
+                    showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true);
                 }
             }
             
             // --- EVENT LISTENERS ---
-            document.getElementById('theme-light-btn').addEventListener('click', () => {
-                document.body.classList.add('theme-light');
-            });
-            document.getElementById('theme-dark-btn').addEventListener('click', () => {
-                document.body.classList.remove('theme-light');
-            });
+            document.getElementById('theme-light-btn').addEventListener('click', () => { document.body.classList.add('theme-light'); });
+            document.getElementById('theme-dark-btn').addEventListener('click', () => { document.body.classList.remove('theme-light'); });
+            
             document.getElementById('single-player-btn').addEventListener('click', () => {
                 if (getUsername()) {
                     singlePlayerMode = 'single';
@@ -1033,9 +1037,8 @@
                     showScreen('singleplayer-setup-screen');
                 }
             });
-            document.getElementById('start-single-game-btn').addEventListener('click', () => {
-                setupAndStartGame(singlePlayerMode);
-            });
+            document.getElementById('start-single-game-btn').addEventListener('click', () => { setupAndStartGame(singlePlayerMode); });
+            
             document.getElementById('multiplayer-btn').addEventListener('click', () => {
                  if (getUsername()) {
                     if(gameIdFromUrl) {
@@ -1045,12 +1048,20 @@
                     }
                 }
             });
+
+            document.getElementById('rejoin-game-btn').addEventListener('click', () => {
+                if (getUsername()) {
+                    const lastGameId = localStorage.getItem('activeGameId');
+                    if (lastGameId) joinGame(lastGameId);
+                }
+            });
+
             document.getElementById('back-to-mode-single-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
             document.getElementById('back-to-mode-multi-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
             leaveGameBtn.onclick = leaveGame;
             createBtn.addEventListener('click', createGame);
             joinBtn.addEventListener('click', () => { const gameId = document.getElementById('game-id-input').value.toUpperCase(); joinGame(gameId); });
-            copyGameIdBtn.addEventListener('click', () => { const gameId = gameIdDisplay.textContent; navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); }, (err) => { showToast('Kopyalanamadı!', true); console.error('Could not copy text: ', err); }); });
+            copyGameIdBtn.addEventListener('click', () => { const gameId = gameIdDisplay.textContent; navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); }); });
             shareGameBtn.addEventListener('click', shareGame);
             startGameBtn.addEventListener('click', async () => { if (!currentGameId || gameMode !== 'multiplayer') return; const gameRef = db.collection("games").doc(currentGameId); await gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }); });
             document.addEventListener('keydown', (e) => { if (e.ctrlKey || e.altKey || e.metaKey) return; handleKeyPress(e.key); });
@@ -1060,15 +1071,16 @@
             // --- Game Startup Logic ---
             async function initializeApp() {
                 await loadWords();
-                 const urlParams = new URLSearchParams(window.location.search);
-                 gameIdFromUrl = urlParams.get('gameId');
-                 if(gameIdFromUrl) {
-                     showToast('Oyun daveti algılandı! Kullanıcı adı girip "İki Kişilik" butonuna tıkla.');
-                 }
+                const urlParams = new URLSearchParams(window.location.search);
+                gameIdFromUrl = urlParams.get('gameId');
+
+                const lastGameId = localStorage.getItem('activeGameId');
+                if(lastGameId) {
+                    document.getElementById('rejoin-game-btn').classList.remove('hidden');
+                }
                 
                  if (typeof firebase === 'undefined') {
-                    showToast("Firebase kütüphanesi yüklenemedi.", true);
-                    return;
+                    showToast("Firebase kütüphanesi yüklenemedi.", true); return;
                 }
                 try {
                     firebase.initializeApp(firebaseConfig);
@@ -1079,6 +1091,13 @@
                             userId = user.uid;
                             createBtn.disabled = false;
                             joinBtn.disabled = false;
+                            
+                            // Link ile gelindiyse ve henüz bir oyunda değilse, otomatik katıl
+                            if (gameIdFromUrl && !currentGameId) {
+                                document.getElementById('username-input').value = `Misafir${Math.floor(Math.random() * 900) + 100}`;
+                                joinGame(gameIdFromUrl);
+                                gameIdFromUrl = null; // Tekrar kullanılmasını engelle
+                            }
                         } else {
                             auth.signInAnonymously().catch(error => { 
                                 console.error("Firebase anonim giriş başarısız!", error); 
