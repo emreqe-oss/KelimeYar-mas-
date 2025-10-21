@@ -44,7 +44,7 @@
         .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
         .keyboard-key {
             transition: background-color 0.2s;
-            height: 48px; /* Yüksekliği 4 satıra uyum için ayarlandı */
+            height: 48px;
             font-size: 1rem;
             padding: 0;
             display: flex;
@@ -61,7 +61,7 @@
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         
         /* Açık Tema Stilleri */
-        body.theme-light { background-color: #fef3c7; color: #1f2937; }
+        body.theme-light { background-color: #ffedd5; color: #1f2937; }
         body.theme-light .bg-gray-800, body.theme-light .bg-gray-900 { background-color: #ffffff; }
         body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
         body.theme-light .text-gray-400 { color: #6b7280; }
@@ -85,7 +85,7 @@
             </div>
             <div class="mt-6 flex justify-center items-center gap-4">
                 <p class="text-sm text-gray-400">Tema:</p>
-                <button id="theme-light-btn" class="w-8 h-8 rounded-full bg-amber-600 border-2 border-gray-500"></button>
+                <button id="theme-light-btn" class="w-8 h-8 rounded-full bg-orange-500 border-2 border-gray-500"></button>
                 <button id="theme-dark-btn" class="w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-500"></button>
             </div>
             <p id="loading-words" class="text-gray-400 mt-4">Kelimeler yükleniyor...</p>
@@ -103,7 +103,6 @@
                             <option value="4">4</option>
                             <option value="5" selected>5</option>
                             <option value="6">6</option>
-                            <option value="7">7</option>
                         </select>
                     </div>
                      <div>
@@ -503,26 +502,34 @@
                     ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
                     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'],
                     ['Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç'],
-                    ['ENTER', '⌫']
+                    ['⌫', 'ENTER']
                 ];
 
                 keyRows.forEach((row, rowIndex) => {
                     const rowDiv = document.createElement('div');
                     rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-1', 'w-full');
-                    if(rowIndex === 3){ // Son satıra özel stil
-                         rowDiv.classList.add('gap-2');
+                    if (rowIndex === 3) {
+                        rowDiv.classList.add('gap-2');
                     }
 
                     row.forEach(key => {
                         const keyButton = document.createElement('button');
-                        keyButton.textContent = key;
-                        keyButton.classList.add('keyboard-key', 'rounded', 'font-semibold', 'uppercase', 'bg-gray-500');
                         
-                        if (rowIndex === 3) {
-                             keyButton.style.flex = '6'; // Geniş tuşlar
-                             keyButton.classList.add('bg-gray-600');
+                        if (key === '⌫') {
+                            keyButton.textContent = 'Sil';
+                        } else if (key === 'ENTER') {
+                            keyButton.textContent = 'Gönder';
                         } else {
-                             keyButton.style.flex = '1'; // Normal harf tuşları
+                            keyButton.textContent = key;
+                        }
+                        
+                        keyButton.classList.add('keyboard-key', 'rounded', 'font-semibold', 'uppercase', 'bg-gray-500');
+
+                        if (rowIndex === 3) {
+                            keyButton.style.flex = '6';
+                            keyButton.classList.add('bg-gray-600');
+                        } else {
+                            keyButton.style.flex = '1';
                         }
 
                         keyButton.onclick = () => handleKeyPress(key);
@@ -546,8 +553,12 @@
                     }
                 });
                 document.querySelectorAll('.keyboard-key').forEach(btn => {
-                    const letter = btn.textContent;
-                    const state = keyStates[letter];
+                    let keyId = btn.textContent;
+                    // Handle special keys with different text
+                    if (keyId === 'GÖNDER') keyId = 'ENTER';
+                    if (keyId === 'SİL') keyId = '⌫';
+                    
+                    const state = keyStates[keyId];
                     btn.classList.remove('correct', 'present', 'absent');
                     if (state) btn.classList.add(state);
                 });
