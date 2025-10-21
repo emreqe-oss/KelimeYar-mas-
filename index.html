@@ -448,12 +448,16 @@
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
 
-                // Sadece tamamlanmış tahminleri çiz
-                const allTiles = document.querySelectorAll('.tile');
-                allTiles.forEach(tile => {
-                    tile.querySelector('.tile-inner').textContent = '';
-                    tile.classList.remove('correct', 'present', 'absent', 'failed');
-                });
+                // Sadece geçmiş tahminleri çiz, mevcut satıra dokunma.
+                for (let i = 0; i < GUESS_COUNT; i++) {
+                    for (let j = 0; j < wordLength; j++) {
+                        const tile = document.getElementById(`tile-${i}-${j}`);
+                        if (tile) {
+                            tile.querySelector('.tile-inner').textContent = '';
+                            tile.classList.remove('correct', 'present', 'absent', 'failed');
+                        }
+                    }
+                }
 
                 const playerIds = Object.keys(gameData.players);
                 let turnOrder = playerIds;
