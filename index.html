@@ -302,7 +302,7 @@
                 });
                 document.getElementById(screenId).classList.remove('hidden');
             }
-
+            
             function initializeGameUI(gameData) {
                 wordLength = gameData.wordLength;
                 if (wordLength === 4) {
@@ -432,11 +432,6 @@
             }
 
             function renderGameState(gameData) {
-                // Bu fonksiyon artık grid veya klavye oluşturmuyor, sadece güncelliyor.
-                if (document.getElementById('game-screen').classList.contains('hidden')) {
-                    showScreen('game-screen');
-                }
-                
                 document.getElementById('game-id-display').textContent = gameMode === 'multiplayer' ? gameData.gameId : 'Tek Kişilik';
                 document.getElementById('game-info-bar').style.display = gameMode === 'multiplayer' ? 'flex' : 'none';
                 if (gameMode === 'multiplayer') {
@@ -453,7 +448,7 @@
                 updateTurnDisplay(gameData);
                 updateScores(gameData);
 
-                // Grid'i sıfırdan oluşturmak yerine sadece dolu olanları render et
+                // Sadece tamamlanmış tahminleri çiz
                 const allTiles = document.querySelectorAll('.tile');
                 allTiles.forEach(tile => {
                     tile.querySelector('.tile-inner').textContent = '';
@@ -978,7 +973,7 @@
                     };
                     const gameRef = db.collection("games").doc(currentGameId);
                     await gameRef.update(updates);
-                    initializeGameUI(updates); // Yeni turda UI'ı yeniden oluştur
+                    initializeGameUI(updates);
                 } else {
                     if(localGameData.currentRound >= localGameData.matchLength){
                          localGameData.players[userId].score = 0; 
