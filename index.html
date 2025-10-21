@@ -91,23 +91,49 @@
             <p id="loading-words" class="text-gray-400 mt-4">Kelimeler yükleniyor...</p>
         </div>
 
-        <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-             <button id="back-to-mode-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
-            <h1 class="text-3xl font-bold text-center mb-6">İki Kişilik Oyun</h1>
+        <div id="singleplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+             <button id="back-to-mode-single-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
+            <h1 id="singleplayer-title" class="text-3xl font-bold text-center mb-6">Oyun Ayarları</h1>
             <div class="mb-4">
-                <h2 class="text-2xl font-semibold mb-3">Yeni Oyun Kur</h2>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="word-length-select" class="block text-sm font-medium text-gray-400">Harf</label>
-                        <select id="word-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                        <label for="word-length-select-single" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
+                        <select id="word-length-select-single" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
                             <option value="4">4</option>
                             <option value="5" selected>5</option>
                             <option value="6">6</option>
                         </select>
                     </div>
                      <div>
-                        <label for="time-select" class="block text-sm font-medium text-gray-400">Süre</label>
-                        <select id="time-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                        <label for="time-select-single" class="block text-sm font-medium text-gray-400">Tahmin Süresi</label>
+                        <select id="time-select-single" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="30">30sn</option>
+                            <option value="45" selected>45sn</option>
+                            <option value="60">60sn</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="start-single-game-btn" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyuna Başla</button>
+            </div>
+        </div>
+
+        <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+             <button id="back-to-mode-multi-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
+            <h1 class="text-3xl font-bold text-center mb-6">İki Kişilik Oyun</h1>
+            <div class="mb-4">
+                <h2 class="text-2xl font-semibold mb-3">Yeni Oyun Kur</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label for="word-length-select-multi" class="block text-sm font-medium text-gray-400">Harf</label>
+                        <select id="word-length-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="4">4</option>
+                            <option value="5" selected>5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label for="time-select-multi" class="block text-sm font-medium text-gray-400">Süre</label>
+                        <select id="time-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
                             <option value="30">30sn</option>
                             <option value="45" selected>45sn</option>
                             <option value="60">60sn</option>
@@ -183,6 +209,7 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             const modeSelectionScreen = document.getElementById('mode-selection-screen');
+            const singleplayerSetupScreen = document.getElementById('singleplayer-setup-screen');
             const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
             const gameScreen = document.getElementById('game-screen');
             const scoreboardScreen = document.getElementById('scoreboard-screen');
@@ -203,6 +230,7 @@
             
             let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
             let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
+            let singlePlayerMode = null;
             
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
@@ -248,7 +276,7 @@
             }
 
             function showScreen(screenId) {
-                ['mode-selection-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen'].forEach(id => {
+                ['mode-selection-screen', 'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen'].forEach(id => {
                     document.getElementById(id).classList.add('hidden');
                 });
                 document.getElementById(screenId).classList.remove('hidden');
@@ -256,8 +284,10 @@
 
             function setupAndStartGame(mode) {
                 gameMode = mode;
-                wordLength = parseInt(document.getElementById('word-length-select').value);
-                timeLimit = parseInt(document.getElementById('time-select').value);
+                if (mode === 'single' || mode === 'vsCPU') {
+                    wordLength = parseInt(document.getElementById('word-length-select-single').value);
+                    timeLimit = parseInt(document.getElementById('time-select-single').value);
+                }
                 const username = getUsername();
                 
                 const secretWord = kelimeSozlugu[wordLength][Math.floor(Math.random() * kelimeSozlugu[wordLength].length)];
@@ -281,8 +311,8 @@
                 
                 gameMode = 'multiplayer';
                 const username = getUsername();
-                const selectedLength = parseInt(document.getElementById('word-length-select').value);
-                const selectedTime = parseInt(document.getElementById('time-select').value);
+                const selectedLength = parseInt(document.getElementById('word-length-select-multi').value);
+                const selectedTime = parseInt(document.getElementById('time-select-multi').value);
                 const selectedMatchLength = parseInt(document.getElementById('match-length-select').value);
                 const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
                 const secretWord = kelimeSozlugu[selectedLength][Math.floor(Math.random() * kelimeSozlugu[selectedLength].length)];
@@ -954,10 +984,26 @@
             document.getElementById('theme-dark-btn').addEventListener('click', () => {
                 document.body.classList.remove('theme-light');
             });
-            document.getElementById('single-player-btn').addEventListener('click', () => { if (getUsername()) setupAndStartGame('single'); });
-            document.getElementById('vs-cpu-btn').addEventListener('click', () => { if (getUsername()) setupAndStartGame('vsCPU'); });
+            document.getElementById('single-player-btn').addEventListener('click', () => {
+                if (getUsername()) {
+                    singlePlayerMode = 'single';
+                    document.getElementById('singleplayer-title').textContent = 'Tek Kişilik Oyun';
+                    showScreen('singleplayer-setup-screen');
+                }
+            });
+            document.getElementById('vs-cpu-btn').addEventListener('click', () => {
+                if (getUsername()) {
+                    singlePlayerMode = 'vsCPU';
+                    document.getElementById('singleplayer-title').textContent = 'Bilgisayara Karşı';
+                    showScreen('singleplayer-setup-screen');
+                }
+            });
+            document.getElementById('start-single-game-btn').addEventListener('click', () => {
+                setupAndStartGame(singlePlayerMode);
+            });
             document.getElementById('multiplayer-btn').addEventListener('click', () => { if (getUsername()) { showScreen('multiplayer-setup-screen'); } });
-            document.getElementById('back-to-mode-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
+            document.getElementById('back-to-mode-single-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
+            document.getElementById('back-to-mode-multi-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
             leaveGameBtn.onclick = leaveGame;
             createBtn.addEventListener('click', createGame);
             joinBtn.addEventListener('click', () => { const gameId = document.getElementById('game-id-input').value.toUpperCase(); joinGame(gameId); });
