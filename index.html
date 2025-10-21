@@ -16,7 +16,7 @@
             height: -webkit-fill-available;
             overflow: hidden; 
         }
-        body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; }
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; transition: background-color 0.3s, color 0.3s; }
         .tile { 
             width: 100%; 
             padding-bottom: 100%; 
@@ -59,6 +59,17 @@
         .pulsate { animation: pulsate-bck 1s ease-in-out infinite both; }
         @keyframes pulsate-bck { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* Açık Tema Stilleri */
+        body.theme-light { background-color: #fef3c7; color: #1f2937; }
+        body.theme-light .bg-gray-800, body.theme-light .bg-gray-900 { background-color: #ffffff; }
+        body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
+        body.theme-light .text-gray-400 { color: #6b7280; }
+        body.theme-light .bg-gray-700 { background-color: #f3f4f6; }
+        body.theme-light .border-gray-600 { border-color: #d1d5db; }
+        body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
+        body.theme-light .tile { border-color: #d1d5db; }
+        body.theme-light #username-input::placeholder { color: #9ca3af; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -72,7 +83,12 @@
                  <button id="vs-cpu-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Bilgisayara Karşı Oyna</button>
                  <button id="multiplayer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>İki Kişilik (Online)</button>
             </div>
-             <p id="loading-words" class="text-gray-400 mt-4">Kelimeler yükleniyor...</p>
+            <div class="mt-6 flex justify-center items-center gap-4">
+                <p class="text-sm text-gray-400">Tema:</p>
+                <button id="theme-light-btn" class="w-8 h-8 rounded-full bg-amber-600 border-2 border-gray-500"></button>
+                <button id="theme-dark-btn" class="w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-500"></button>
+            </div>
+            <p id="loading-words" class="text-gray-400 mt-4">Kelimeler yükleniyor...</p>
         </div>
 
         <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
@@ -484,23 +500,31 @@
             function createKeyboard() {
                 keyboardContainer.innerHTML = '';
                 const keyRows = [
-                    ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-                    ['A', 'S', 'D', 'F', 'G', 'H', 'J', '⌫'],
-                    ['K', 'L', 'Ş', 'İ', 'Z', 'C', 'V', 'ENTER'],
-                    ['B', 'N', 'M', 'Ö', 'Ç', 'Ğ', 'Ü']
+                    ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
+                    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'],
+                    ['Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç'],
+                    ['ENTER', '⌫']
                 ];
 
-                keyRows.forEach(row => {
+                keyRows.forEach((row, rowIndex) => {
                     const rowDiv = document.createElement('div');
-                    rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-2', 'w-full');
+                    rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-1', 'w-full');
+                    if(rowIndex === 3){ // Son satıra özel stil
+                         rowDiv.classList.add('gap-2');
+                    }
+
                     row.forEach(key => {
                         const keyButton = document.createElement('button');
                         keyButton.textContent = key;
-                        keyButton.classList.add('keyboard-key', 'rounded', 'font-semibold', 'uppercase', 'bg-gray-500', 'flex-1');
-                        if (key === 'ENTER' || key === '⌫') {
-                            keyButton.classList.add('bg-gray-600', 'px-2');
-                            keyButton.style.flex = '1.5';
+                        keyButton.classList.add('keyboard-key', 'rounded', 'font-semibold', 'uppercase', 'bg-gray-500');
+                        
+                        if (rowIndex === 3) {
+                             keyButton.style.flex = '6'; // Geniş tuşlar
+                             keyButton.classList.add('bg-gray-600');
+                        } else {
+                             keyButton.style.flex = '1'; // Normal harf tuşları
                         }
+
                         keyButton.onclick = () => handleKeyPress(key);
                         rowDiv.appendChild(keyButton);
                     });
@@ -914,6 +938,12 @@
             }
             
             // --- EVENT LISTENERS ---
+            document.getElementById('theme-light-btn').addEventListener('click', () => {
+                document.body.classList.add('theme-light');
+            });
+            document.getElementById('theme-dark-btn').addEventListener('click', () => {
+                document.body.classList.remove('theme-light');
+            });
             document.getElementById('single-player-btn').addEventListener('click', () => { if (getUsername()) setupAndStartGame('single'); });
             document.getElementById('vs-cpu-btn').addEventListener('click', () => { if (getUsername()) setupAndStartGame('vsCPU'); });
             document.getElementById('multiplayer-btn').addEventListener('click', () => { if (getUsername()) { showScreen('multiplayer-setup-screen'); } });
