@@ -247,6 +247,8 @@
             let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
             let singlePlayerMode = null;
             let gameIdFromUrl = null;
+            let heartbeatInterval = null;
+            let presenceCheckInterval = null;
             
             const scorePoints = [1000, 800, 600, 400, 200, 100];
             const GUESS_COUNT = 6;
@@ -336,7 +338,7 @@
                 const gameData = {
                     gameId, wordLength: selectedLength, secretWord, timeLimit: selectedTime, creatorId: userId,
                     matchLength: selectedMatchLength, currentRound: 1,
-                    players: { [userId]: { username, guesses: [], score: 0 } },
+                    players: { [userId]: { username, guesses: [], score: 0, lastSeen: firebase.firestore.FieldValue.serverTimestamp() } },
                     currentPlayerId: userId, status: 'waiting', roundWinner: null, createdAt: new Date(),
                     turnStartTime: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -365,7 +367,7 @@
                     const gameData = gameDoc.data();
                     
                     if (Object.keys(gameData.players).length === 1 && !gameData.players[userId]) {
-                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: 0 } });
+                        await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: 0, lastSeen: firebase.firestore.FieldValue.serverTimestamp() } });
                     } else if (!gameData.players[userId]) {
                         return showToast("Bu oyun dolu veya başlamış.", true);
                     }
@@ -373,6 +375,7 @@
                     localStorage.setItem('activeGameId', gameId);
                     currentGameId = gameId;
                     showScreen('game-screen');
+                    startHeartbeat();
                     listenToGameUpdates(gameId);
                 } catch (error) { console.error("Error joining game:", error); showToast("Oyuna katılırken hata oluştu.", true); }
             }
@@ -398,6 +401,8 @@
             
             function leaveGame() {
                 if (gameUnsubscribe) gameUnsubscribe();
+                stopHeartbeat();
+                stopPresenceCheck();
                 stopTurnTimer();
                 localStorage.removeItem('activeGameId');
                 gameUnsubscribe = null;
@@ -405,6 +410,7 @@
                 localGameData = null;
                 gameMode = null;
                 showScreen('mode-selection-screen');
+                document.getElementById('rejoin-game-btn').classList.add('hidden');
             }
 
             function renderGameState(gameData) {
@@ -414,6 +420,7 @@
                 document.getElementById('game-info-bar').style.display = gameMode === 'multiplayer' ? 'flex' : 'none';
                 if (gameMode === 'multiplayer') {
                     roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
+                    startPresenceCheck();
                 } else {
                     roundCounter.textContent = '';
                 }
@@ -873,6 +880,7 @@
             }
             
             function showScoreboard(gameData) {
+                stopPresenceCheck();
                 stopTurnTimer();
                 showScreen('scoreboard-screen');
 
@@ -912,7 +920,7 @@
 
                 if (gameMode === 'multiplayer') {
                      if (gameData.currentRound >= gameData.matchLength) {
-                        localStorage.removeItem('activeGameId'); // Maç bittiğinde hafızayı temizle
+                        localStorage.removeItem('activeGameId');
                         const p1 = sortedPlayers[0];
                         const p2 = sortedPlayers.length > 1 ? sortedPlayers[1] : {score: -1};
                         if (p1.score > p2.score) {
@@ -1011,12 +1019,55 @@
                             text: `Kelime Yarışması oyunuma katıl!`,
                             url: shareUrl,
                         });
-                    } catch (error) {
-                        console.error('Paylaşım hatası:', error);
+                    } catch (error) { console.error('Paylaşım hatası:', error); }
+                } else { showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true); }
+            }
+
+            function startHeartbeat() {
+                stopHeartbeat();
+                heartbeatInterval = setInterval(() => {
+                    if (currentGameId && db) {
+                        db.collection("games").doc(currentGameId).update({
+                            [`players.${userId}.lastSeen`]: firebase.firestore.FieldValue.serverTimestamp()
+                        });
                     }
-                } else {
-                    showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true);
-                }
+                }, 10000);
+            }
+            function stopHeartbeat() { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+
+            function startPresenceCheck() {
+                stopPresenceCheck();
+                presenceCheckInterval = setInterval(() => {
+                    if (!localGameData || localGameData.status !== 'playing' || isGameOver) {
+                        stopPresenceCheck(); return;
+                    }
+                    const playerIds = Object.keys(localGameData.players);
+                    if (playerIds.length < 2) return;
+
+                    const opponentId = playerIds.find(id => id !== userId);
+                    const opponent = localGameData.players[opponentId];
+
+                    if (opponent && opponent.lastSeen) {
+                        const lastSeenDate = opponent.lastSeen.toDate();
+                        const secondsSinceLastSeen = (new Date().getTime() - lastSeenDate.getTime()) / 1000;
+                        if (secondsSinceLastSeen > 25) {
+                            handleOpponentDisconnect(opponentId);
+                        }
+                    }
+                }, 15000);
+            }
+            function stopPresenceCheck() { clearInterval(presenceCheckInterval); presenceCheckInterval = null; }
+
+            async function handleOpponentDisconnect(opponentId) {
+                if (isGameOver) return;
+                stopPresenceCheck();
+                showToast(`${localGameData.players[opponentId].username} oyundan ayrıldı!`, true);
+
+                const gameRef = db.collection("games").doc(currentGameId);
+                const updates = { status: 'finished', roundWinner: userId };
+                const scoreToAdd = scorePoints[0];
+                updates[`players.${userId}.score`] = (localGameData.players[userId].score || 0) + scoreToAdd;
+                await gameRef.update(updates);
             }
             
             // --- EVENT LISTENERS ---
@@ -1092,11 +1143,10 @@
                             createBtn.disabled = false;
                             joinBtn.disabled = false;
                             
-                            // Link ile gelindiyse ve henüz bir oyunda değilse, otomatik katıl
                             if (gameIdFromUrl && !currentGameId) {
                                 document.getElementById('username-input').value = `Misafir${Math.floor(Math.random() * 900) + 100}`;
                                 joinGame(gameIdFromUrl);
-                                gameIdFromUrl = null; // Tekrar kullanılmasını engelle
+                                gameIdFromUrl = null;
                             }
                         } else {
                             auth.signInAnonymously().catch(error => { 
