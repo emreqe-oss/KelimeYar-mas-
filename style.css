@@ -53,10 +53,13 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
 }
 /* ANİMASYON BİTİŞ */
 
-.tile.correct .back, .tile.correct.flip { background-color: #10b981; border-color: #10b981; color: white; }
-.tile.present .back, .tile.present.flip { background-color: #f59e0b; border-color: #f59e0b; color: white; }
-.tile.absent .back, .tile.absent.flip { background-color: #374151; border-color: #374151; color: white; }
-.tile.failed .back, .tile.failed.flip { background-color: #ef4444; border-color: #ef4444; color: white; }
+/* --- DÜZELTİLEN BÖLÜM BURASI --- */
+.tile.correct.flip, .tile.correct .back { background-color: #10b981; border-color: #10b981; color: white; }
+.tile.present.flip, .tile.present .back { background-color: #f59e0b; border-color: #f59e0b; color: white; }
+.tile.absent.flip, .tile.absent .back { background-color: #374151; border-color: #374151; color: white; }
+.tile.failed.flip, .tile.failed .back { background-color: #ef4444; border-color: #ef4444; color: white; }
+/* --- DÜZELTME BİTİŞ --- */
+
 
 .keyboard-key {
     transition: background-color 0.2s;
@@ -87,9 +90,9 @@ body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
 body.theme-light .tile { border-color: #d1d5db; }
 body.theme-light #username-input::placeholder { color: #9ca3af; }
 
-body.theme-light .tile.correct .back,
-body.theme-light .tile.present .back,
-body.theme-light .tile.absent .back,
-body.theme-light .tile.failed .back {
+body.theme-light .tile.correct.flip, body.theme-light .tile.correct .back,
+body.theme-light .tile.present.flip, body.theme-light .tile.present .back,
+body.theme-light .tile.absent.flip, body.theme-light .tile.absent .back,
+body.theme-light .tile.failed.flip, body.theme-light .tile.failed .back {
     color: white;
 }
