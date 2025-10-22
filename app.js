@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dailyWordBtn = document.getElementById('daily-word-btn');
     const hardModeCheckbox = document.getElementById('hard-mode-checkbox');
     const hardModeCheckboxMulti = document.getElementById('hard-mode-checkbox-multi');
-    
+
     // Auth Elementleri
     const emailInput = document.getElementById('email-input');
     const passwordInput = document.getElementById('password-input');
@@ -66,13 +66,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const GUESS_COUNT = 6;
     const DAILY_WORD_LENGTH = 5;
 
+    const firebaseConfig = {
+        apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ",
+        authDomain: "kelime-oyunu-flaneur.firebaseapp.com",
+        projectId: "kelime-oyunu-flaneur",
+        storageBucket: "kelime-oyunu-flaneur.appspot.com",
+        messagingSenderId: "888546992121",
+        appId: "1:888546992121:web:3e29748729cca6fbbb2728",
+        measurementId: "G-RVD6YZ8JYV"
+    };
+
+    const sounds = { click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(), error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(), win: new Tone.PolySynth(Tone.Synth).toDestination(), lose: new Tone.PolySynth(Tone.Synth).toDestination(), draw: new Tone.PolySynth(Tone.Synth).toDestination() };
+    function playSound(sound) { if (Tone.context.state !== 'running') { Tone.context.resume(); } switch (sound) { case 'click': sounds.click.triggerAttackRelease('C5', '8n'); break; case 'error': sounds.error.triggerAttackRelease('C3', '8n'); break; case 'win': sounds.win.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n', Tone.now()); break; case 'lose': sounds.lose.triggerAttackRelease(['C4', 'A3', 'F3', 'D3'], '8n', Tone.now()); break; case 'draw': sounds.draw.triggerAttackRelease(['C4', 'G4'], '8n', Tone.now()); break; } }
+    
+    function showToast(message, isError = false) { if (isError) playSound('error'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
+    
     // --- AUTH FONKSİYONLARI ---
     const handleLogin = async () => {
         const email = emailInput.value;
         const password = passwordInput.value;
         if (!email || !password) { return showToast("E-posta ve şifre alanları boş bırakılamaz.", true); }
         authLoading.classList.remove('hidden');
-        try { await auth.signInWithEmailAndPassword(email, password); } 
+        try { await auth.signInWithEmailAndPassword(email, password); }
         catch (error) { showToast(getFirebaseErrorMessage(error), true); }
         authLoading.classList.add('hidden');
     };
@@ -107,10 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleLogout = async () => {
-        try { await auth.signOut(); } 
+        try { await auth.signOut(); }
         catch (error) { showToast(getFirebaseErrorMessage(error), true); }
     };
-    
+
     function getFirebaseErrorMessage(error) {
         switch (error.code) {
             case 'auth/user-not-found': return 'Bu e-posta adresiyle bir kullanıcı bulunamadı.';
@@ -122,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
+    // Diğer tüm fonksiyonlar...
     function getDaysSinceEpoch() { const today = new Date(); const epoch = new Date('2024-01-01'); return Math.floor((today - epoch) / (1000 * 60 * 60 * 24)); }
     function getWordOfTheDay() { const dayIndex = getDaysSinceEpoch(); const wordList = kelimeSozlugu[DAILY_WORD_LENGTH]; return wordList[dayIndex % wordList.length]; }
     function getDailyGameState() { const state = localStorage.getItem(`dailyGameState_${userId}`); if (!state) return null; try { const parsedState = JSON.parse(state); const today = new Date().toDateString(); if (parsedState.date === today) { return parsedState; } return null; } catch (e) { return null; } }
@@ -155,11 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const distributionContainer = document.getElementById('stats-guess-distribution'); distributionContainer.innerHTML = ''; let maxDistribution = Math.max(...Object.values(stats.guessDistribution)); if (maxDistribution === 0) maxDistribution = 1;
         for (let i = 1; i <= 6; i++) { const count = stats.guessDistribution[i]; const percentage = (count / maxDistribution) * 100; const bar = `<div class="flex items-center"><div class="w-4">${i}</div><div class="flex-grow bg-gray-700 rounded"><div class="bg-amber-500 text-right pr-2 rounded text-black font-bold" style="width: ${percentage > 0 ? percentage : 1}%">${count > 0 ? count : ''}</div></div></div>`; distributionContainer.innerHTML += bar; }
     }
-    const sounds = { click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(), error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(), win: new Tone.PolySynth(Tone.Synth).toDestination(), lose: new Tone.PolySynth(Tone.Synth).toDestination(), draw: new Tone.PolySynth(Tone.Synth).toDestination() };
-    function playSound(sound) { if (Tone.context.state !== 'running') { Tone.context.resume(); } switch(sound) { case 'click': sounds.click.triggerAttackRelease('C5', '8n'); break; case 'error': sounds.error.triggerAttackRelease('C3', '8n'); break; case 'win': sounds.win.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n', Tone.now()); break; case 'lose': sounds.lose.triggerAttackRelease(['C4', 'A3', 'F3', 'D3'], '8n', Tone.now()); break; case 'draw': sounds.draw.triggerAttackRelease(['C4', 'G4'], '8n', Tone.now()); break; } }
+    function getUsername() { return currentUserProfile?.username || 'Oyuncu'; }
     function showScreen(screenId) { ['login-screen', 'register-screen', 'mode-selection-screen', 'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen', 'profile-screen', 'how-to-play-screen'].forEach(id => { document.getElementById(id).classList.add('hidden'); }); document.getElementById(screenId).classList.remove('hidden'); }
     function initializeGameUI(gameData) { wordLength = gameData.wordLength; if (wordLength === 4) { guessGrid.style.maxWidth = '220px'; } else if (wordLength === 5) { guessGrid.style.maxWidth = '280px'; } else { guessGrid.style.maxWidth = '320px'; } createGrid(); createKeyboard(); }
-    function getUsername() { return currentUserProfile?.username || 'Oyuncu'; }
     function setupAndStartGame(mode) {
         gameMode = mode;
         wordLength = parseInt(document.getElementById('word-length-select-single').value);
@@ -291,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const index in correctLetters) { if (guessWord[index] !== correctLetters[index]) { showToast(`'${correctLetters[index]}' harfi ${parseInt(index) + 1}. sırada olmalı!`, true); shakeCurrentRow(); return; } }
             for (const letter of presentLetters) { if (!guessWord.includes(letter)) { showToast(`'${letter}' harfini kullanmalısın!`, true); shakeCurrentRow(); return; } }
         }
-        if (!kelimeSozlugu[wordLength] || !kelimeSozlugu[wordLength].includes(guessWord)) { showToast("Kelime sözlükte bulunamadı!", true); shakeCurrentRow(); if (gameMode !== 'daily' && gameMode !== 'single') { await failTurn(guessWord); } return; }
+        if (!kelimeSozlugu[wordLength] || !kelimeSozlugu[wordLength].includes(guessWord)) { showToast("Kelime sözlükte bulunamadı!", true); shakeCurrentRow(); return; }
         keyboardContainer.style.pointerEvents = 'none'; stopTurnTimer();
         const secretWord = localGameData.secretWord; const colors = calculateColors(guessWord, secretWord); const newGuess = { word: guessWord, colors: colors }; const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1;
         if (gameMode === 'multiplayer') { const gameRef = db.collection("games").doc(currentGameId); const playerGuesses = localGameData.players[userId].guesses || []; playerGuesses.push(newGuess); const playerIds = Object.keys(localGameData.players); const myIndex = playerIds.indexOf(userId); const nextPlayerIndex = (myIndex + 1) % playerIds.length; const updates = { [`players.${userId}.guesses`]: playerGuesses, currentPlayerId: playerIds[nextPlayerIndex], turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }; if (guessWord === secretWord) { updates.status = 'finished'; updates.roundWinner = userId; const scoreToAdd = scorePoints[playerGuesses.length - 1] || 0; updates[`players.${userId}.score`] = (localGameData.players[userId].score || 0) + scoreToAdd; } else if (totalGuessesMade >= GUESS_COUNT) { updates.status = 'finished'; updates.roundWinner = null; } await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
@@ -345,6 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(lastGameId) { document.getElementById('rejoin-game-btn').classList.remove('hidden'); }
                     
                     await loadWords();
+                    
+                    document.getElementById('daily-word-btn').disabled = false;
+                    document.getElementById('single-player-btn').disabled = false;
+                    document.getElementById('vs-cpu-btn').disabled = false;
+                    document.getElementById('multiplayer-btn').disabled = false;
+
                     const urlParams = new URLSearchParams(window.location.search);
                     gameIdFromUrl = urlParams.get('gameId');
 
