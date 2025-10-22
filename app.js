@@ -1,4 +1,4 @@
-// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve YENİ DETAYLI PROFİL EKRANI mantığını içerir.
+// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve GİRİŞ SİSTEMİ HATALARI DÜZELTİLMİŞ halini içerir.
 
 let kelimeSozlugu = {};
 
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dailyWordBtn = document.getElementById('daily-word-btn');
     const hardModeCheckbox = document.getElementById('hard-mode-checkbox');
     const hardModeCheckboxMulti = document.getElementById('hard-mode-checkbox-multi');
-
+    
     // Auth Elementleri
     const emailInput = document.getElementById('email-input');
     const passwordInput = document.getElementById('password-input');
@@ -81,13 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function showToast(message, isError = false) { if (isError) playSound('error'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
     
-    // --- AUTH FONKSİYONLARI ---
     const handleLogin = async () => {
         const email = emailInput.value;
         const password = passwordInput.value;
         if (!email || !password) { return showToast("E-posta ve şifre alanları boş bırakılamaz.", true); }
         authLoading.classList.remove('hidden');
-        try { await auth.signInWithEmailAndPassword(email, password); }
+        try { await auth.signInWithEmailAndPassword(email, password); } 
         catch (error) { showToast(getFirebaseErrorMessage(error), true); }
         authLoading.classList.add('hidden');
     };
@@ -99,33 +98,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const username = registerUsername.value;
         const age = registerAge.value;
         const city = registerCity.value;
-
         if (!email || !password || !fullname || !username || !age || !city) { return showToast("Tüm alanları doldurmalısınız.", true); }
         if (password.length < 6) { return showToast("Şifre en az 6 karakter olmalıdır.", true); }
         authLoading.classList.remove('hidden');
-
         try {
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
             await db.collection('users').doc(user.uid).set({
-                username: username,
-                fullname: fullname,
-                age: parseInt(age),
-                city: city,
-                email: email,
+                username: username, fullname: fullname, age: parseInt(age), city: city, email: email,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-        } catch (error) {
-            showToast(getFirebaseErrorMessage(error), true);
-        }
+        } catch (error) { showToast(getFirebaseErrorMessage(error), true); }
         authLoading.classList.add('hidden');
     };
 
     const handleLogout = async () => {
-        try { await auth.signOut(); }
+        try { await auth.signOut(); } 
         catch (error) { showToast(getFirebaseErrorMessage(error), true); }
     };
-
+    
     function getFirebaseErrorMessage(error) {
         switch (error.code) {
             case 'auth/user-not-found': return 'Bu e-posta adresiyle bir kullanıcı bulunamadı.';
@@ -136,8 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
             default: return 'Bir hata oluştu: ' + error.message;
         }
     }
-
-    // Diğer tüm fonksiyonlar...
     function getDaysSinceEpoch() { const today = new Date(); const epoch = new Date('2024-01-01'); return Math.floor((today - epoch) / (1000 * 60 * 60 * 24)); }
     function getWordOfTheDay() { const dayIndex = getDaysSinceEpoch(); const wordList = kelimeSozlugu[DAILY_WORD_LENGTH]; return wordList[dayIndex % wordList.length]; }
     function getDailyGameState() { const state = localStorage.getItem(`dailyGameState_${userId}`); if (!state) return null; try { const parsedState = JSON.parse(state); const today = new Date().toDateString(); if (parsedState.date === today) { return parsedState; } return null; } catch (e) { return null; } }
@@ -341,13 +330,13 @@ document.addEventListener('DOMContentLoaded', () => {
             auth = firebase.auth();
             
             auth.onAuthStateChanged(async user => {
-                if (user) {
+                if (user && !user.isAnonymous) { // Sadece e-postalı kullanıcılar için devam et
                     userId = user.uid;
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
                         currentUserProfile = userDoc.data();
                         userDisplay.textContent = currentUserProfile.username;
-                    } else {
+                    } else if (user.email) {
                         currentUserProfile = { username: user.email.split('@')[0], email: user.email };
                         userDisplay.textContent = currentUserProfile.username;
                     }
