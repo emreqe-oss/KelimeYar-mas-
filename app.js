@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getStats() { const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } }; try { const stats = JSON.parse(localStorage.getItem('gameStats')); return stats ? { ...defaultStats, ...stats } : defaultStats; } catch (e) { return defaultStats; } }
     function saveStats(stats) { localStorage.setItem('gameStats', JSON.stringify(stats)); }
     function updateStats(didWin, guessCount) {
+        if (gameMode === 'multiplayer') return;
         const stats = getStats(); stats.played += 1;
         if (didWin) { stats.wins += 1; stats.currentStreak += 1; if (stats.currentStreak > stats.maxStreak) { stats.maxStreak = stats.currentStreak; } if (guessCount >= 1 && guessCount <= 6) { stats.guessDistribution[guessCount] += 1; } } else { stats.currentStreak = 0; }
         saveStats(stats);
@@ -192,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
             keyboardContainer.style.pointerEvents = 'auto';
         }
     }
-    function handleKeyPress(key) { if (isGameOver || !isMyTurn) return; const processedKey = key.toLocaleUpperCase('tr-TR'); if (processedKey === 'ENTER') { playSound('click'); submitGuess(); } else if (processedKey === '⌫' || processedKey === 'BACKSPACE') { playSound('click'); deleteLetter(); } else if (processedKey.length === 1 && "ERTYUIOPĞÜASDFGHJKLŞİZC VBNMÖÇ".includes(processedKey)) { addLetter(letter); } }
+    function handleKeyPress(key) { if (isGameOver || !isMyTurn) return; const processedKey = key.toLocaleUpperCase('tr-TR'); if (processedKey === 'ENTER') { playSound('click'); submitGuess(); } else if (processedKey === '⌫' || processedKey === 'BACKSPACE') { playSound('click'); deleteLetter(); } else if (processedKey.length === 1 && "ERTYUIOPĞÜASDFGHJKLŞİZC VBNMÖÇ".includes(processedKey)) { addLetter(processedKey); } }
     function addLetter(letter) { if (currentRow >= GUESS_COUNT) return; for (let i = 0; i < wordLength; i++) { const tile = document.getElementById(`tile-${currentRow}-${i}`); if (tile && tile.querySelector('.front').textContent === '') { tile.querySelector('.front').textContent = letter; playSound('click'); break; } } }
     function deleteLetter() { if (currentRow >= GUESS_COUNT) return; for (let i = wordLength - 1; i >= 0; i--) { const tile = document.getElementById(`tile-${currentRow}-${i}`); if (tile && tile.querySelector('.front').textContent !== '') { tile.querySelector('.front').textContent = ''; break; } } }
     async function submitGuess() {
@@ -212,8 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const index in correctLetters) { if (guessWord[index] !== correctLetters[index]) { showToast(`'${correctLetters[index]}' harfi ${parseInt(index) + 1}. sırada olmalı!`, true); shakeCurrentRow(); return; } }
             for (const letter of presentLetters) { if (!guessWord.includes(letter)) { showToast(`'${letter}' harfini kullanmalısın!`, true); shakeCurrentRow(); return; } }
         }
-        if (!kelimeSozlugu[wordLength] || !kelimeSozlugu[wordLength].includes(guessWord)) { showToast("Kelime sözlükte bulunamadı!", true); shakeCurrentRow(); if (gameMode !== 'daily' && gameMode !== 'single') { await failTurn(guessWord); } return; }
-        keyboardContainer.style.pointerEvents = 'none'; stopTurnTimer(); const secretWord = localGameData.secretWord; const colors = calculateColors(guessWord, secretWord); const newGuess = { word: guessWord, colors: colors }; const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1;
+        if (!kelimeSozlugu[wordLength] || !kelimeSozlugu[wordLength].includes(guessWord)) { showToast("Kelime sözlükte bulunamadı!", true); shakeCurrentRow(); return; }
+        keyboardContainer.style.pointerEvents = 'none'; stopTurnTimer();
+        const secretWord = localGameData.secretWord; const colors = calculateColors(guessWord, secretWord); const newGuess = { word: guessWord, colors: colors }; const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1;
         if (gameMode === 'multiplayer') { const gameRef = db.collection("games").doc(currentGameId); const playerGuesses = localGameData.players[userId].guesses || []; playerGuesses.push(newGuess); const playerIds = Object.keys(localGameData.players); const myIndex = playerIds.indexOf(userId); const nextPlayerIndex = (myIndex + 1) % playerIds.length; const updates = { [`players.${userId}.guesses`]: playerGuesses, currentPlayerId: playerIds[nextPlayerIndex], turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }; if (guessWord === secretWord) { updates.status = 'finished'; updates.roundWinner = userId; const scoreToAdd = scorePoints[playerGuesses.length - 1] || 0; updates[`players.${userId}.score`] = (localGameData.players[userId].score || 0) + scoreToAdd; } else if (totalGuessesMade >= GUESS_COUNT) { updates.status = 'finished'; updates.roundWinner = null; } await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
         } else {
             localGameData.players[userId].guesses.push(newGuess);
