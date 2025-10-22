@@ -67,17 +67,45 @@
                      <span>İki Kişilik (Online)</span>
                  </button>
                  <button id="rejoin-game-btn" class="hidden w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 px-4 rounded-lg text-lg mt-4">Devam Et</button>
-                 <button id="profile-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg mt-4">Profil</button>
+                 <div class="grid grid-cols-2 gap-4 mt-4">
+                    <button id="friends-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Arkadaşlar</button>
+                    <button id="profile-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Profil</button>
+                 </div>
             </div>
             <div class="mt-6 flex justify-between items-center px-4">
                 <button id="how-to-play-btn" class="text-sm text-gray-400 hover:text-white">Nasıl Oynanır?</button>
                 <div class="flex items-center gap-4">
                     <p class="text-sm text-gray-400">Tema:</p>
-                    <button id="theme-light-btn" class="w-8 h-8 rounded-full border-2 border-gray-500" style="background-color: #f1c0e8;"></button>
+                    <button id="theme-light-btn" class="w-8 h-8 rounded-full border-2 border-gray-500" style="background-color: #e9d5ff;"></button>
                     <button id="theme-dark-btn" class="w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-500"></button>
                 </div>
             </div>
             <p id="loading-words" class="text-gray-400 mt-4 hidden">Kelimeler yükleniyor...</p>
+        </div>
+
+        <div id="friends-screen" class="hidden bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col">
+            <button id="back-to-menu-from-friends-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Ana Menü</button>
+            <h2 class="text-3xl font-bold mb-4 text-center">Arkadaşlar</h2>
+            <div class="flex border-b border-gray-600 mb-4">
+                <button id="show-friends-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Arkadaşlarım</button>
+                <button id="show-requests-tab-btn" class="flex-1 py-2 text-center text-gray-400">İstekler <span id="friend-request-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span></button>
+                <button id="show-add-friend-tab-btn" class="flex-1 py-2 text-center text-gray-400">Arkadaş Ekle</button>
+            </div>
+            <div id="friends-tab" class="flex-1 overflow-y-auto">
+                <p id="friends-list-placeholder" class="text-gray-500 text-center mt-8">Henüz hiç arkadaşın yok.</p>
+                <div id="friends-list" class="space-y-2"></div>
+            </div>
+            <div id="requests-tab" class="hidden flex-1 overflow-y-auto">
+                <p id="friend-requests-placeholder" class="text-gray-500 text-center mt-8">Yeni arkadaşlık isteği yok.</p>
+                <div id="friend-requests-list" class="space-y-2"></div>
+            </div>
+            <div id="add-friend-tab" class="hidden flex-1">
+                <div class="flex gap-2">
+                    <input type="text" id="search-friend-input" placeholder="Kullanıcı adı veya e-posta" class="flex-grow p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                    <button id="search-friend-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Ara</button>
+                </div>
+                <div id="friend-search-results" class="mt-4 space-y-2"></div>
+            </div>
         </div>
 
         <div id="singleplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
@@ -114,7 +142,9 @@
              <button id="back-to-mode-multi-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
             <h1 class="text-3xl font-bold text-center mb-6">İki Kişilik Oyun</h1>
             <div class="mb-4">
-                <h2 class="text-2xl font-semibold mb-3">Yeni Oyun Kur</h2>
+                <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4">Arkadaşına Meydan Oku</button>
+                <hr class="border-gray-600 my-4">
+                <h2 class="text-2xl font-semibold mb-3">Rastgele Oyun</h2>
                 <div class="grid grid-cols-3 gap-2">
                     <div>
                         <label for="word-length-select-multi" class="block text-sm font-medium text-gray-400">Harf</label>
@@ -252,6 +282,17 @@
             </div>
             <p class="mb-4"><strong class="text-gray-400">I</strong> harfi kelimede yok.</p>
             <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
+        </div>
+
+        <div id="invitation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center max-w-sm w-full">
+                <h2 class="text-2xl font-bold mb-4">Oyun Daveti</h2>
+                <p id="invitation-text" class="mb-6">Bir arkadaşın seni oyuna davet ediyor!</p>
+                <div class="flex gap-4">
+                    <button id="accept-invite-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Kabul Et</button>
+                    <button id="reject-invite-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Reddet</button>
+                </div>
+            </div>
         </div>
 
     </div>
