@@ -1,61 +1,95 @@
-<style>
-        html, body { 
-            height: 100vh; 
-            height: -webkit-fill-available;
-            overflow: hidden; 
-        }
-        body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; transition: background-color 0.3s, color 0.3s; }
-        .tile { 
-            width: 100%; 
-            padding-bottom: 100%; 
-            position: relative; 
-            border: 2px solid #4b5563; 
-            display: flex;
-            justify-content: center; 
-            align-items: center;
-            font-size: clamp(1.5rem, 5vw, 2rem);
-            font-weight: bold; 
-            text-transform: uppercase; 
-            transition: all 0.3s ease; 
-        }
-        .tile-inner { 
-            position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            line-height: 1;
-        }
-        .tile.correct { background-color: #10b981; border-color: #10b981; color: white; }
-        .tile.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
-        .tile.absent { background-color: #374151; border-color: #374151; color: white; }
-        .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
-        .keyboard-key {
-            transition: background-color 0.2s;
-            height: 48px;
-            font-size: 1rem;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .keyboard-key.correct { background-color: #10b981 !important; color: white; }
-        .keyboard-key.present { background-color: #f59e0b !important; color: white; }
-        .keyboard-key.absent { background-color: #374151 !important; color: white; }
-        .toast { visibility: hidden; opacity: 0; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; transform: translateX(-50%); bottom: 50px; transition: opacity 0.5s, visibility 0.5s, bottom 0.5s; }
-        .toast.show { visibility: visible; opacity: 1; bottom: 70px; }
-        .pulsate { animation: pulsate-bck 1s ease-in-out infinite both; }
-        @keyframes pulsate-bck { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        /* Açık Tema Stilleri */
-        body.theme-light { background-color: #f1c0e8; color: #1f2937; }
-        body.theme-light .bg-gray-800, body.theme-light .bg-gray-900:not(#theme-dark-btn) { background-color: #ffffff; }
-        body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
-        body.theme-light .text-gray-400 { color: #6b7280; }
-        body.theme-light .bg-gray-700 { background-color: #f3f4f6; }
-        body.theme-light .border-gray-600 { border-color: #d1d5db; }
-        body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
-        body.theme-light .tile { border-color: #1f2937; }
-        body.theme-light #username-input::placeholder { color: #9ca3af; }
-    </style>
+html, body { 
+    height: 100vh; 
+    height: -webkit-fill-available;
+    overflow: hidden; 
+}
+body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; transition: background-color 0.3s, color 0.3s; }
+.tile { 
+    width: 100%; 
+    padding-bottom: 100%; 
+    position: relative; 
+    border: 2px solid #4b5563; 
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    font-weight: bold; 
+    text-transform: uppercase; 
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+}
+.tile-inner { 
+    position: absolute; 
+    top: 0; left: 0; right: 0; bottom: 0; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    line-height: 1;
+    -webkit-backface-visibility: hidden; /* Safari için */
+    backface-visibility: hidden;
+}
+.tile.flip {
+    transform: rotateX(180deg);
+}
+.tile .front {
+    transform: rotateX(0deg);
+}
+.tile .back {
+    transform: rotateX(-180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* YENİ EKLENEN SARSILMA ANİMASYONU */
+.shake {
+    animation: shake 0.5s;
+}
+@keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+}
+/* ANİMASYON BİTİŞ */
+
+.tile.correct .back, .tile.correct.flip { background-color: #10b981; border-color: #10b981; color: white; }
+.tile.present .back, .tile.present.flip { background-color: #f59e0b; border-color: #f59e0b; color: white; }
+.tile.absent .back, .tile.absent.flip { background-color: #374151; border-color: #374151; color: white; }
+.tile.failed .back, .tile.failed.flip { background-color: #ef4444; border-color: #ef4444; color: white; }
+
+.keyboard-key {
+    transition: background-color 0.2s;
+    height: 48px;
+    font-size: 1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.keyboard-key.correct { background-color: #10b981 !important; color: white; }
+.keyboard-key.present { background-color: #f59e0b !important; color: white; }
+.keyboard-key.absent { background-color: #374151 !important; color: white; }
+.toast { visibility: hidden; opacity: 0; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; transform: translateX(-50%); bottom: 50px; transition: opacity 0.5s, visibility 0.5s, bottom 0.5s; }
+.toast.show { visibility: visible; opacity: 1; bottom: 70px; }
+.pulsate { animation: pulsate-bck 1s ease-in-out infinite both; }
+@keyframes pulsate-bck { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Açık Tema Stilleri */
+body.theme-light { background-color: #f1c0e8; color: #1f2937; }
+body.theme-light .bg-gray-800, body.theme-light .bg-gray-900:not(#theme-dark-btn) { background-color: #ffffff; }
+body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
+body.theme-light .text-gray-400 { color: #6b7280; }
+body.theme-light .bg-gray-700 { background-color: #f3f4f6; }
+body.theme-light .border-gray-600 { border-color: #d1d5db; }
+body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
+body.theme-light .tile { border-color: #d1d5db; }
+body.theme-light #username-input::placeholder { color: #9ca3af; }
+
+body.theme-light .tile.correct .back,
+body.theme-light .tile.present .back,
+body.theme-light .tile.absent .back,
+body.theme-light .tile.failed .back {
+    color: white;
+}
