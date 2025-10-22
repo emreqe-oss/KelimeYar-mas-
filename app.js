@@ -1,16 +1,17 @@
-// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve YENİ KULLANICI GİRİŞ SİSTEMİNİ içerir.
+// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve YENİ DETAYLI PROFİL EKRANI mantığını içerir.
 
 let kelimeSozlugu = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     // Ekranlar
     const loginScreen = document.getElementById('login-screen');
+    const registerScreen = document.getElementById('register-screen');
     const modeSelectionScreen = document.getElementById('mode-selection-screen');
     const singleplayerSetupScreen = document.getElementById('singleplayer-setup-screen');
     const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
     const gameScreen = document.getElementById('game-screen');
     const scoreboardScreen = document.getElementById('scoreboard-screen');
-    const statsScreen = document.getElementById('stats-screen');
+    const profileScreen = document.getElementById('profile-screen');
     const howToPlayScreen = document.getElementById('how-to-play-screen');
 
     // Elementler
@@ -29,26 +30,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareGameBtn = document.getElementById('share-game-btn');
     const startGameBtn = document.getElementById('start-game-btn');
     const roundCounter = document.getElementById('round-counter');
-    const statsBtn = document.getElementById('stats-btn');
-    const closeStatsBtn = document.getElementById('close-stats-btn');
+    const profileBtn = document.getElementById('profile-btn');
+    const closeProfileBtn = document.getElementById('close-profile-btn');
     const howToPlayBtn = document.getElementById('how-to-play-btn');
     const closeHowToPlayBtn = document.getElementById('close-how-to-play-btn');
     const shareResultsBtn = document.getElementById('share-results-btn');
     const dailyWordBtn = document.getElementById('daily-word-btn');
     const hardModeCheckbox = document.getElementById('hard-mode-checkbox');
     const hardModeCheckboxMulti = document.getElementById('hard-mode-checkbox-multi');
-
-    // YENİ Auth Elementleri
+    
+    // Auth Elementleri
     const emailInput = document.getElementById('email-input');
     const passwordInput = document.getElementById('password-input');
     const loginBtn = document.getElementById('login-btn');
+    const goToRegisterBtn = document.getElementById('go-to-register-btn');
+    const backToLoginBtn = document.getElementById('back-to-login-btn');
     const registerBtn = document.getElementById('register-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const userDisplay = document.getElementById('user-display');
     const authLoading = document.getElementById('auth-loading');
+    const registerFullname = document.getElementById('register-fullname');
+    const registerUsername = document.getElementById('register-username');
+    const registerEmail = document.getElementById('register-email');
+    const registerPassword = document.getElementById('register-password');
+    const registerAge = document.getElementById('register-age');
+    const registerCity = document.getElementById('register-city');
 
 
-    let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
+    let db, auth, userId, currentUserProfile = null, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
     let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
     let singlePlayerMode = null;
     let gameIdFromUrl = null;
@@ -57,50 +66,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const GUESS_COUNT = 6;
     const DAILY_WORD_LENGTH = 5;
 
-    // --- YENİ AUTH FONKSİYONLARI ---
+    // --- AUTH FONKSİYONLARI ---
     const handleLogin = async () => {
         const email = emailInput.value;
         const password = passwordInput.value;
-        if (!email || !password) {
-            return showToast("E-posta ve şifre alanları boş bırakılamaz.", true);
-        }
+        if (!email || !password) { return showToast("E-posta ve şifre alanları boş bırakılamaz.", true); }
         authLoading.classList.remove('hidden');
-        try {
-            await auth.signInWithEmailAndPassword(email, password);
-            // Başarılı giriş sonrası işlemler onAuthStateChanged tarafından yönetilecek
-        } catch (error) {
-            showToast(error.message, true);
-        }
+        try { await auth.signInWithEmailAndPassword(email, password); } 
+        catch (error) { showToast(getFirebaseErrorMessage(error), true); }
         authLoading.classList.add('hidden');
     };
 
     const handleRegister = async () => {
-        const email = emailInput.value;
-        const password = passwordInput.value;
-        if (!email || !password) {
-            return showToast("E-posta ve şifre alanları boş bırakılamaz.", true);
-        }
-        if (password.length < 6) {
-            return showToast("Şifre en az 6 karakter olmalıdır.", true);
-        }
+        const email = registerEmail.value;
+        const password = registerPassword.value;
+        const fullname = registerFullname.value;
+        const username = registerUsername.value;
+        const age = registerAge.value;
+        const city = registerCity.value;
+
+        if (!email || !password || !fullname || !username || !age || !city) { return showToast("Tüm alanları doldurmalısınız.", true); }
+        if (password.length < 6) { return showToast("Şifre en az 6 karakter olmalıdır.", true); }
         authLoading.classList.remove('hidden');
+
         try {
-            await auth.createUserWithEmailAndPassword(email, password);
-            // Başarılı kayıt sonrası işlemler onAuthStateChanged tarafından yönetilecek
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            await db.collection('users').doc(user.uid).set({
+                username: username,
+                fullname: fullname,
+                age: parseInt(age),
+                city: city,
+                email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
         } catch (error) {
-            showToast(error.message, true);
+            showToast(getFirebaseErrorMessage(error), true);
         }
         authLoading.classList.add('hidden');
     };
 
     const handleLogout = async () => {
-        try {
-            await auth.signOut();
-            // Başarılı çıkış sonrası işlemler onAuthStateChanged tarafından yönetilecek
-        } catch (error) {
-            showToast(error.message, true);
-        }
+        try { await auth.signOut(); } 
+        catch (error) { showToast(getFirebaseErrorMessage(error), true); }
     };
+    
+    function getFirebaseErrorMessage(error) {
+        switch (error.code) {
+            case 'auth/user-not-found': return 'Bu e-posta adresiyle bir kullanıcı bulunamadı.';
+            case 'auth/wrong-password': return 'Hatalı şifre girdiniz.';
+            case 'auth/invalid-email': return 'Geçersiz e-posta adresi formatı.';
+            case 'auth/email-already-in-use': return 'Bu e-posta adresi zaten kayıtlı.';
+            case 'auth/weak-password': return 'Şifre çok zayıf, en az 6 karakter olmalı.';
+            default: return 'Bir hata oluştu: ' + error.message;
+        }
+    }
 
 
     function getDaysSinceEpoch() { const today = new Date(); const epoch = new Date('2024-01-01'); return Math.floor((today - epoch) / (1000 * 60 * 60 * 24)); }
@@ -137,11 +157,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const sounds = { click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(), error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(), win: new Tone.PolySynth(Tone.Synth).toDestination(), lose: new Tone.PolySynth(Tone.Synth).toDestination(), draw: new Tone.PolySynth(Tone.Synth).toDestination() };
     function playSound(sound) { if (Tone.context.state !== 'running') { Tone.context.resume(); } switch(sound) { case 'click': sounds.click.triggerAttackRelease('C5', '8n'); break; case 'error': sounds.error.triggerAttackRelease('C3', '8n'); break; case 'win': sounds.win.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n', Tone.now()); break; case 'lose': sounds.lose.triggerAttackRelease(['C4', 'A3', 'F3', 'D3'], '8n', Tone.now()); break; case 'draw': sounds.draw.triggerAttackRelease(['C4', 'G4'], '8n', Tone.now()); break; } }
-    const firebaseConfig = { apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ", authDomain: "kelime-oyunu-flaneur.firebaseapp.com", projectId: "kelime-oyunu-flaneur", storageBucket: "kelime-oyunu-flaneur.appspot.com", messagingSenderId: "888546992121", appId: "1:888546992121:web:3e29748729cca6fbbb2728", measurementId: "G-RVD6YZ8JYV" };
-    function showToast(message, isError = false) { if (isError) playSound('error'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
-    function getUsername() { let username = document.getElementById('username-input').value.trim(); return username ? username.slice(0, 12) : `Oyuncu${Math.floor(Math.random() * 900) + 100}`; }
-    function showScreen(screenId) { ['login-screen', 'mode-selection-screen', 'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen', 'stats-screen', 'how-to-play-screen'].forEach(id => { document.getElementById(id).classList.add('hidden'); }); document.getElementById(screenId).classList.remove('hidden'); }
+    function showScreen(screenId) { ['login-screen', 'register-screen', 'mode-selection-screen', 'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen', 'profile-screen', 'how-to-play-screen'].forEach(id => { document.getElementById(id).classList.add('hidden'); }); document.getElementById(screenId).classList.remove('hidden'); }
     function initializeGameUI(gameData) { wordLength = gameData.wordLength; if (wordLength === 4) { guessGrid.style.maxWidth = '220px'; } else if (wordLength === 5) { guessGrid.style.maxWidth = '280px'; } else { guessGrid.style.maxWidth = '320px'; } createGrid(); createKeyboard(); }
+    function getUsername() { return currentUserProfile?.username || 'Oyuncu'; }
     function setupAndStartGame(mode) {
         gameMode = mode;
         wordLength = parseInt(document.getElementById('word-length-select-single').value);
@@ -173,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
             firstFailurePlayerId: null
         };
-        try { await firebase.firestore().collection("games").doc(gameId).set(gameData); await joinGame(gameId); }
+        try { await db.collection("games").doc(gameId).set(gameData); await joinGame(gameId); }
         catch (error) { console.error("Error creating game:", error); showToast("Oyun oluşturulamadı!", true); }
     }
     async function joinGame(gameId) {
@@ -263,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (localGameData.isHardMode && localGameData.players[userId].guesses.length > 0) {
             const allPlayerGuesses = localGameData.players[userId].guesses;
             const presentLetters = new Set();
-            const correctLetters = {}; // { index: letter }
+            const correctLetters = {};
             allPlayerGuesses.forEach(g => {
                 for (let i = 0; i < g.colors.length; i++) {
                     if (g.colors[i] === 'correct') { correctLetters[i] = g.word[i]; } 
@@ -291,64 +309,45 @@ document.addEventListener('DOMContentLoaded', () => {
     async function startNewRound() { if (gameMode === 'multiplayer') { if (!localGameData) return; const newWordList = kelimeSozlugu[localGameData.wordLength]; const newSecretWord = newWordList[Math.floor(Math.random() * newWordList.length)]; const playerIds = Object.keys(localGameData.players); const newPlayersState = {}; playerIds.forEach(pid => { newPlayersState[pid] = { ...localGameData.players[pid], guesses: [] }; }); const updates = { secretWord: newSecretWord, players: newPlayersState, currentPlayerId: localGameData.creatorId, status: 'playing', roundWinner: null, currentRound: localGameData.currentRound + 1, turnStartTime: firebase.firestore.FieldValue.serverTimestamp(), firstFailurePlayerId: null }; const gameRef = db.collection("games").doc(currentGameId); await gameRef.update(updates); showScreen('game-screen'); } else { setupAndStartGame(gameMode); } }
     function calculateColors(guess, secret) { const secretLetters = secret.split(''); const guessLetters = guess.split(''); const colors = Array(wordLength).fill('absent'); const letterCounts = {}; for (const letter of secretLetters) { letterCounts[letter] = (letterCounts[letter] || 0) + 1; } for (let i = 0; i < wordLength; i++) { if (guessLetters[i] === secretLetters[i]) { colors[i] = 'correct'; letterCounts[guessLetters[i]]--; } } for (let i = 0; i < wordLength; i++) { if (colors[i] !== 'correct' && secret.includes(guessLetters[i]) && letterCounts[guessLetters[i]] > 0) { colors[i] = 'present'; letterCounts[guessLetters[i]]--; } } return colors; }
     async function fetchWordMeaning(word) { try { const response = await fetch(`https://sozluk.gov.tr/gts?ara=${word.toLocaleLowerCase('tr-TR')}`); const data = await response.json(); if (data.error) { return "Anlam bulunamadı."; } return data[0]?.anlamlarListe?.[0]?.anlam || "Anlam bulunamadı."; } catch (error) { console.error("Anlam alınırken hata:", error); return "Anlam alınırken bir hata oluştu."; } }
-    async function loadWords() { try { const response = await fetch('kelimeler.json'); if (!response.ok) { throw new Error(`Network response was not ok, status: ${response.status}`); } kelimeSozlugu = await response.json(); document.getElementById('loading-words').style.display = 'none'; document.getElementById('daily-word-btn').disabled = false; document.getElementById('single-player-btn').disabled = false; document.getElementById('vs-cpu-btn').disabled = false; document.getElementById('multiplayer-btn').disabled = false; } catch (error) { console.error("HATA: Kelime listesi yüklenirken bir sorun oluştu!", error); document.getElementById('loading-words').textContent = 'Kelimeler yüklenemedi! (Hata)'; showToast('Kelime listesi yüklenemedi. Lütfen konsolu kontrol edin.', true); } }
+    async function loadWords() { try { const response = await fetch('kelimeler.json'); if (!response.ok) { throw new Error(`Network response was not ok, status: ${response.status}`); } kelimeSozlugu = await response.json(); document.getElementById('loading-words').style.display = 'none'; } catch (error) { console.error("HATA: Kelime listesi yüklenirken bir sorun oluştu!", error); document.getElementById('loading-words').textContent = 'Kelimeler yüklenemedi! (Hata)'; showToast('Kelime listesi yüklenemedi. Lütfen konsolu kontrol edin.', true); } }
     async function shareGame() { if (navigator.share) { try { const shareUrl = `${window.location.origin}${window.location.pathname}?gameId=${currentGameId}`; await navigator.share({ title: 'Kelime Yarışması', text: `Kelime Yarışması oyunuma katıl!`, url: shareUrl, }); } catch (error) { console.error('Paylaşım hatası:', error); } } else { showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true); } }
     
     // --- EVENT LISTENERS ---
-    document.getElementById('theme-light-btn').addEventListener('click', () => { document.body.classList.add('theme-light'); });
-    document.getElementById('theme-dark-btn').addEventListener('click', () => { document.body.classList.remove('theme-light'); });
-    dailyWordBtn.addEventListener('click', () => { if (getUsername()) startDailyGame(); });
-    document.getElementById('single-player-btn').addEventListener('click', () => { if (getUsername()) { singlePlayerMode = 'single'; document.getElementById('singleplayer-title').textContent = 'Tek Kişilik Oyun'; showScreen('singleplayer-setup-screen'); } });
-    document.getElementById('vs-cpu-btn').addEventListener('click', () => { if (getUsername()) { singlePlayerMode = 'vsCPU'; document.getElementById('singleplayer-title').textContent = 'Bilgisayara Karşı'; showScreen('singleplayer-setup-screen'); } });
-    document.getElementById('start-single-game-btn').addEventListener('click', () => { setupAndStartGame(singlePlayerMode); });
-    document.getElementById('multiplayer-btn').addEventListener('click', () => { if (getUsername()) { if(gameIdFromUrl) { joinGame(gameIdFromUrl); } else { showScreen('multiplayer-setup-screen'); } } });
-    document.getElementById('rejoin-game-btn').addEventListener('click', () => { if (getUsername()) { const lastGameId = localStorage.getItem('activeGameId'); if (lastGameId) joinGame(lastGameId); } });
-    statsBtn.addEventListener('click', () => { displayStats(); showScreen('stats-screen'); });
-    closeStatsBtn.addEventListener('click', () => showScreen('mode-selection-screen'));
-    howToPlayBtn.addEventListener('click', () => showScreen('how-to-play-screen'));
-    closeHowToPlayBtn.addEventListener('click', () => showScreen('mode-selection-screen'));
-    shareResultsBtn.addEventListener('click', shareResultsAsEmoji);
-    document.getElementById('back-to-mode-single-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
-    document.getElementById('back-to-mode-multi-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
-    leaveGameBtn.onclick = leaveGame;
-    createBtn.addEventListener('click', createGame);
-    joinBtn.addEventListener('click', () => { const gameId = document.getElementById('game-id-input').value.toUpperCase(); joinGame(gameId); });
-    copyGameIdBtn.addEventListener('click', () => { const gameId = gameIdDisplay.textContent; navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); }); });
-    shareGameBtn.addEventListener('click', shareGame);
-    startGameBtn.addEventListener('click', async () => { if (!currentGameId || gameMode !== 'multiplayer') return; const gameRef = db.collection("games").doc(currentGameId); await gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }); });
-    document.addEventListener('keydown', (e) => { if (e.ctrlKey || e.altKey || e.metaKey) return; handleKeyPress(e.key); });
-    mainMenuBtn.addEventListener('click', leaveGame);
-    newRoundBtn.addEventListener('click', startNewRound);
-    // YENİ AUTH EVENT LISTENERS
+    document.getElementById('theme-light-btn').addEventListener('click', () => { document.body.classList.add('theme-light'); }); document.getElementById('theme-dark-btn').addEventListener('click', () => { document.body.classList.remove('theme-light'); }); dailyWordBtn.addEventListener('click', () => { startDailyGame(); }); document.getElementById('single-player-btn').addEventListener('click', () => { singlePlayerMode = 'single'; document.getElementById('singleplayer-title').textContent = 'Tek Kişilik Oyun'; showScreen('singleplayer-setup-screen'); }); document.getElementById('vs-cpu-btn').addEventListener('click', () => { singlePlayerMode = 'vsCPU'; document.getElementById('singleplayer-title').textContent = 'Bilgisayara Karşı'; showScreen('singleplayer-setup-screen'); }); document.getElementById('start-single-game-btn').addEventListener('click', () => { setupAndStartGame(singlePlayerMode); }); document.getElementById('multiplayer-btn').addEventListener('click', () => { if(gameIdFromUrl) { joinGame(gameIdFromUrl); } else { showScreen('multiplayer-setup-screen'); } }); document.getElementById('rejoin-game-btn').addEventListener('click', () => { const lastGameId = localStorage.getItem('activeGameId'); if (lastGameId) joinGame(lastGameId); }); profileBtn.addEventListener('click', () => { document.getElementById('profile-fullname').textContent = currentUserProfile.fullname; document.getElementById('profile-username').textContent = currentUserProfile.username; document.getElementById('profile-email').textContent = currentUserProfile.email; document.getElementById('profile-age').textContent = currentUserProfile.age; document.getElementById('profile-city').textContent = currentUserProfile.city; displayStats(); showScreen('profile-screen'); }); closeProfileBtn.addEventListener('click', () => showScreen('mode-selection-screen')); howToPlayBtn.addEventListener('click', () => showScreen('how-to-play-screen')); closeHowToPlayBtn.addEventListener('click', () => showScreen('mode-selection-screen')); shareResultsBtn.addEventListener('click', shareResultsAsEmoji); document.getElementById('back-to-mode-single-btn').addEventListener('click', () => showScreen('mode-selection-screen')); document.getElementById('back-to-mode-multi-btn').addEventListener('click', () => showScreen('mode-selection-screen')); leaveGameBtn.onclick = leaveGame; createBtn.addEventListener('click', createGame); joinBtn.addEventListener('click', () => { const gameId = document.getElementById('game-id-input').value.toUpperCase(); joinGame(gameId); }); copyGameIdBtn.addEventListener('click', () => { const gameId = gameIdDisplay.textContent; navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); }); }); shareGameBtn.addEventListener('click', shareGame); startGameBtn.addEventListener('click', async () => { if (!currentGameId || gameMode !== 'multiplayer') return; const gameRef = db.collection("games").doc(currentGameId); await gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }); }); document.addEventListener('keydown', (e) => { if (e.ctrlKey || e.altKey || e.metaKey) return; handleKeyPress(e.key); }); mainMenuBtn.addEventListener('click', leaveGame); newRoundBtn.addEventListener('click', startNewRound);
     loginBtn.addEventListener('click', handleLogin);
     registerBtn.addEventListener('click', handleRegister);
     logoutBtn.addEventListener('click', handleLogout);
+    goToRegisterBtn.addEventListener('click', () => showScreen('register-screen'));
+    backToLoginBtn.addEventListener('click', () => showScreen('login-screen'));
 
     async function initializeApp() {
-        await loadWords();
-        const urlParams = new URLSearchParams(window.location.search);
-        gameIdFromUrl = urlParams.get('gameId');
-
-        if (typeof firebase === 'undefined') { showToast("Firebase kütüphanesi yüklenemedi.", true); return; }
-        
+        if (typeof firebase === 'undefined') { showToast("Firebase kütüphanesi yüklenemedi.", true); return; } 
         try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             auth = firebase.auth();
             
-            // --- GÜNCELLENEN AUTH MANTIĞI ---
-            auth.onAuthStateChanged(user => {
+            auth.onAuthStateChanged(async user => {
                 if (user) {
-                    // Kullanıcı giriş yapmış
                     userId = user.uid;
-                    userDisplay.textContent = user.email;
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        currentUserProfile = userDoc.data();
+                        userDisplay.textContent = currentUserProfile.username;
+                    } else {
+                        currentUserProfile = { username: user.email.split('@')[0], email: user.email };
+                        userDisplay.textContent = currentUserProfile.username;
+                    }
                     
                     createBtn.disabled = false;
                     joinBtn.disabled = false;
-                    
                     const lastGameId = localStorage.getItem('activeGameId');
                     if(lastGameId) { document.getElementById('rejoin-game-btn').classList.remove('hidden'); }
                     
+                    await loadWords();
+                    const urlParams = new URLSearchParams(window.location.search);
+                    gameIdFromUrl = urlParams.get('gameId');
+
                     if (gameIdFromUrl && !currentGameId) {
                         joinGame(gameIdFromUrl);
                         gameIdFromUrl = null;
@@ -356,11 +355,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         showScreen('mode-selection-screen');
                     }
                 } else {
-                    // Kullanıcı giriş yapmamış veya çıkış yapmış
                     userId = null;
+                    currentUserProfile = null;
                     createBtn.disabled = true;
                     joinBtn.disabled = true;
-                    // Tüm oyun ekranlarını gizle ve sadece giriş ekranını göster
                     showScreen('login-screen');
                 }
             });
@@ -369,6 +367,5 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Uygulama başlatılamadı.", true);
         }
     }
-    
     initializeApp();
 });
