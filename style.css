@@ -16,7 +16,7 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
     font-weight: bold; 
     text-transform: uppercase; 
     transform-style: preserve-3d;
-    transition: transform 0.6s, background-color 0.3s 0.3s, border-color 0.3s 0.3s; /* Geçişe arkaplan ve çerçeveyi ekledik */
+    transition: transform 0.6s, background-color 0.3s 0.3s, border-color 0.3s 0.3s;
 }
 .tile-inner { 
     position: absolute; 
@@ -53,7 +53,6 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
     40%, 60% { transform: translateX(4px); }
 }
 
-/* KUTUCUK İÇİ RENKLENDİRME DÜZELTMESİ */
 .tile.correct, .tile.static.correct {
     background-color: #10b981;
     border-color: #10b981;
@@ -74,7 +73,6 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
     border-color: #ef4444;
     color: white;
 }
-/* RENKLENDİRME BİTİŞ */
 
 .keyboard-key {
     transition: background-color 0.2s;
@@ -96,7 +94,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* --- AÇIK TEMA GÜNCELLEMELERİ --- */
 body.theme-light { 
-    background-color: #e9d5ff; /* LİLA AÇIK TEMA */
+    background-color: #faedcd; /* YENİ ARKA PLAN RENGİ */
     color: #1f2937; 
 }
 body.theme-light .bg-gray-800, body.theme-light .bg-gray-900:not(#theme-dark-btn) { background-color: #ffffff; }
@@ -106,12 +104,11 @@ body.theme-light .bg-gray-700 { background-color: #f3f4f6; }
 body.theme-light .border-gray-600 { border-color: #d1d5db; }
 body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
 body.theme-light .tile { 
-    border-color: #1f2937; /* SİYAH ÇERÇEVE */
-    color: #1f2937; /* Harf rengi */
+    border-color: #1f2937; 
+    color: #1f2937;
 }
 body.theme-light #username-input::placeholder { color: #9ca3af; }
 
-/* Açık temada renkli kutucukların içindeki yazıların beyaz kalmasını sağla */
 body.theme-light .tile.correct,
 body.theme-light .tile.present,
 body.theme-light .tile.absent,
