@@ -47,16 +47,21 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
     40%, 60% { transform: translateX(4px); }
 }
 
-/* RENK ATAMA KODLARI (DÜZELTİLDİ) */
-.tile.correct.flip { border-color: #10b981; }
-.tile.present.flip { border-color: #f59e0b; }
-.tile.absent.flip  { border-color: #374151; }
-.tile.failed.flip  { border-color: #ef4444; }
+/* RENK ATAMA KODLARI (OYUN İÇİ) */
+.tile.flip.correct { border-color: #10b981; }
+.tile.flip.present { border-color: #f59e0b; }
+.tile.flip.absent  { border-color: #374151; }
+.tile.flip.failed  { border-color: #ef4444; }
 
-.tile.correct .back { background-color: #10b981; color: white; }
-.tile.present .back { background-color: #f59e0b; color: white; }
-.tile.absent .back  { background-color: #374151; color: white; }
-.tile.failed .back  { background-color: #ef4444; color: white; }
+.tile .back.correct { background-color: #10b981; color: white; }
+.tile .back.present { background-color: #f59e0b; color: white; }
+.tile .back.absent  { background-color: #374151; color: white; }
+.tile .back.failed  { background-color: #ef4444; color: white; }
+
+/* "NASIL OYNANIR?" İÇİN STATİK RENK KODLARI (DÜZELTİLDİ) */
+.tile.static.correct { background-color: #10b981; border-color: #10b981; color: white; }
+.tile.static.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
+.tile.static.absent { background-color: #374151; border-color: #374151; color: white; }
 /* RENK ATAMA BİTİŞ */
 
 .keyboard-key {
@@ -88,9 +93,7 @@ body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
 body.theme-light .tile { border-color: #d1d5db; }
 body.theme-light #username-input::placeholder { color: #9ca3af; }
 
-body.theme-light .tile.correct.flip .back,
-body.theme-light .tile.present.flip .back,
-body.theme-light .tile.absent.flip .back,
-body.theme-light .tile.failed.flip .back {
+body.theme-light .tile .back.correct, body.theme-light .tile .back.present, body.theme-light .tile .back.absent, body.theme-light .tile .back.failed,
+body.theme-light .tile.static.correct, body.theme-light .tile.static.present, body.theme-light .tile.static.absent {
     color: white;
 }
