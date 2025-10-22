@@ -137,7 +137,6 @@
                 </div>
                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
             </div>
-            
             <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
                  <div class="flex items-center gap-2">
                      <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
@@ -149,11 +148,9 @@
                  </div>
                  <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
             </div>
-            
             <div class="w-full flex-grow flex flex-col justify-center min-h-0">
                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
             </div>
-
             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
             <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
@@ -176,26 +173,13 @@
         <div id="stats-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h2 class="text-3xl font-bold mb-4">İstatistikler</h2>
             <div class="grid grid-cols-4 gap-2 text-center mb-4">
-                <div>
-                    <p id="stats-played" class="text-2xl font-bold">0</p>
-                    <p class="text-xs text-gray-400">Oynanan</p>
-                </div>
-                <div>
-                    <p id="stats-win-percentage" class="text-2xl font-bold">0</p>
-                    <p class="text-xs text-gray-400">Kazanma %</p>
-                </div>
-                <div>
-                    <p id="stats-current-streak" class="text-2xl font-bold">0</p>
-                    <p class="text-xs text-gray-400">Seri</p>
-                </div>
-                <div>
-                    <p id="stats-max-streak" class="text-2xl font-bold">0</p>
-                    <p class="text-xs text-gray-400">En İyi Seri</p>
-                </div>
+                <div> <p id="stats-played" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Oynanan</p> </div>
+                <div> <p id="stats-win-percentage" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Kazanma %</p> </div>
+                <div> <p id="stats-current-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Seri</p> </div>
+                <div> <p id="stats-max-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">En İyi Seri</p> </div>
             </div>
             <h3 class="text-xl font-bold mb-2">Tahmin Dağılımı</h3>
-            <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left">
-            </div>
+            <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
             <button id="close-stats-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kapat</button>
         </div>
 
@@ -224,14 +208,13 @@
             <div class="flex justify-center gap-2 mb-2">
                 <div class="tile"><div class="tile-inner front">K</div><div class="tile-inner back">K</div></div>
                 <div class="tile"><div class="tile-inner front">A</div><div class="tile-inner back">A</div></div>
-                <div class="tile"><div class="tile-inner front">A</div><div class="tile-inner back">Ğ</div></div>
+                <div class="tile"><div class="tile-inner front">Ğ</div><div class="tile-inner back">Ğ</div></div>
                 <div class="tile absent flip"><div class="tile-inner front">I</div><div class="tile-inner back">I</div></div>
                 <div class="tile"><div class="tile-inner front">T</div><div class="tile-inner back">T</div></div>
             </div>
             <p class="mb-4"><strong class="text-gray-400">I</strong> harfi kelimede yok.</p>
             <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
         </div>
-
 
     </div>
     <div id="toast" class="toast"></div>
