@@ -15,9 +15,24 @@
 <body class="bg-gray-900 text-gray-200">
     <div id="app" class="w-full max-w-md mx-auto flex flex-col h-full p-2">
         
-        <div id="mode-selection-screen" class="text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+        <div id="login-screen" class="text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
-            <input type="text" id="username-input" placeholder="Kullanıcı Adını Gir" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 mb-6 text-center text-white text-lg" maxlength="12">
+            <div class="space-y-4">
+                <input type="email" id="email-input" placeholder="E-posta Adresiniz" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 text-center text-white text-lg">
+                <input type="password" id="password-input" placeholder="Şifreniz" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 text-center text-white text-lg">
+                <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Giriş Yap</button>
+                <button id="register-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kayıt Ol</button>
+            </div>
+            <p id="auth-loading" class="text-gray-400 mt-4 hidden">İşlem yapılıyor...</p>
+        </div>
+
+        <div id="mode-selection-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+            <div id="user-info" class="absolute top-4 right-4 text-xs text-right">
+                <p id="user-display" class="font-bold"></p>
+                <button id="logout-btn" class="text-red-400 hover:text-red-500">Çıkış Yap</button>
+            </div>
+            <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
+            <input type="text" id="username-input" placeholder="Oyun İçi Adınız" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 mb-6 text-center text-white text-lg" maxlength="12">
             <div class="space-y-4">
                  <button id="daily-word-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>

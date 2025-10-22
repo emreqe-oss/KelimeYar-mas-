@@ -1,8 +1,10 @@
-// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri içerir.
+// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve YENİ KULLANICI GİRİŞ SİSTEMİNİ içerir.
 
 let kelimeSozlugu = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Ekranlar
+    const loginScreen = document.getElementById('login-screen');
     const modeSelectionScreen = document.getElementById('mode-selection-screen');
     const singleplayerSetupScreen = document.getElementById('singleplayer-setup-screen');
     const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
@@ -10,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreboardScreen = document.getElementById('scoreboard-screen');
     const statsScreen = document.getElementById('stats-screen');
     const howToPlayScreen = document.getElementById('how-to-play-screen');
+
+    // Elementler
     const guessGrid = document.getElementById('guess-grid');
     const keyboardContainer = document.getElementById('keyboard');
     const toast = document.getElementById('toast');
@@ -34,6 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const hardModeCheckbox = document.getElementById('hard-mode-checkbox');
     const hardModeCheckboxMulti = document.getElementById('hard-mode-checkbox-multi');
 
+    // YENİ Auth Elementleri
+    const emailInput = document.getElementById('email-input');
+    const passwordInput = document.getElementById('password-input');
+    const loginBtn = document.getElementById('login-btn');
+    const registerBtn = document.getElementById('register-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userDisplay = document.getElementById('user-display');
+    const authLoading = document.getElementById('auth-loading');
+
+
     let db, auth, userId, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
     let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
     let singlePlayerMode = null;
@@ -43,10 +57,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const GUESS_COUNT = 6;
     const DAILY_WORD_LENGTH = 5;
 
+    // --- YENİ AUTH FONKSİYONLARI ---
+    const handleLogin = async () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        if (!email || !password) {
+            return showToast("E-posta ve şifre alanları boş bırakılamaz.", true);
+        }
+        authLoading.classList.remove('hidden');
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+            // Başarılı giriş sonrası işlemler onAuthStateChanged tarafından yönetilecek
+        } catch (error) {
+            showToast(error.message, true);
+        }
+        authLoading.classList.add('hidden');
+    };
+
+    const handleRegister = async () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        if (!email || !password) {
+            return showToast("E-posta ve şifre alanları boş bırakılamaz.", true);
+        }
+        if (password.length < 6) {
+            return showToast("Şifre en az 6 karakter olmalıdır.", true);
+        }
+        authLoading.classList.remove('hidden');
+        try {
+            await auth.createUserWithEmailAndPassword(email, password);
+            // Başarılı kayıt sonrası işlemler onAuthStateChanged tarafından yönetilecek
+        } catch (error) {
+            showToast(error.message, true);
+        }
+        authLoading.classList.add('hidden');
+    };
+
+    const handleLogout = async () => {
+        try {
+            await auth.signOut();
+            // Başarılı çıkış sonrası işlemler onAuthStateChanged tarafından yönetilecek
+        } catch (error) {
+            showToast(error.message, true);
+        }
+    };
+
+
     function getDaysSinceEpoch() { const today = new Date(); const epoch = new Date('2024-01-01'); return Math.floor((today - epoch) / (1000 * 60 * 60 * 24)); }
     function getWordOfTheDay() { const dayIndex = getDaysSinceEpoch(); const wordList = kelimeSozlugu[DAILY_WORD_LENGTH]; return wordList[dayIndex % wordList.length]; }
-    function getDailyGameState() { const state = localStorage.getItem('dailyGameState'); if (!state) return null; try { const parsedState = JSON.parse(state); const today = new Date().toDateString(); if (parsedState.date === today) { return parsedState; } return null; } catch (e) { return null; } }
-    function saveDailyGameState(gameState) { const state = { date: new Date().toDateString(), guesses: gameState.players[userId].guesses, status: gameState.status, secretWord: gameState.secretWord }; localStorage.setItem('dailyGameState', JSON.stringify(state)); }
+    function getDailyGameState() { const state = localStorage.getItem(`dailyGameState_${userId}`); if (!state) return null; try { const parsedState = JSON.parse(state); const today = new Date().toDateString(); if (parsedState.date === today) { return parsedState; } return null; } catch (e) { return null; } }
+    function saveDailyGameState(gameState) { const state = { date: new Date().toDateString(), guesses: gameState.players[userId].guesses, status: gameState.status, secretWord: gameState.secretWord }; localStorage.setItem(`dailyGameState_${userId}`, JSON.stringify(state)); }
     function startDailyGame() {
         gameMode = 'daily'; const username = getUsername(); const secretWord = getWordOfTheDay(); wordLength = DAILY_WORD_LENGTH; const savedState = getDailyGameState(); let guesses = []; let status = 'playing'; if (savedState) { guesses = savedState.guesses; status = savedState.status; }
         localGameData = { wordLength, secretWord, timeLimit: 999, isHardMode: true, players: { [userId]: { username, guesses, score: 0 } }, currentPlayerId: userId, status, };
@@ -61,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.clipboard.writeText(shareText).then(() => { showToast('Sonuç panoya kopyalandı!'); }).catch(err => { console.error('Kopyalama başarısız: ', err); showToast('Kopyalama başarısız oldu!', true); });
     }
     function shakeCurrentRow() { for (let i = 0; i < wordLength; i++) { const tile = document.getElementById(`tile-${currentRow}-${i}`); if (tile) { tile.classList.add('shake'); tile.addEventListener('animationend', () => { tile.classList.remove('shake'); }, { once: true }); } } }
-    function getStats() { const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } }; try { const stats = JSON.parse(localStorage.getItem('gameStats')); return stats ? { ...defaultStats, ...stats } : defaultStats; } catch (e) { return defaultStats; } }
-    function saveStats(stats) { localStorage.setItem('gameStats', JSON.stringify(stats)); }
+    function getStats() { const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } }; try { const stats = JSON.parse(localStorage.getItem(`gameStats_${userId}`)); return stats ? { ...defaultStats, ...stats } : defaultStats; } catch (e) { return defaultStats; } }
+    function saveStats(stats) { localStorage.setItem(`gameStats_${userId}`, JSON.stringify(stats)); }
     function updateStats(didWin, guessCount) {
         if (gameMode === 'multiplayer') return;
         const stats = getStats(); stats.played += 1;
@@ -80,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const firebaseConfig = { apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ", authDomain: "kelime-oyunu-flaneur.firebaseapp.com", projectId: "kelime-oyunu-flaneur", storageBucket: "kelime-oyunu-flaneur.appspot.com", messagingSenderId: "888546992121", appId: "1:888546992121:web:3e29748729cca6fbbb2728", measurementId: "G-RVD6YZ8JYV" };
     function showToast(message, isError = false) { if (isError) playSound('error'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
     function getUsername() { let username = document.getElementById('username-input').value.trim(); return username ? username.slice(0, 12) : `Oyuncu${Math.floor(Math.random() * 900) + 100}`; }
-    function showScreen(screenId) { ['mode-selection-screen', 'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen', 'stats-screen', 'how-to-play-screen'].forEach(id => { document.getElementById(id).classList.add('hidden'); }); document.getElementById(screenId).classList.remove('hidden'); }
+    function showScreen(screenId) { ['login-screen', 'mode-selection-screen', 'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 'scoreboard-screen', 'stats-screen', 'how-to-play-screen'].forEach(id => { document.getElementById(id).classList.add('hidden'); }); document.getElementById(screenId).classList.remove('hidden'); }
     function initializeGameUI(gameData) { wordLength = gameData.wordLength; if (wordLength === 4) { guessGrid.style.maxWidth = '220px'; } else if (wordLength === 5) { guessGrid.style.maxWidth = '280px'; } else { guessGrid.style.maxWidth = '320px'; } createGrid(); createKeyboard(); }
     function setupAndStartGame(mode) {
         gameMode = mode;
@@ -188,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameMode === 'multiplayer' && firstFailurePlayerId !== null && firstFailurePlayerId !== userId) { const gameRef = db.collection("games").doc(currentGameId); const playerGuesses = localGameData.players[userId].guesses || []; playerGuesses.push(newGuess); const updates = { [`players.${userId}.guesses`]: playerGuesses, status: 'finished', roundWinner: null, firstFailurePlayerId: userId }; await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; }); return; }
         if (gameMode === 'multiplayer') { const gameRef = db.collection("games").doc(currentGameId); const playerGuesses = localGameData.players[userId].guesses || []; playerGuesses.push(newGuess); const playerIds = Object.keys(localGameData.players); const myIndex = playerIds.indexOf(userId); const nextPlayerIndex = (myIndex + 1) % playerIds.length; const updates = { [`players.${userId}.guesses`]: playerGuesses, currentPlayerId: playerIds[nextPlayerIndex], turnStartTime: firebase.firestore.FieldValue.serverTimestamp(), firstFailurePlayerId: userId }; if (totalGuessesMade >= GUESS_COUNT) { updates.status = 'finished'; updates.roundWinner = null; } await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
         } else { localGameData.players[userId].guesses.push(newGuess); if (totalGuessesMade >= GUESS_COUNT) { localGameData.status = 'finished'; localGameData.roundWinner = null; } else { if (gameMode === 'vsCPU') { localGameData.currentPlayerId = 'cpu'; } }
-            const didWin = localGameData.roundWinner === userId; if (localGameData.status === 'finished') updateStats(didWin, 0);
+            const didWin = localGameData.roundWinner === userId; if (localGameData.status === 'finished') { if(gameMode !== 'multiplayer') updateStats(didWin, 0); if (gameMode === 'daily') saveDailyGameState(localGameData); }
             renderGameState(localGameData, true).then(() => { if (localGameData.status === 'finished') { setTimeout(() => showScoreboard(localGameData), wordLength * 300); } else if (gameMode === 'vsCPU') { setTimeout(cpuTurn, 1500 + wordLength * 250); } });
             keyboardContainer.style.pointerEvents = 'auto';
         }
@@ -213,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const index in correctLetters) { if (guessWord[index] !== correctLetters[index]) { showToast(`'${correctLetters[index]}' harfi ${parseInt(index) + 1}. sırada olmalı!`, true); shakeCurrentRow(); return; } }
             for (const letter of presentLetters) { if (!guessWord.includes(letter)) { showToast(`'${letter}' harfini kullanmalısın!`, true); shakeCurrentRow(); return; } }
         }
-        if (!kelimeSozlugu[wordLength] || !kelimeSozlugu[wordLength].includes(guessWord)) { showToast("Kelime sözlükte bulunamadı!", true); shakeCurrentRow(); return; }
+        if (!kelimeSozlugu[wordLength] || !kelimeSozlugu[wordLength].includes(guessWord)) { showToast("Kelime sözlükte bulunamadı!", true); shakeCurrentRow(); if (gameMode !== 'daily' && gameMode !== 'single') { await failTurn(guessWord); } return; }
         keyboardContainer.style.pointerEvents = 'none'; stopTurnTimer();
         const secretWord = localGameData.secretWord; const colors = calculateColors(guessWord, secretWord); const newGuess = { word: guessWord, colors: colors }; const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1;
         if (gameMode === 'multiplayer') { const gameRef = db.collection("games").doc(currentGameId); const playerGuesses = localGameData.players[userId].guesses || []; playerGuesses.push(newGuess); const playerIds = Object.keys(localGameData.players); const myIndex = playerIds.indexOf(userId); const nextPlayerIndex = (myIndex + 1) % playerIds.length; const updates = { [`players.${userId}.guesses`]: playerGuesses, currentPlayerId: playerIds[nextPlayerIndex], turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }; if (guessWord === secretWord) { updates.status = 'finished'; updates.roundWinner = userId; const scoreToAdd = scorePoints[playerGuesses.length - 1] || 0; updates[`players.${userId}.score`] = (localGameData.players[userId].score || 0) + scoreToAdd; } else if (totalGuessesMade >= GUESS_COUNT) { updates.status = 'finished'; updates.roundWinner = null; } await gameRef.update(updates).finally(() => { keyboardContainer.style.pointerEvents = 'auto'; });
@@ -233,7 +293,82 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchWordMeaning(word) { try { const response = await fetch(`https://sozluk.gov.tr/gts?ara=${word.toLocaleLowerCase('tr-TR')}`); const data = await response.json(); if (data.error) { return "Anlam bulunamadı."; } return data[0]?.anlamlarListe?.[0]?.anlam || "Anlam bulunamadı."; } catch (error) { console.error("Anlam alınırken hata:", error); return "Anlam alınırken bir hata oluştu."; } }
     async function loadWords() { try { const response = await fetch('kelimeler.json'); if (!response.ok) { throw new Error(`Network response was not ok, status: ${response.status}`); } kelimeSozlugu = await response.json(); document.getElementById('loading-words').style.display = 'none'; document.getElementById('daily-word-btn').disabled = false; document.getElementById('single-player-btn').disabled = false; document.getElementById('vs-cpu-btn').disabled = false; document.getElementById('multiplayer-btn').disabled = false; } catch (error) { console.error("HATA: Kelime listesi yüklenirken bir sorun oluştu!", error); document.getElementById('loading-words').textContent = 'Kelimeler yüklenemedi! (Hata)'; showToast('Kelime listesi yüklenemedi. Lütfen konsolu kontrol edin.', true); } }
     async function shareGame() { if (navigator.share) { try { const shareUrl = `${window.location.origin}${window.location.pathname}?gameId=${currentGameId}`; await navigator.share({ title: 'Kelime Yarışması', text: `Kelime Yarışması oyunuma katıl!`, url: shareUrl, }); } catch (error) { console.error('Paylaşım hatası:', error); } } else { showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true); } }
-    document.getElementById('theme-light-btn').addEventListener('click', () => { document.body.classList.add('theme-light'); }); document.getElementById('theme-dark-btn').addEventListener('click', () => { document.body.classList.remove('theme-light'); }); dailyWordBtn.addEventListener('click', () => { if (getUsername()) startDailyGame(); }); document.getElementById('single-player-btn').addEventListener('click', () => { if (getUsername()) { singlePlayerMode = 'single'; document.getElementById('singleplayer-title').textContent = 'Tek Kişilik Oyun'; showScreen('singleplayer-setup-screen'); } }); document.getElementById('vs-cpu-btn').addEventListener('click', () => { if (getUsername()) { singlePlayerMode = 'vsCPU'; document.getElementById('singleplayer-title').textContent = 'Bilgisayara Karşı'; showScreen('singleplayer-setup-screen'); } }); document.getElementById('start-single-game-btn').addEventListener('click', () => { setupAndStartGame(singlePlayerMode); }); document.getElementById('multiplayer-btn').addEventListener('click', () => { if (getUsername()) { if(gameIdFromUrl) { joinGame(gameIdFromUrl); } else { showScreen('multiplayer-setup-screen'); } } }); document.getElementById('rejoin-game-btn').addEventListener('click', () => { if (getUsername()) { const lastGameId = localStorage.getItem('activeGameId'); if (lastGameId) joinGame(lastGameId); } }); statsBtn.addEventListener('click', () => { displayStats(); showScreen('stats-screen'); }); closeStatsBtn.addEventListener('click', () => showScreen('mode-selection-screen')); howToPlayBtn.addEventListener('click', () => showScreen('how-to-play-screen')); closeHowToPlayBtn.addEventListener('click', () => showScreen('mode-selection-screen')); shareResultsBtn.addEventListener('click', shareResultsAsEmoji); document.getElementById('back-to-mode-single-btn').addEventListener('click', () => showScreen('mode-selection-screen')); document.getElementById('back-to-mode-multi-btn').addEventListener('click', () => showScreen('mode-selection-screen')); leaveGameBtn.onclick = leaveGame; createBtn.addEventListener('click', createGame); joinBtn.addEventListener('click', () => { const gameId = document.getElementById('game-id-input').value.toUpperCase(); joinGame(gameId); }); copyGameIdBtn.addEventListener('click', () => { const gameId = gameIdDisplay.textContent; navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); }); }); shareGameBtn.addEventListener('click', shareGame); startGameBtn.addEventListener('click', async () => { if (!currentGameId || gameMode !== 'multiplayer') return; const gameRef = db.collection("games").doc(currentGameId); await gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }); }); document.addEventListener('keydown', (e) => { if (e.ctrlKey || e.altKey || e.metaKey) return; handleKeyPress(e.key); }); mainMenuBtn.addEventListener('click', leaveGame); newRoundBtn.addEventListener('click', startNewRound);
-    async function initializeApp() { await loadWords(); const urlParams = new URLSearchParams(window.location.search); gameIdFromUrl = urlParams.get('gameId'); const lastGameId = localStorage.getItem('activeGameId'); if(lastGameId) { document.getElementById('rejoin-game-btn').classList.remove('hidden'); } if (typeof firebase === 'undefined') { showToast("Firebase kütüphanesi yüklenemedi.", true); return; } try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); auth = firebase.auth(); auth.onAuthStateChanged(user => { if (user) { userId = user.uid; createBtn.disabled = false; joinBtn.disabled = false; if (gameIdFromUrl && !currentGameId) { document.getElementById('username-input').value = `Misafir${Math.floor(Math.random() * 900) + 100}`; joinGame(gameIdFromUrl); gameIdFromUrl = null; } } else { auth.signInAnonymously().catch(error => { console.error("Firebase anonim giriş başarısız!", error); showToast("Bağlantı hatası!", true); }); } }); } catch (e) { console.error("Firebase başlatılırken bir sorun oluştu!", e); showToast("Uygulama başlatılamadı.", true); } }
+    
+    // --- EVENT LISTENERS ---
+    document.getElementById('theme-light-btn').addEventListener('click', () => { document.body.classList.add('theme-light'); });
+    document.getElementById('theme-dark-btn').addEventListener('click', () => { document.body.classList.remove('theme-light'); });
+    dailyWordBtn.addEventListener('click', () => { if (getUsername()) startDailyGame(); });
+    document.getElementById('single-player-btn').addEventListener('click', () => { if (getUsername()) { singlePlayerMode = 'single'; document.getElementById('singleplayer-title').textContent = 'Tek Kişilik Oyun'; showScreen('singleplayer-setup-screen'); } });
+    document.getElementById('vs-cpu-btn').addEventListener('click', () => { if (getUsername()) { singlePlayerMode = 'vsCPU'; document.getElementById('singleplayer-title').textContent = 'Bilgisayara Karşı'; showScreen('singleplayer-setup-screen'); } });
+    document.getElementById('start-single-game-btn').addEventListener('click', () => { setupAndStartGame(singlePlayerMode); });
+    document.getElementById('multiplayer-btn').addEventListener('click', () => { if (getUsername()) { if(gameIdFromUrl) { joinGame(gameIdFromUrl); } else { showScreen('multiplayer-setup-screen'); } } });
+    document.getElementById('rejoin-game-btn').addEventListener('click', () => { if (getUsername()) { const lastGameId = localStorage.getItem('activeGameId'); if (lastGameId) joinGame(lastGameId); } });
+    statsBtn.addEventListener('click', () => { displayStats(); showScreen('stats-screen'); });
+    closeStatsBtn.addEventListener('click', () => showScreen('mode-selection-screen'));
+    howToPlayBtn.addEventListener('click', () => showScreen('how-to-play-screen'));
+    closeHowToPlayBtn.addEventListener('click', () => showScreen('mode-selection-screen'));
+    shareResultsBtn.addEventListener('click', shareResultsAsEmoji);
+    document.getElementById('back-to-mode-single-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
+    document.getElementById('back-to-mode-multi-btn').addEventListener('click', () => showScreen('mode-selection-screen'));
+    leaveGameBtn.onclick = leaveGame;
+    createBtn.addEventListener('click', createGame);
+    joinBtn.addEventListener('click', () => { const gameId = document.getElementById('game-id-input').value.toUpperCase(); joinGame(gameId); });
+    copyGameIdBtn.addEventListener('click', () => { const gameId = gameIdDisplay.textContent; navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); }); });
+    shareGameBtn.addEventListener('click', shareGame);
+    startGameBtn.addEventListener('click', async () => { if (!currentGameId || gameMode !== 'multiplayer') return; const gameRef = db.collection("games").doc(currentGameId); await gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() }); });
+    document.addEventListener('keydown', (e) => { if (e.ctrlKey || e.altKey || e.metaKey) return; handleKeyPress(e.key); });
+    mainMenuBtn.addEventListener('click', leaveGame);
+    newRoundBtn.addEventListener('click', startNewRound);
+    // YENİ AUTH EVENT LISTENERS
+    loginBtn.addEventListener('click', handleLogin);
+    registerBtn.addEventListener('click', handleRegister);
+    logoutBtn.addEventListener('click', handleLogout);
+
+    async function initializeApp() {
+        await loadWords();
+        const urlParams = new URLSearchParams(window.location.search);
+        gameIdFromUrl = urlParams.get('gameId');
+
+        if (typeof firebase === 'undefined') { showToast("Firebase kütüphanesi yüklenemedi.", true); return; }
+        
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+            
+            // --- GÜNCELLENEN AUTH MANTIĞI ---
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // Kullanıcı giriş yapmış
+                    userId = user.uid;
+                    userDisplay.textContent = user.email;
+                    
+                    createBtn.disabled = false;
+                    joinBtn.disabled = false;
+                    
+                    const lastGameId = localStorage.getItem('activeGameId');
+                    if(lastGameId) { document.getElementById('rejoin-game-btn').classList.remove('hidden'); }
+                    
+                    if (gameIdFromUrl && !currentGameId) {
+                        joinGame(gameIdFromUrl);
+                        gameIdFromUrl = null;
+                    } else {
+                        showScreen('mode-selection-screen');
+                    }
+                } else {
+                    // Kullanıcı giriş yapmamış veya çıkış yapmış
+                    userId = null;
+                    createBtn.disabled = true;
+                    joinBtn.disabled = true;
+                    // Tüm oyun ekranlarını gizle ve sadece giriş ekranını göster
+                    showScreen('login-screen');
+                }
+            });
+        } catch (e) {
+            console.error("Firebase başlatılırken bir sorun oluştu!", e);
+            showToast("Uygulama başlatılamadı.", true);
+        }
+    }
+    
     initializeApp();
 });
