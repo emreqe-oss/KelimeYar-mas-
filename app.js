@@ -1,9 +1,9 @@
-// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve ARKADAŞ PROFİLİ GÖRÜNTÜLEME sistemini içerir.
+// Bu dosya, projenin en son ve tam halidir. TÜM özellikleri ve TAM ARKADAŞLIK SİSTEMİNİ içerir.
 
 let kelimeSozlugu = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tüm ekran ve element tanımlamaları...
+    // Ekranlar
     const loginScreen = document.getElementById('login-screen');
     const registerScreen = document.getElementById('register-screen');
     const modeSelectionScreen = document.getElementById('mode-selection-screen');
@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const howToPlayScreen = document.getElementById('how-to-play-screen');
     const friendsScreen = document.getElementById('friends-screen');
     const invitationModal = document.getElementById('invitation-modal');
+
+    // Elementler
     const guessGrid = document.getElementById('guess-grid');
     const keyboardContainer = document.getElementById('keyboard');
     const toast = document.getElementById('toast');
@@ -39,6 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const hardModeCheckbox = document.getElementById('hard-mode-checkbox');
     const hardModeCheckboxMulti = document.getElementById('hard-mode-checkbox-multi');
     const friendsBtn = document.getElementById('friends-btn');
+    
+    // Auth Elementleri
     const emailInput = document.getElementById('email-input');
     const passwordInput = document.getElementById('password-input');
     const loginBtn = document.getElementById('login-btn');
@@ -54,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerPassword = document.getElementById('register-password');
     const registerAge = document.getElementById('register-age');
     const registerCity = document.getElementById('register-city');
+
+    // Friends Ekranı Elementleri
     const backToMenuFromFriendsBtn = document.getElementById('back-to-menu-from-friends-btn');
     const showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
     const showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
@@ -74,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const acceptInviteBtn = document.getElementById('accept-invite-btn');
     const rejectInviteBtn = document.getElementById('reject-invite-btn');
 
+
     let db, auth, userId, currentUserProfile = null, currentGameId = null, gameUnsubscribe = null, turnTimerInterval = null, localGameData = null, gameMode = null;
     let currentRow = 0, isMyTurn = false, isGameOver = false, wordLength = 5, timeLimit = 45;
     let singlePlayerMode = null;
@@ -91,71 +98,173 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(message, isError = false) { if (isError) playSound('error'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
     
     // --- AUTH FONKSİYONLARI ---
-    const handleLogin = async () => { /* ... Mevcut haliyle kalabilir ... */ };
-    const handleRegister = async () => { /* ... Mevcut haliyle kalabilir ... */ };
+    const handleLogin = async () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        if (!email || !password) { return showToast("E-posta ve şifre alanları boş bırakılamaz.", true); }
+        authLoading.classList.remove('hidden');
+        try { await auth.signInWithEmailAndPassword(email, password); } 
+        catch (error) { showToast(getFirebaseErrorMessage(error), true); }
+        authLoading.classList.add('hidden');
+    };
+
+    const handleRegister = async () => {
+        const email = registerEmail.value;
+        const password = registerPassword.value;
+        const fullname = registerFullname.value;
+        const username = registerUsername.value;
+        const age = registerAge.value;
+        const city = registerCity.value;
+        if (!email || !password || !fullname || !username || !age || !city) { return showToast("Tüm alanları doldurmalısınız.", true); }
+        if (password.length < 6) { return showToast("Şifre en az 6 karakter olmalıdır.", true); }
+        authLoading.classList.remove('hidden');
+        try {
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            const initialStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 } };
+            await db.collection('users').doc(user.uid).set({
+                username: username, fullname: fullname, age: parseInt(age), city: city, email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                stats: initialStats
+            });
+        } catch (error) { showToast(getFirebaseErrorMessage(error), true); }
+        authLoading.classList.add('hidden');
+    };
+
     const handleLogout = async () => { if (friendsUnsubscribe) friendsUnsubscribe(); if(invitesUnsubscribe) invitesUnsubscribe(); try { await auth.signOut(); } catch (error) { showToast(getFirebaseErrorMessage(error), true); } };
-    function getFirebaseErrorMessage(error) { /* ... Mevcut haliyle kalabilir ... */ }
-
-    // --- İSTATİSTİK FONKSİYONLARI (GÜNCELLENDİ) ---
-    function getStats(profileData) {
-        const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } };
-        return profileData?.stats ? { ...defaultStats, ...profileData.stats } : defaultStats;
-    }
-
-    async function updateStats(didWin, guessCount) {
-        if (gameMode === 'multiplayer') return;
-        const stats = getStats(currentUserProfile);
-        stats.played += 1;
-        if (didWin) {
-            stats.wins += 1;
-            stats.currentStreak += 1;
-            if (stats.currentStreak > stats.maxStreak) { stats.maxStreak = stats.currentStreak; }
-            if (guessCount >= 1 && guessCount <= 6) { stats.guessDistribution[guessCount] += 1; }
-        } else {
-            stats.currentStreak = 0;
-        }
-        
-        // Firestore'a kaydet
-        try {
-            await db.collection('users').doc(userId).set({ stats: stats }, { merge: true });
-            currentUserProfile.stats = stats; // Lokal kopyayı da güncelle
-        } catch (error) {
-            console.error("İstatistikler güncellenemedi:", error);
+    
+    function getFirebaseErrorMessage(error) {
+        switch (error.code) {
+            case 'auth/user-not-found': return 'Bu e-posta adresiyle bir kullanıcı bulunamadı.';
+            case 'auth/wrong-password': return 'Hatalı şifre girdiniz.';
+            case 'auth/invalid-email': return 'Geçersiz e-posta adresi formatı.';
+            case 'auth/email-already-in-use': return 'Bu e-posta adresi zaten kayıtlı.';
+            case 'auth/weak-password': return 'Şifre çok zayıf, en az 6 karakter olmalı.';
+            default: return 'Bir hata oluştu: ' + error.message;
         }
     }
 
-    function displayStats(profileData) {
-        const stats = getStats(profileData);
-        document.getElementById('stats-played').textContent = stats.played; const winPercentage = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-        document.getElementById('stats-win-percentage').textContent = winPercentage; document.getElementById('stats-current-streak').textContent = stats.currentStreak; document.getElementById('stats-max-streak').textContent = stats.maxStreak;
-        const distributionContainer = document.getElementById('stats-guess-distribution'); distributionContainer.innerHTML = ''; let maxDistribution = Math.max(...Object.values(stats.guessDistribution)); if (maxDistribution === 0) maxDistribution = 1;
-        for (let i = 1; i <= 6; i++) { const count = stats.guessDistribution[i]; const percentage = (count / maxDistribution) * 100; const bar = `<div class="flex items-center"><div class="w-4">${i}</div><div class="flex-grow bg-gray-700 rounded"><div class="bg-amber-500 text-right pr-2 rounded text-black font-bold" style="width: ${percentage > 0 ? percentage : 1}%">${count > 0 ? count : ''}</div></div></div>`; distributionContainer.innerHTML += bar; }
-    }
-
-    // --- YENİ ARKADAŞ PROFİLİ GÖRÜNTÜLEME ---
-    async function showFriendProfile(friendId) {
+    // --- ARKADAŞLIK FONKSİYONLARI ---
+    async function searchUsers() {
+        const query = searchFriendInput.value.trim();
+        if (query.length < 3) return showToast("Arama için en az 3 karakter girin.", true);
+        friendSearchResults.innerHTML = '<p class="text-gray-400">Aranıyor...</p>';
         try {
-            const userDoc = await db.collection('users').doc(friendId).get();
-            if (userDoc.exists) {
-                const friendProfile = userDoc.data();
-                document.getElementById('profile-fullname').textContent = friendProfile.fullname;
-                document.getElementById('profile-username').textContent = friendProfile.username;
-                document.getElementById('profile-email').textContent = friendProfile.email;
-                document.getElementById('profile-age').textContent = friendProfile.age;
-                document.getElementById('profile-city').textContent = friendProfile.city;
-                displayStats(friendProfile);
-                showScreen('profile-screen');
+            const byUsername = db.collection('users').where('username', '==', query).get();
+            const byEmail = db.collection('users').where('email', '==', query).get();
+            const [usernameSnapshot, emailSnapshot] = await Promise.all([byUsername, byEmail]);
+            const results = new Map();
+            usernameSnapshot.forEach(doc => { if (doc.id !== userId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
+            emailSnapshot.forEach(doc => { if (doc.id !== userId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
+            if (results.size === 0) { friendSearchResults.innerHTML = '<p class="text-gray-400">Kullanıcı bulunamadı.</p>';
             } else {
-                showToast("Kullanıcı profili bulunamadı.", true);
+                friendSearchResults.innerHTML = '';
+                results.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'bg-gray-700 p-2 rounded flex justify-between items-center';
+                    userDiv.innerHTML = `<span>${user.username} <span class="text-xs text-gray-400">(${user.fullname})</span></span>`;
+                    const addButton = document.createElement('button');
+                    addButton.className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
+                    addButton.textContent = 'Ekle';
+                    addButton.onclick = () => sendFriendRequest(user.id);
+                    userDiv.appendChild(addButton);
+                    friendSearchResults.appendChild(userDiv);
+                });
             }
-        } catch(error) {
-            showToast("Profil getirilirken hata oluştu.", true);
-            console.error(error);
+        } catch (error) { console.error("Kullanıcı arama hatası:", error); friendSearchResults.innerHTML = '<p class="text-red-400">Arama sırasında bir hata oluştu.</p>'; }
+    }
+    async function sendFriendRequest(receiverId) {
+        if (!userId || !receiverId) return;
+        try {
+            const friendshipData = { users: [userId, receiverId], senderId: userId, receiverId: receiverId, status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+            await db.collection('friendships').add(friendshipData);
+            showToast('Arkadaşlık isteği gönderildi!');
+        } catch (error) { console.error("İstek gönderme hatası:", error); showToast('İstek gönderilirken bir hata oluştu.', true); }
+    }
+    async function handleFriendRequest(friendshipId, action) {
+        try {
+            if (action === 'accept') { await db.collection('friendships').doc(friendshipId).update({ status: 'accepted' }); showToast('Arkadaşlık isteği kabul edildi.'); } 
+            else if (action === 'reject') { await db.collection('friendships').doc(friendshipId).delete(); showToast('Arkadaşlık isteği reddedildi.'); }
+        } catch (error) { console.error("İstek işleme hatası:", error); showToast('İşlem sırasında bir hata oluştu.', true); }
+    }
+    async function removeFriend(friendshipId) {
+        if (confirm("Bu arkadaşınızı silmek istediğinizden emin misiniz?")) {
+            try { await db.collection('friendships').doc(friendshipId).delete(); showToast('Arkadaş silindi.'); } 
+            catch (error) { console.error("Arkadaş silme hatası:", error); showToast('Arkadaş silinirken bir hata oluştu.', true); }
         }
     }
-
-
-    // Diğer tüm oyun fonksiyonları...
+    function listenToFriendships() {
+        if (friendsUnsubscribe) friendsUnsubscribe();
+        friendsUnsubscribe = db.collection('friendships').where('users', 'array-contains', userId)
+            .onSnapshot(async (snapshot) => {
+                const friendPromises = [];
+                const requestPromises = [];
+                let pendingCount = 0;
+                snapshot.forEach(doc => {
+                    const data = { id: doc.id, ...doc.data() };
+                    if (data.status === 'accepted') {
+                        const friendId = data.users.find(id => id !== userId);
+                        if (friendId) friendPromises.push(db.collection('users').doc(friendId).get().then(userDoc => ({ friendshipId: data.id, id: userDoc.id, ...userDoc.data() })));
+                    } else if (data.status === 'pending' && data.receiverId === userId) {
+                        pendingCount++;
+                        requestPromises.push(db.collection('users').doc(data.senderId).get().then(userDoc => ({ friendshipId: data.id, id: userDoc.id, ...userDoc.data() })));
+                    }
+                });
+                const friends = await Promise.all(friendPromises);
+                const requests = await Promise.all(requestPromises);
+                if (pendingCount > 0) { friendRequestCount.textContent = pendingCount; friendRequestCount.classList.remove('hidden'); } 
+                else { friendRequestCount.classList.add('hidden'); }
+                renderFriends(friends, requests);
+            }, error => console.error("Arkadaşlıkları dinlerken hata:", error));
+    }
+    function renderFriends(friends, requests) {
+        friendsList.innerHTML = '';
+        friendRequestsList.innerHTML = '';
+        if (friends.length > 0) {
+            friendsListPlaceholder.classList.add('hidden');
+            friends.forEach(friend => {
+                const friendDiv = document.createElement('div'); friendDiv.className = 'bg-gray-700 p-2 rounded flex justify-between items-center'; friendDiv.innerHTML = `<span>${friend.username}</span>`;
+                const buttonsWrapper = document.createElement('div'); buttonsWrapper.className = 'flex gap-2 items-center';
+                const profileButton = document.createElement('button'); profileButton.className = 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-lg text-xs'; profileButton.textContent = 'Profil'; profileButton.onclick = () => showFriendProfile(friend.id);
+                const inviteButton = document.createElement('button'); inviteButton.className = 'bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-1 px-2 rounded-lg text-xs'; inviteButton.textContent = 'Davet Et'; inviteButton.onclick = () => createGameWithFriend(friend.id);
+                const removeButton = document.createElement('button'); removeButton.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs'; removeButton.textContent = 'Sil'; removeButton.onclick = () => removeFriend(friend.friendshipId);
+                buttonsWrapper.appendChild(profileButton); buttonsWrapper.appendChild(inviteButton); buttonsWrapper.appendChild(removeButton); friendDiv.appendChild(buttonsWrapper); friendsList.appendChild(friendDiv);
+            });
+        } else { friendsListPlaceholder.classList.remove('hidden'); }
+        if (requests.length > 0) {
+            friendRequestsPlaceholder.classList.add('hidden');
+            requests.forEach(request => {
+                const requestDiv = document.createElement('div'); requestDiv.className = 'bg-gray-700 p-2 rounded flex justify-between items-center'; requestDiv.innerHTML = `<span>${request.username}</span>`;
+                const buttonsWrapper = document.createElement('div'); buttonsWrapper.className = 'flex gap-2';
+                const acceptButton = document.createElement('button'); acceptButton.className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-lg text-xs'; acceptButton.textContent = 'Kabul Et'; acceptButton.onclick = () => handleFriendRequest(request.friendshipId, 'accept');
+                const rejectButton = document.createElement('button'); rejectButton.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs'; rejectButton.textContent = 'Reddet'; rejectButton.onclick = () => handleFriendRequest(request.friendshipId, 'reject');
+                buttonsWrapper.appendChild(acceptButton); buttonsWrapper.appendChild(rejectButton); requestDiv.appendChild(buttonsWrapper); friendRequestsList.appendChild(requestDiv);
+            });
+        } else { friendRequestsPlaceholder.classList.remove('hidden'); }
+    }
+    function switchFriendTab(tabName) {
+        const tabs = { friends: friendsTab, requests: requestsTab, add: addFriendTab };
+        const buttons = { friends: showFriendsTabBtn, requests: showRequestsTabBtn, add: showAddFriendTabBtn };
+        for (const key in tabs) { tabs[key].classList.add('hidden'); buttons[key].classList.remove('border-indigo-500', 'text-white'); buttons[key].classList.add('text-gray-400'); }
+        tabs[tabName].classList.remove('hidden'); buttons[tabName].classList.add('border-indigo-500', 'text-white'); buttons[tabName].classList.remove('text-gray-400');
+    }
+    async function createGameWithFriend(friendId) { createBtn.onclick = () => createGame(friendId); showScreen('multiplayer-setup-screen'); showToast(`Oyun kurarak arkadaşına meydan oku.`, false); }
+    function listenForGameInvites() {
+        if(invitesUnsubscribe) invitesUnsubscribe();
+        invitesUnsubscribe = db.collection('games').where('invitedPlayerId', '==', userId).where('status', '==', 'invited')
+            .onSnapshot(async (snapshot) => {
+                if (snapshot.docs.length > 0) {
+                    const inviteDoc = snapshot.docs[0]; const inviteData = { id: inviteDoc.id, ...inviteDoc.data() }; const creatorDoc = await db.collection('users').doc(inviteData.creatorId).get();
+                    const creatorUsername = creatorDoc.exists() ? creatorDoc.data().username : 'Bir arkadaşın';
+                    invitationText.innerHTML = `<strong class="text-yellow-400">${creatorUsername}</strong> seni bir oyuna davet ediyor!`;
+                    acceptInviteBtn.onclick = () => acceptInvite(inviteData.id); rejectInviteBtn.onclick = () => rejectInvite(inviteData.id);
+                    invitationModal.classList.remove('hidden');
+                }
+            });
+    }
+    async function acceptInvite(gameId) { invitationModal.classList.add('hidden'); await joinGame(gameId); }
+    async function rejectInvite(gameId) { invitationModal.classList.add('hidden'); try { await db.collection('games').doc(gameId).delete(); showToast('Davet reddedildi.'); } catch (error) { console.error('Davet reddedilemedi:', error); } }
+    
     function getDaysSinceEpoch() { const today = new Date(); const epoch = new Date('2024-01-01'); return Math.floor((today - epoch) / (1000 * 60 * 60 * 24)); }
     function getWordOfTheDay() { const dayIndex = getDaysSinceEpoch(); const wordList = kelimeSozlugu[DAILY_WORD_LENGTH]; return wordList[dayIndex % wordList.length]; }
     function getDailyGameState() { const state = localStorage.getItem(`dailyGameState_${userId}`); if (!state) return null; try { const parsedState = JSON.parse(state); const today = new Date().toDateString(); if (parsedState.date === today) { return parsedState; } return null; } catch (e) { return null; } }
@@ -189,66 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('game-screen');
         initializeGameUI(localGameData);
         renderGameState(localGameData);
-    }
-    async function createGame(invitedFriendId = null) {
-        if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
-        gameMode = 'multiplayer';
-        const username = getUsername();
-        const selectedLength = parseInt(document.getElementById('word-length-select-multi').value);
-        const selectedTime = parseInt(document.getElementById('time-select-multi').value);
-        const selectedMatchLength = parseInt(document.getElementById('match-length-select').value);
-        const isHard = hardModeCheckboxMulti.checked;
-        const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const secretWord = kelimeSozlugu[selectedLength][Math.floor(Math.random() * kelimeSozlugu[selectedLength].length)];
-        const gameData = {
-            gameId, wordLength: selectedLength, secretWord, timeLimit: selectedTime, creatorId: userId,
-            isHardMode: isHard, matchLength: selectedMatchLength, currentRound: 1,
-            players: { [userId]: { username, guesses: [], score: 0 } },
-            currentPlayerId: userId, status: invitedFriendId ? 'invited' : 'waiting', roundWinner: null, createdAt: new Date(),
-            turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-            firstFailurePlayerId: null
-        };
-        if (invitedFriendId) { gameData.invitedPlayerId = invitedFriendId; }
-        try { await db.collection("games").doc(gameId).set(gameData); await joinGame(gameId); }
-        catch (error) { console.error("Error creating game:", error); showToast("Oyun oluşturulamadı!", true); }
-    }
-    async function joinGame(gameId) {
-        if (!db || !auth || !userId) return showToast("Sunucuya bağlanılamıyor.", true);
-        if (!gameId) return showToast("Lütfen bir Oyun ID'si girin.", true);
-        gameMode = 'multiplayer';
-        const username = getUsername();
-        const gameRef = db.collection("games").doc(gameId);
-        try {
-            const gameDoc = await gameRef.get();
-            if (!gameDoc.exists) { localStorage.removeItem('activeGameId'); return showToast("Oyun bulunamadı!", true); }
-            const gameData = gameDoc.data();
-            if (Object.keys(gameData.players).length === 1 && !gameData.players[userId]) { await gameRef.update({ [`players.${userId}`]: { username, guesses: [], score: 0 } }); }
-            else if (!gameData.players[userId]) { return showToast("Bu oyun dolu veya başlamış.", true); }
-            localStorage.setItem('activeGameId', gameId);
-            currentGameId = gameId;
-            showScreen('game-screen');
-            initializeGameUI(gameData);
-            listenToGameUpdates(gameId);
-        } catch (error) { console.error("Error joining game:", error); showToast("Oyuna katılırken hata oluştu.", true); }
-    }
-    function listenToGameUpdates(gameId) {
-        if (gameUnsubscribe) gameUnsubscribe();
-        const gameRef = db.collection("games").doc(gameId);
-        gameUnsubscribe = gameRef.onSnapshot((doc) => {
-            const gameData = doc.data();
-            if (!gameData) { showToast("Oyun sonlandırıldı."); leaveGame(); return; }
-            const oldGameData = localGameData;
-            localGameData = gameData;
-            const oldGuessesCount = oldGameData ? Object.values(oldGameData.players).flatMap(p => p.guesses).length : 0;
-            const newGuessesCount = Object.values(gameData.players).flatMap(p => p.guesses).length;
-            if (gameData.status === 'finished') {
-                renderGameState(gameData, oldGuessesCount < newGuessesCount).then(() => {
-                    setTimeout(() => showScoreboard(gameData), wordLength * 300 + 500);
-                });
-            } else {
-                renderGameState(gameData, oldGuessesCount < newGuessesCount);
-            }
-        });
     }
     function leaveGame() { if (gameUnsubscribe) gameUnsubscribe(); stopTurnTimer(); localStorage.removeItem('activeGameId'); gameUnsubscribe = null; currentGameId = null; localGameData = null; gameMode = null; showScreen('mode-selection-screen'); document.getElementById('rejoin-game-btn').classList.add('hidden'); }
     async function renderGameState(gameData, animateLastRow = false) {
@@ -332,9 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function cpuTurn() { if (isGameOver || !localGameData || localGameData.currentPlayerId !== 'cpu') return; keyboardContainer.style.pointerEvents = 'none'; setTimeout(() => { const allGuesses = Object.values(localGameData.players).flatMap(p => p.guesses); const correctLetters = {}; const presentLetters = {}; const absentLetters = new Set(); allGuesses.forEach(guess => { for (let i = 0; i < guess.word.length; i++) { const letter = guess.word[i]; const color = guess.colors[i]; if (color === 'correct') { correctLetters[letter] = i; } else if (color === 'present') { if (!presentLetters[letter]) presentLetters[letter] = []; if (!presentLetters[letter].includes(i)) presentLetters[letter].push(i); } else if (color === 'absent' && !correctLetters[letter] && !presentLetters[letter]) { absentLetters.add(letter); } } }); let possibleWords = kelimeSozlugu[wordLength].filter(word => { for (const letter of absentLetters) { if (word.includes(letter)) return false; } for (const letter in correctLetters) { if (word[correctLetters[letter]] !== letter) return false; } for (const letter in presentLetters) { if (!word.includes(letter)) return false; for (const pos of presentLetters[letter]) { if (word[pos] === letter) return false; } } return true; }); if (possibleWords.length === 0) { possibleWords = kelimeSozlugu[wordLength]; } const guessWord = possibleWords[Math.floor(Math.random() * possibleWords.length)]; const secretWord = localGameData.secretWord; const colors = calculateColors(guessWord, secretWord); const newGuess = { word: guessWord, colors: colors }; localGameData.players['cpu'].guesses.push(newGuess); const totalGuessesMade = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0); if (guessWord === secretWord) { localGameData.status = 'finished'; localGameData.roundWinner = 'cpu'; const scoreToAdd = scorePoints[localGameData.players['cpu'].guesses.length - 1] || 0; localGameData.players['cpu'].score += scoreToAdd; updateStats(false, 0); } else { if (totalGuessesMade >= GUESS_COUNT) { localGameData.status = 'finished'; localGameData.roundWinner = null; updateStats(false, 0); } else { localGameData.currentPlayerId = userId; } } renderGameState(localGameData, true).then(() => { if (localGameData.status === 'finished') { setTimeout(() => showScoreboard(localGameData), wordLength * 300); } }); keyboardContainer.style.pointerEvents = 'auto'; }, 1000 + Math.random() * 500); }
     async function showScoreboard(gameData) {
         stopTurnTimer(); showScreen('scoreboard-screen'); const roundWinnerDisplay = document.getElementById('round-winner-display'); const correctWordDisplay = document.getElementById('correct-word-display'); const finalScores = document.getElementById('final-scores'); const matchWinnerDisplay = document.getElementById('match-winner-display'); const meaningDisplay = document.getElementById('word-meaning-display');
-        finalScores.style.display = (gameMode === 'daily' || gameMode === 'single') ? 'none' : 'block';
-        matchWinnerDisplay.style.display = gameMode === 'daily' ? 'none' : 'block';
-
+        finalScores.style.display = (gameMode === 'daily' || gameMode === 'single') ? 'none' : 'block'; matchWinnerDisplay.style.display = gameMode === 'daily' ? 'none' : 'block';
         if (gameMode === 'single' || gameMode === 'vsCPU' || gameMode === 'daily') {
             if (gameData.roundWinner === userId) { roundWinnerDisplay.textContent = "Tebrikler, Kazandın!"; playSound('win'); } 
             else { roundWinnerDisplay.textContent = "Kaybettin!"; playSound('lose'); }
@@ -342,10 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (gameData.roundWinner && gameData.players[gameData.roundWinner]) { const winnerName = gameData.players[gameData.roundWinner].username; roundWinnerDisplay.textContent = `${winnerName} Turu Kazandı!`; if (gameData.roundWinner === userId) playSound('win'); else playSound('lose'); } 
             else { roundWinnerDisplay.textContent = "Berabere!"; playSound('draw'); }
         }
-        
         correctWordDisplay.textContent = gameData.secretWord; meaningDisplay.textContent = 'Anlam yükleniyor...'; const meaning = await fetchWordMeaning(gameData.secretWord); meaningDisplay.textContent = meaning;
         finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">Toplam Puan</h3>`; const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => b.score - a.score); sortedPlayers.forEach(player => { const scoreEl = document.createElement('p'); scoreEl.className = 'text-lg'; scoreEl.textContent = `${player.username}: ${player.score} Puan`; finalScores.appendChild(scoreEl); }); matchWinnerDisplay.textContent = ''; newRoundBtn.textContent = 'Yeni Oyun';
-        
         if(gameMode === 'daily') { newRoundBtn.classList.add('hidden'); } 
         else if (gameMode === 'multiplayer') { newRoundBtn.textContent = 'Yeni Tur'; if (gameData.currentRound >= gameData.matchLength) { localStorage.removeItem('activeGameId'); const p1 = sortedPlayers[0]; const p2 = sortedPlayers.length > 1 ? sortedPlayers[1] : { score: -1 }; if (p1.score > p2.score) { matchWinnerDisplay.textContent = `MAÇI ${p1.username} KAZANDI!`; } else if (p2.score > p1.score) { matchWinnerDisplay.textContent = `MAÇI ${p2.username} KAZANDI!`; } else { matchWinnerDisplay.textContent = 'MAÇ BERABERE!'; } newRoundBtn.classList.add('hidden'); } else if (userId === gameData.creatorId) { newRoundBtn.classList.remove('hidden'); } } 
         else { newRoundBtn.classList.remove('hidden'); }
