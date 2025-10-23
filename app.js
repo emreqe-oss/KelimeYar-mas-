@@ -3,6 +3,34 @@
 let kelimeSozlugu = {};
 let cevapSozlugu = {}; // YENİ: Cevapların alınacağı sözlük
 
+// --- KELİME YÜKLEME FONKSİYONU (EKLENDİ) ---
+async function loadWords() {
+    const loadingText = document.getElementById('loading-words');
+    if(loadingText) loadingText.classList.remove('hidden');
+    try {
+        const [kelimelerResponse, cevaplarResponse] = await Promise.all([
+            fetch('kelimeler.json'),
+            fetch('cevaplar.json')
+        ]);
+
+        if (!kelimelerResponse.ok || !cevaplarResponse.ok) {
+            throw new Error('Sözlük dosyaları sunucudan yüklenemedi.');
+        }
+
+        kelimeSozlugu = await kelimelerResponse.json();
+        cevapSozlugu = await cevaplarResponse.json();
+        
+        console.log("Kelimeler ve Cevaplar başarıyla yüklendi.");
+        if(loadingText) loadingText.classList.add('hidden');
+
+    } catch (error) {
+        console.error("Kelime yükleme hatası:", error);
+        if(loadingText) loadingText.textContent = 'Kelimeler yüklenemedi, lütfen sayfayı yenileyin.';
+        showToast("Kelimeler yüklenemedi! Sayfayı yenileyin.", true);
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // Ekranlar
     const loginScreen = document.getElementById('login-screen');
@@ -546,6 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentUserProfile = userDoc.data();
                         userDisplay.textContent = currentUserProfile.username;
                     } else {
+                        // This case might happen if user is created but doc writing fails.
+                        // For robustness, handle it gracefully.
                         currentUserProfile = { username: user.email ? user.email.split('@')[0] : 'Misafir', email: user.email };
                         userDisplay.textContent = currentUserProfile.username;
                     }
@@ -555,6 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lastGameId = localStorage.getItem('activeGameId');
                     if(lastGameId) { document.getElementById('rejoin-game-btn').classList.remove('hidden'); }
                     
+                    // Kelimeleri yükle
                     await loadWords();
                     
                     document.getElementById('daily-word-btn').disabled = false;
@@ -570,6 +601,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (gameIdFromUrl && !currentGameId) {
                         joinGame(gameIdFromUrl);
+                        // Clear the URL parameter to avoid re-joining on refresh
+                        window.history.replaceState({}, document.title, window.location.pathname);
                         gameIdFromUrl = null;
                     } else {
                         showScreen('mode-selection-screen');
