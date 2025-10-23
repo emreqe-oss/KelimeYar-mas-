@@ -2,7 +2,8 @@
 import { db } from './firebase.js';
 import * as state from './state.js';
 import { showToast, playSound, shakeCurrentRow } from './utils.js';
-import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, turnDisplay, timerDisplay, roundCounter, shareGameBtn, startGameBtn } from './ui.js';
+// DÜZELTME: gameIdDisplay buraya eklendi.
+import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, turnDisplay, timerDisplay, gameIdDisplay, roundCounter, shareGameBtn, startGameBtn } from './ui.js';
 
 // --- SABİTLER ---
 const scorePoints = [1000, 800, 600, 400, 200, 100];
@@ -290,11 +291,11 @@ export function leaveGame() {
 async function renderGameState(gameData, animateLastRow = false) {
     // UI güncellemeleri
     if (state.gameMode === 'daily') {
-        gameIdDisplay.textContent = 'Günün Kelimesi';
+        document.getElementById('game-id-display').textContent = 'Günün Kelimesi';
         document.getElementById('game-info-bar').style.display = 'none';
         roundCounter.textContent = new Date().toLocaleDateString('tr-TR');
     } else {
-        gameIdDisplay.textContent = state.gameMode === 'multiplayer' ? gameData.gameId : 'Tek Kişilik';
+        document.getElementById('game-id-display').textContent = state.gameMode === 'multiplayer' ? gameData.gameId : 'Tek Kişilik';
         document.getElementById('game-info-bar').style.display = state.gameMode === 'multiplayer' ? 'flex' : 'none';
         roundCounter.textContent = (state.gameMode === 'multiplayer') ? `Tur ${gameData.currentRound}/${gameData.matchLength}` : '';
     }
