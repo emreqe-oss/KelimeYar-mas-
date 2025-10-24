@@ -2,37 +2,31 @@
 
 import { showToast } from './utils.js';
 
-// --- NİHAİ GÜVENLİ YÖNTEM ---
-// Bu yapı, projenin Vercel gibi modern platformlara deploy edilmesi için tasarlanmıştır.
-// Anahtarlar artık kodun içinde değil, platformun "Environment Variables" ayarlarından güvenli bir şekilde okunur.
-const firebaseConfig = {
-    apiKey: import.meta.env.VITE_API_KEY,
-    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_APP_ID,
-    measurementId: import.meta.env.VITE_MEASUREMENT_ID
+// ========================================================================
+// NİHAİ CANLI SÜRÜM: Projemizde bir build adımı (Vite, Webpack vb.) olmadığı için,
+// Vercel ortam değişkenlerini koda enjekte edemiyor. Bu nedenle, Vercel'e
+// deploy ederken anahtarları bu şekilde doğrudan yazmak, bu proje yapısı için
+// en basit ve en güvenilir çözümdür.
+// Projenin güvenliği, veritabanı kuralları (firestore.rules) ile sağlanmaktadır.
+// ========================================================================
+const firebaseConfig = { 
+    apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ", 
+    authDomain: "kelime-oyunu-flaneur.firebaseapp.com", 
+    projectId: "kelime-oyunu-flaneur", 
+    storageBucket: "kelime-oyunu-flaneur.appspot.com", 
+    messagingSenderId: "888546992121", 
+    appId: "1:888546992121:web:3e29748729cca6fbbb2728", 
+    measurementId: "G-RVD6YZ8JYV" 
 };
 
-// Firebase'i başlatmadan önce anahtarların yüklenip yüklenmediğini kontrol et.
-if (firebaseConfig.apiKey) {
-    firebase.initializeApp(firebaseConfig);
-} else {
-    console.error("Firebase konfigürasyon bilgileri yüklenemedi. Ortam değişkenlerini kontrol edin.");
-    showToast("Uygulama başlatılamadı. Yapılandırma hatası.", true);
-}
+// Firebase'i başlat
+firebase.initializeApp(firebaseConfig);
 
 // Diğer dosyalarda kullanmak için servisleri export et
 export const db = firebase.firestore();
 export const auth = firebase.auth();
 const functions = firebase.functions();
 
-
-// ========================================================================
-// NİHAİ ÇÖZÜM: 'callable' dahil tüm Firebase katmanlarını atlayıp,
-// en temel ve ilkel 'fetch' isteğini doğrudan sunucunun HTTP adresine yapıyoruz.
-// ========================================================================
 export const checkWordValidity = async (wordToTest) => {
     try {
         const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/checkWordValidity";
