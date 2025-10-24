@@ -1,9 +1,6 @@
 // js/state.js
 
 // --- ÖZEL (PRIVATE) DEĞİŞKENLER ---
-// Bu değişkenlere artık başka hiçbir dosya doğrudan erişemez.
-// Başlarına alt çizgi (_) koymak, onların özel olduğunu belirten bir gelenektir.
-
 let _userId = null;
 let _currentUserProfile = null;
 let _currentGameId = null;
@@ -11,6 +8,7 @@ let _localGameData = null;
 let _gameMode = null;
 let _singlePlayerMode = null;
 let _gameIdFromUrl = null;
+let _challengedFriendId = null; // <-- YENİ EKLENDİ
 
 // Fonksiyon ve interval referansları
 let _gameUnsubscribe = null;
@@ -19,7 +17,6 @@ let _friendsUnsubscribe = null;
 let _invitesUnsubscribe = null;
 
 // --- GENEL (PUBLIC) FONKSİYONLAR ---
-// Değişkenleri değiştirmek (set) veya okumak (get) için sadece bu fonksiyonlar kullanılacak.
 
 // --- Kullanıcı ve Oturum State'i ---
 export function setUserId(id) { _userId = id; }
@@ -43,6 +40,10 @@ export function getSinglePlayerMode() { return _singlePlayerMode; }
 
 export function setGameIdFromUrl(id) { _gameIdFromUrl = id; }
 export function getGameIdFromUrl() { return _gameIdFromUrl; }
+
+// --- Meydan Okuma State'i --- // <-- YENİ EKLENDİ
+export function setChallengedFriendId(id) { _challengedFriendId = id; }
+export function getChallengedFriendId() { return _challengedFriendId; }
 
 // --- Dinleyici (Listener) ve Interval State'i ---
 export function setGameUnsubscribe(func) { _gameUnsubscribe = func; }

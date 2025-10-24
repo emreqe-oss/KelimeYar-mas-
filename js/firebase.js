@@ -2,13 +2,6 @@
 
 import { showToast } from './utils.js';
 
-// ========================================================================
-// NİHAİ CANLI SÜRÜM: Projemizde bir build adımı (Vite, Webpack vb.) olmadığı için,
-// Vercel ortam değişkenlerini koda enjekte edemiyor. Bu nedenle, Vercel'e
-// deploy ederken anahtarları bu şekilde doğrudan yazmak, bu proje yapısı için
-// en basit ve en güvenilir çözümdür.
-// Projenin güvenliği, veritabanı kuralları (firestore.rules) ile sağlanmaktadır.
-// ========================================================================
 const firebaseConfig = { 
     apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ", 
     authDomain: "kelime-oyunu-flaneur.firebaseapp.com", 
@@ -19,36 +12,28 @@ const firebaseConfig = {
     measurementId: "G-RVD6YZ8JYV" 
 };
 
-// Firebase'i başlat
 firebase.initializeApp(firebaseConfig);
 
-// Diğer dosyalarda kullanmak için servisleri export et
 export const db = firebase.firestore();
 export const auth = firebase.auth();
-const functions = firebase.functions();
+
+// ========================================================================
+// ARTIK TÜM FONKSİYONLAR, EN TEMEL VE GÜVENİLİR OLAN 'fetch' YÖNTEMİNİ KULLANIYOR.
+// ========================================================================
 
 export const checkWordValidity = async (wordToTest) => {
     try {
         const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/checkWordValidity";
-
         const response = await fetch(functionUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: wordToTest })
         });
-
-        if (!response.ok) {
-            console.error('Sunucudan hatalı yanıt durumu:', response.status);
-            throw new Error('Sunucu kelimeyi doğrulayamadı.');
-        }
-
+        if (!response.ok) throw new Error('Sunucu kelimeyi doğrulayamadı.');
         const jsonResponse = await response.json();
         return jsonResponse.isValid;
-
     } catch (error) {
-        console.error("Kelime kontrol fonksiyonunda 'fetch' hatası:", error);
+        console.error("checkWordValidity 'fetch' hatası:", error);
         showToast("Kelime kontrol edilemedi. Lütfen tekrar deneyin.", true);
         return false;
     }
@@ -56,11 +41,17 @@ export const checkWordValidity = async (wordToTest) => {
 
 export const getNewSecretWord = async (length) => {
     try {
-        const getWord = functions.httpsCallable('getNewSecretWord');
-        const result = await getWord({ wordLength: length });
-        return result.data.secretWord;
+        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/getNewSecretWord";
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wordLength: length }) // Veriyi doğru formatta gönderiyoruz
+        });
+        if (!response.ok) throw new Error('Sunucudan yeni kelime alınamadı.');
+        const jsonResponse = await response.json();
+        return jsonResponse.secretWord;
     } catch (error) {
-        console.error("Yeni kelime alınamadı:", error);
+        console.error("getNewSecretWord 'fetch' hatası:", error);
         showToast("Yeni oyun için kelime alınamadı.", true);
         return null;
     }

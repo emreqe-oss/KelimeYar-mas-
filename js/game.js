@@ -2,7 +2,7 @@
 
 import { db, getNewSecretWord, checkWordValidity } from './firebase.js';
 import * as state from './state.js';
-import { showToast, playSound, shakeCurrentRow } from './utils.js';
+import { showToast, playSound, shakeCurrentRow, getStatsFromProfile } from './utils.js';
 import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, turnDisplay, timerDisplay, gameIdDisplay, roundCounter, shareGameBtn, startGameBtn, keyboardContainer } from './ui.js';
 
 // --- SABİTLER ---
@@ -17,7 +17,6 @@ let wordLength = 5;
 let timeLimit = 45;
 
 async function submitGuess() {
-    // DÜZELTME: state.localGameData -> state.getLocalGameData()
     const localGameData = state.getLocalGameData();
     if(!localGameData) return;
     const currentRow = Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
@@ -35,8 +34,6 @@ async function submitGuess() {
         guessWord += tileInner.textContent;
     }
     
-    // Zor mod kontrolü
-    // DÜZELTME: state.userId -> state.getUserId()
     if (localGameData.isHardMode && localGameData.players[state.getUserId()].guesses.length > 0) {
         const allPlayerGuesses = localGameData.players[state.getUserId()].guesses;
         const presentLetters = new Set();
@@ -82,7 +79,6 @@ async function submitGuess() {
     
     const totalGuessesMade = currentRow + 1;
 
-    // DÜZELTME: state.gameMode -> state.getGameMode()
     if (state.getGameMode() === 'multiplayer') {
         const gameRef = db.collection("games").doc(state.getCurrentGameId());
         const playerGuesses = localGameData.players[state.getUserId()].guesses || [];
@@ -100,9 +96,7 @@ async function submitGuess() {
             updates.roundWinner = state.getUserId();
             const scoreToAdd = scorePoints[playerGuesses.length - 1] || 0;
             updates[`players.${state.getUserId()}.score`] = (localGameData.players[state.getUserId()].score || 0) + scoreToAdd;
-        // DÜZELTME: Beraberlik durumu artık oyuncu sayısına göre değil,
-        // sabit tahmin hakkına (6) göre belirleniyor.
-        } else if (totalGuessesMade >= GUESS_COUNT) { 
+        } else if (totalGuessesMade >= GUESS_COUNT) {
             updates.status = 'finished';
             updates.roundWinner = null;
         }
@@ -264,7 +258,9 @@ export async function createGame(invitedFriendId = null) {
         firstFailurePlayerId: null
     };
 
-    if (invitedFriendId) gameData.invitedPlayerId = invitedFriendId;
+    if (invitedFriendId) {
+        gameData.invitedPlayerId = invitedFriendId;
+    }
     
     try {
         await db.collection("games").doc(gameId).set(gameData);
@@ -338,6 +334,14 @@ function listenToGameUpdates(gameId) {
         const oldGameData = state.getLocalGameData();
         state.setLocalGameData(gameData);
 
+        const wasFinished = oldGameData && oldGameData.status === 'finished';
+        const isNowPlaying = gameData.status === 'playing';
+
+        if (wasFinished && isNowPlaying) {
+            showScreen('game-screen');
+            initializeGameUI(gameData);
+        }
+
         const oldGuessesCount = oldGameData ? Object.values(oldGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) : 0;
         const newGuessesCount = Object.values(gameData.players).reduce((acc, p) => acc + p.guesses.length, 0);
 
@@ -367,8 +371,7 @@ export function leaveGame() {
 }
 
 async function renderGameState(gameData, animateLastRow = false) {
-    const gameScreen = document.getElementById('game-screen');
-    if (!gameScreen || gameScreen.classList.contains('hidden') || !gameData) return;
+    if (!gameData) return;
 
     const gameMode = state.getGameMode();
     const currentUserId = state.getUserId();
@@ -599,7 +602,7 @@ async function failTurn(guessWord = '') {
             turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
         };
 
-        if (totalGuessesMade >= GUESS_COUNT * playerIds.length) {
+        if (totalGuessesMade >= GUESS_COUNT) {
             updates.status = 'finished';
             updates.roundWinner = null;
         }
@@ -736,27 +739,11 @@ async function updateStats(didWin, guessCount) {
     
     try {
         await userRef.set({ stats: stats }, { merge: true });
-        // DÜZELTME: Doğrudan state'i değiştirmek yerine, yeni profili set edelim.
         const updatedProfile = { ...currentUserProfile, stats: stats };
         state.setCurrentUserProfile(updatedProfile);
     } catch (error) {
         console.error("İstatistikler güncellenemedi:", error);
     }
-}
-
-function getStatsFromProfile(profileData) {
-    const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 } };
-    const userStats = profileData?.stats || {};
-    if (!userStats.guessDistribution || typeof userStats.guessDistribution !== 'object') {
-        userStats.guessDistribution = {};
-    }
-    for (let i = 1; i <= 6; i++) {
-        const key = String(i);
-        if (userStats.guessDistribution[key] === undefined || typeof userStats.guessDistribution[key] !== 'number') {
-            userStats.guessDistribution[key] = 0;
-        }
-    }
-    return { ...defaultStats, ...userStats };
 }
 
 async function showScoreboard(gameData) {
@@ -863,7 +850,6 @@ export async function startNewRound() {
         };
         const gameRef = db.collection("games").doc(state.getCurrentGameId());
         await gameRef.update(updates);
-        showScreen('game-screen');
     } else {
         setupAndStartGame(gameMode);
     }

@@ -10,10 +10,8 @@ import { showToast } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // DOM hazır olduğunda ilk iş olarak UI elementlerini bul ve ata.
     ui.initUI();
 
-    // --- OLAY YETKİLENDİRME (EVENT DELEGATION) ---
     const appContainer = document.getElementById('app');
     if (appContainer) {
         appContainer.addEventListener('click', (event) => {
@@ -24,11 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const buttonId = button.id;
 
             switch (buttonId) {
-                // Tema
+                // ... (diğer case'ler aynı kalacak) ...
                 case 'theme-light-btn': document.body.classList.add('theme-light'); break;
                 case 'theme-dark-btn': document.body.classList.remove('theme-light'); break;
-                
-                // Mod Seçimi
                 case 'daily-word-btn': game.startDailyGame(); break;
                 case 'single-player-btn': 
                     state.setSinglePlayerMode('single');
@@ -41,17 +37,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     ui.showScreen('singleplayer-setup-screen');
                     break;
                 case 'multiplayer-btn':
-                    const createBtn = document.getElementById('create-game-btn');
-                    if(createBtn) createBtn.onclick = () => game.createGame();
-                    // DÜZELTME: state.gameIdFromUrl -> state.getGameIdFromUrl()
+                    // DÜZELTME: Bu ekrandaki "Oyun Kur" butonunun tıklama olayını artık
+                    // aşağıdaki 'create-game-btn' case'i yönetecek. Burayı temizliyoruz.
+                    state.setChallengedFriendId(null); // Rastgele oyun için meydan okumayı temizle
                     if (state.getGameIdFromUrl()) game.joinGame(state.getGameIdFromUrl());
                     else ui.showScreen('multiplayer-setup-screen');
                     break;
-
-                // Oyun Kurulum
-                // DÜZELTME: state.singlePlayerMode -> state.getSinglePlayerMode()
                 case 'start-single-game-btn': game.setupAndStartGame(state.getSinglePlayerMode()); break;
-                case 'create-game-btn': game.createGame(); break;
+
+                // ========================================================================
+                // MEYDAN OKUMA MANTIĞINI BURADA TAMAMLIYORUZ
+                // ========================================================================
+                case 'create-game-btn':
+                    // Hafızaya bakıyoruz, meydan okunan bir arkadaş var mı?
+                    const friendId = state.getChallengedFriendId();
+                    // Oyunu bu arkadaşa özel (veya rastgele ise null) olarak kuruyoruz.
+                    game.createGame(friendId);
+                    // Oyunu kurduktan sonra hafızayı temizliyoruz ki bir sonraki oyun etilenmesin.
+                    state.setChallengedFriendId(null);
+                    break;
+
+                // ... (dosyanın geri kalanı önceki adımlardaki güncel haliyle aynı) ...
                 case 'join-game-btn':
                     const gameIdInput = document.getElementById('game-id-input');
                     if (gameIdInput) game.joinGame(gameIdInput.value.toUpperCase());
@@ -60,8 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lastGameId = localStorage.getItem('activeGameId');
                     if (lastGameId) game.joinGame(lastGameId);
                     break;
-
-                // Oyun İçi
                 case 'leave-game-button': game.leaveGame(); break;
                 case 'copy-game-id-btn':
                     if (ui.gameIdDisplay) {
@@ -71,22 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'share-game-btn': game.shareGame(); break;
                 case 'start-game-btn':
-                    // DÜZELTME: state.currentGameId -> state.getCurrentGameId() ve state.gameMode -> state.getGameMode()
                     if (!state.getCurrentGameId() || state.getGameMode() !== 'multiplayer') return;
                     const gameRef = db.collection("games").doc(state.getCurrentGameId());
                     gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
                     break;
-
-                // Skor Tablosu
                 case 'main-menu-btn': game.leaveGame(); break;
                 case 'new-round-btn': game.startNewRound(); break;
                 case 'share-results-btn': game.shareResultsAsEmoji(); break;
-
-                // Navigasyon & Diğerleri
                 case 'back-to-mode-single-btn': ui.showScreen('mode-selection-screen'); break;
                 case 'back-to-mode-multi-btn': ui.showScreen('mode-selection-screen'); break;
                 case 'profile-btn':
-                    // DÜZELTME: state.currentUserProfile -> state.getCurrentUserProfile()
                     const userProfile = state.getCurrentUserProfile();
                     if (userProfile) {
                         document.getElementById('profile-fullname').textContent = userProfile.fullname;
@@ -101,16 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'close-profile-btn': ui.showScreen('mode-selection-screen'); break;
                 case 'how-to-play-btn': ui.showScreen('how-to-play-screen'); break;
                 case 'close-how-to-play-btn': ui.showScreen('mode-selection-screen'); break;
-
-                // Auth
                 case 'login-btn': handleLogin(); break;
                 case 'register-btn': handleRegister(); break;
-                // DÜZELTME: state.friendsUnsubscribe -> state.getFriendsUnsubscribe() vb.
-                case 'logout-btn': handleLogout(state.getFriendsUnsubscribe(), state.getInvitesUnsubscribe()); break;
+                case 'logout-btn': handleLogout(); break;
                 case 'go-to-register-btn': ui.showScreen('register-screen'); break;
                 case 'back-to-login-btn': ui.showScreen('login-screen'); break;
-                
-                // Friends
                 case 'friends-btn': ui.showScreen('friends-screen'); break;
                 case 'back-to-menu-from-friends-btn': ui.showScreen('mode-selection-screen'); break;
                 case 'show-friends-tab-btn': ui.switchFriendTab('friends'); break;
@@ -126,13 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Fiziksel klavye olayları
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return;
         game.handleKeyPress(e.key);
     });
 
-    // --- UYGULAMAYI BAŞLATMA ---
     async function initializeApp() {
         if (typeof firebase === 'undefined') {
             showToast("Firebase kütüphanesi yüklenemedi.", true);
@@ -148,12 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (userDoc.exists) {
                     state.setCurrentUserProfile(userDoc.data());
-                    // DÜZELTME: state.currentUserProfile -> state.getCurrentUserProfile()
                     if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
                 } else {
                     const profileData = { username: user.email.split('@')[0], email: user.email };
                     state.setCurrentUserProfile(profileData);
-                    // DÜZELTME: state.currentUserProfile -> state.getCurrentUserProfile()
                     if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
                 }
                 
@@ -183,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gameId = urlParams.get('gameId');
                 state.setGameIdFromUrl(gameId);
 
-                // DÜZELTME: state.currentGameId -> state.getCurrentGameId()
                 if (gameId && !state.getCurrentGameId()) {
                     game.joinGame(gameId);
                     window.history.replaceState({}, document.title, window.location.pathname);
@@ -197,8 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (createBtn) createBtn.disabled = true;
                 if (joinBtn) joinBtn.disabled = true;
-
-                // DÜZELTME: Artık önce fonksiyonu çağırıp, sonra çalıştırıyoruz.
+                
                 const friendsUnsubscribe = state.getFriendsUnsubscribe();
                 if (friendsUnsubscribe) friendsUnsubscribe();
                 

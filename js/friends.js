@@ -1,12 +1,11 @@
 // js/friends.js
 import { db } from './firebase.js';
-// DÜZELTME: Artık state'ten belirli değişkenleri değil, tüm modülü alıyoruz.
 import * as state from './state.js';
 import { showToast } from './utils.js';
 import { showScreen, displayStats } from './ui.js';
 import { createGame, joinGame } from './game.js';
 
-// Elementler
+// ... (dosyanın üstündeki element tanımlamaları aynı) ...
 const friendsList = document.getElementById('friends-list');
 const friendRequestsList = document.getElementById('friend-requests-list');
 const searchFriendInput = document.getElementById('search-friend-input');
@@ -19,24 +18,19 @@ const acceptInviteBtn = document.getElementById('accept-invite-btn');
 const rejectInviteBtn = document.getElementById('reject-invite-btn');
 const invitationModal = document.getElementById('invitation-modal');
 
+// ... (searchUsers, sendFriendRequest, handleFriendRequest, removeFriend fonksiyonları aynı) ...
 export async function searchUsers() {
     const query = searchFriendInput.value.trim();
     if (query.length < 3) return showToast("Arama için en az 3 karakter girin.", true);
-
-    // DÜZELTME: userId'yi güvenli fonksiyondan alıyoruz.
     const currentUserId = state.getUserId();
-
     friendSearchResults.innerHTML = '<p class="text-gray-400">Aranıyor...</p>';
     try {
         const byUsername = db.collection('users').where('username', '==', query).get();
         const byEmail = db.collection('users').where('email', '==', query).get();
         const [usernameSnapshot, emailSnapshot] = await Promise.all([byUsername, byEmail]);
-        
         const results = new Map();
-        // DÜZELTME: userId yerine currentUserId kullanılıyor.
         usernameSnapshot.forEach(doc => { if (doc.id !== currentUserId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
         emailSnapshot.forEach(doc => { if (doc.id !== currentUserId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
-
         if (results.size === 0) {
             friendSearchResults.innerHTML = '<p class="text-gray-400">Kullanıcı bulunamadı.</p>';
         } else {
@@ -58,18 +52,11 @@ export async function searchUsers() {
         friendSearchResults.innerHTML = '<p class="text-red-400">Arama sırasında bir hata oluştu.</p>';
     }
 }
-
 async function sendFriendRequest(receiverId) {
     const currentUserId = state.getUserId();
     if (!currentUserId || !receiverId) return;
     try {
-        const friendshipData = {
-            users: [currentUserId, receiverId],
-            senderId: currentUserId,
-            receiverId: receiverId,
-            status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        const friendshipData = { users: [currentUserId, receiverId], senderId: currentUserId, receiverId: receiverId, status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
         await db.collection('friendships').add(friendshipData);
         showToast('Arkadaşlık isteği gönderildi!');
     } catch (error) {
@@ -77,7 +64,6 @@ async function sendFriendRequest(receiverId) {
         showToast('İstek gönderilirken bir hata oluştu.', true);
     }
 }
-
 async function handleFriendRequest(friendshipId, action) {
     try {
         if (action === 'accept') {
@@ -92,7 +78,6 @@ async function handleFriendRequest(friendshipId, action) {
         showToast('İşlem sırasında bir hata oluştu.', true);
     }
 }
-
 async function removeFriend(friendshipId) {
     if (confirm("Bu arkadaşınızı silmek istediğinizden emin misiniz?")) {
         try {
@@ -105,42 +90,28 @@ async function removeFriend(friendshipId) {
     }
 }
 
+
 export function listenToFriendships() {
     const currentUserId = state.getUserId();
-    if (!currentUserId) return; // Güvenlik kontrolü: Kullanıcı yoksa dinleyiciyi başlatma.
+    if (!currentUserId) return;
 
     return db.collection('friendships').where('users', 'array-contains', currentUserId)
         .onSnapshot(async (snapshot) => {
             const friendPromises = [];
             const requestPromises = [];
             let pendingCount = 0;
-
             snapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
                 if (data.status === 'accepted') {
                     const friendId = data.users.find(id => id !== currentUserId);
-                    if (friendId) friendPromises.push(
-                        db.collection('users').doc(friendId).get().then(userDoc => ({
-                            friendshipId: data.id,
-                            id: userDoc.id,
-                            ...userDoc.data()
-                        }))
-                    );
+                    if (friendId) friendPromises.push(db.collection('users').doc(friendId).get().then(userDoc => ({ friendshipId: data.id, id: userDoc.id, ...userDoc.data() })));
                 } else if (data.status === 'pending' && data.receiverId === currentUserId) {
                     pendingCount++;
-                    requestPromises.push(
-                        db.collection('users').doc(data.senderId).get().then(userDoc => ({
-                            friendshipId: data.id,
-                            id: userDoc.id,
-                            ...userDoc.data()
-                        }))
-                    );
+                    requestPromises.push(db.collection('users').doc(data.senderId).get().then(userDoc => ({ friendshipId: data.id, id: userDoc.id, ...userDoc.data() })));
                 }
             });
-
             const friends = await Promise.all(friendPromises);
             const requests = await Promise.all(requestPromises);
-
             if (pendingCount > 0) {
                 friendRequestCount.textContent = pendingCount;
                 friendRequestCount.classList.remove('hidden');
@@ -151,6 +122,18 @@ export function listenToFriendships() {
         }, error => console.error("Arkadaşlıkları dinlerken hata:", error));
 }
 
+// ========================================================================
+// MEYDAN OKUMA MANTIĞINI BURADA DEĞİŞTİRİYORUZ
+// ========================================================================
+
+function challengeFriend(friend) {
+    // Kime meydan okuduğumuzu hafızaya kaydediyoruz.
+    state.setChallengedFriendId(friend.id);
+    // Oyun kurma ekranına gidiyoruz.
+    showScreen('multiplayer-setup-screen');
+    // Kullanıcıya bilgi veriyoruz.
+    showToast(`${friend.username} adlı arkadaşına meydan okumak için ayarları yap.`, false);
+}
 
 function renderFriends(friends, requests) {
     friendsList.innerHTML = '';
@@ -174,7 +157,8 @@ function renderFriends(friends, requests) {
             const inviteButton = document.createElement('button');
             inviteButton.className = 'bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
             inviteButton.textContent = 'Davet Et';
-            inviteButton.onclick = () => createGameWithFriend(friend.id);
+            // DÜZELTME: Artık yeni ve akıllı fonksiyonumuzu çağırıyoruz.
+            inviteButton.onclick = () => challengeFriend(friend);
 
             const removeButton = document.createElement('button');
             removeButton.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
@@ -221,16 +205,13 @@ function renderFriends(friends, requests) {
     }
 }
 
-export function createGameWithFriend(friendId) {
-    document.getElementById('create-game-btn').onclick = () => createGame(friendId);
-    showScreen('multiplayer-setup-screen');
-    showToast(`Oyun kurarak arkadaşına meydan oku.`, false);
-}
+// DÜZELTME: Bu fonksiyon artık gereksiz, siliyoruz.
+// export function createGameWithFriend(friendId) { ... }
 
-
+// ... (dosyanın geri kalanındaki listenForGameInvites, acceptInvite, rejectInvite, showFriendProfile fonksiyonları aynı kalacak) ...
 export function listenForGameInvites() {
     const currentUserId = state.getUserId();
-    if (!currentUserId) return; // Güvenlik kontrolü
+    if (!currentUserId) return; 
 
     return db.collection('games').where('invitedPlayerId', '==', currentUserId).where('status', '==', 'invited')
         .onSnapshot(async (snapshot) => {
@@ -239,7 +220,6 @@ export function listenForGameInvites() {
                 const inviteData = { id: inviteDoc.id, ...inviteDoc.data() };
                 const creatorDoc = await db.collection('users').doc(inviteData.creatorId).get();
                 const creatorUsername = creatorDoc.exists() ? creatorDoc.data().username : 'Bir arkadaşın';
-
                 invitationText.innerHTML = `<strong class="text-yellow-400">${creatorUsername}</strong> seni bir oyuna davet ediyor!`;
                 acceptInviteBtn.onclick = () => acceptInvite(inviteData.id);
                 rejectInviteBtn.onclick = () => rejectInvite(inviteData.id);
@@ -247,12 +227,10 @@ export function listenForGameInvites() {
             }
         });
 }
-
 async function acceptInvite(gameId) {
     invitationModal.classList.add('hidden');
     await joinGame(gameId);
 }
-
 async function rejectInvite(gameId) {
     invitationModal.classList.add('hidden');
     try {
@@ -262,7 +240,6 @@ async function rejectInvite(gameId) {
         console.error('Davet reddedilemedi:', error);
     }
 }
-
 async function showFriendProfile(friendId) {
     try {
         const userDoc = await db.collection('users').doc(friendId).get();
