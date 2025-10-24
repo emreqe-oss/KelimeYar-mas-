@@ -1,8 +1,10 @@
-const CACHE_NAME = 'kelime-oyunu-v15'; // Cache versiyonu güncellendi
+// service-worker.js
+
+const CACHE_NAME = 'kelime-oyunu-v16'; // Cache versiyonunu bir artırdık.
 const urlsToCache = [
   '/',
   '/index.html',
-  '/kelimeler.json', // Kelime listesi eklendi
+  // '/kelimeler.json', // <-- ARTIK GÜVENLİ DEĞİL! BU SATIRI KALDIRDIK.
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js',
   'https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js',
@@ -16,10 +18,9 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Opened cache');
-        // addAll atomik bir işlemdir, biri başarısız olursa hepsi başarısız olur.
-        // Hata olasılığını azaltmak için ayrı ayrı ekleyebiliriz.
         const promises = urlsToCache.map(url => {
-            return cache.add(new Request(url, { mode: 'no-cors' })).catch(err => {
+            // no-cors modu harici kaynaklarda sorun yaratabilir, normal request kullanalım
+            return cache.add(url).catch(err => {
                 console.warn(`Failed to cache ${url}:`, err);
             });
         });
@@ -32,13 +33,17 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
+        // Cache'de varsa, cache'den döndür.
         if (response) {
           return response;
         }
+
+        // Cache'de yoksa, ağdan iste ve cache'e ekle.
         return fetch(event.request).then(
           (response) => {
-            // Yanıt geçerliyse, önbelleğe al ve döndür
-            if(!response || response.status !== 200 || response.type !== 'basic') {
+            // Sadece geçerli ve 'basic' tipteki istekleri cache'le.
+            // Bu, 'opaque' (CORS olmayan) yanıtların cache'lenmesini engeller.
+            if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
@@ -63,6 +68,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })

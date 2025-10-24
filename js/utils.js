@@ -55,3 +55,26 @@ export function shakeCurrentRow(wordLength, currentRow) {
         }
     }
 }
+
+// --- YENİ EKLENEN ORTAK FONKSİYON ---
+// Bu fonksiyon hem game.js hem de ui.js tarafından kullanılacak.
+export function getStatsFromProfile(profileData) {
+    const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 } };
+    
+    if (!profileData || !profileData.stats) {
+        return defaultStats;
+    }
+
+    const userStats = profileData.stats;
+    // Güvenlik: guessDistribution'ın varlığını ve tüm anahtarlarını kontrol et
+    if (!userStats.guessDistribution || typeof userStats.guessDistribution !== 'object') {
+        userStats.guessDistribution = {};
+    }
+    for (let i = 1; i <= 6; i++) {
+        const key = String(i);
+        if (userStats.guessDistribution[key] === undefined || typeof userStats.guessDistribution[key] !== 'number') {
+            userStats.guessDistribution[key] = 0;
+        }
+    }
+    return { ...defaultStats, ...userStats };
+}

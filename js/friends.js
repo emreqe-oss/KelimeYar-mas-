@@ -1,6 +1,7 @@
 // js/friends.js
 import { db } from './firebase.js';
-import { userId } from './state.js';
+// DÜZELTME: Artık state'ten belirli değişkenleri değil, tüm modülü alıyoruz.
+import * as state from './state.js';
 import { showToast } from './utils.js';
 import { showScreen, displayStats } from './ui.js';
 import { createGame, joinGame } from './game.js';
@@ -22,6 +23,9 @@ export async function searchUsers() {
     const query = searchFriendInput.value.trim();
     if (query.length < 3) return showToast("Arama için en az 3 karakter girin.", true);
 
+    // DÜZELTME: userId'yi güvenli fonksiyondan alıyoruz.
+    const currentUserId = state.getUserId();
+
     friendSearchResults.innerHTML = '<p class="text-gray-400">Aranıyor...</p>';
     try {
         const byUsername = db.collection('users').where('username', '==', query).get();
@@ -29,8 +33,9 @@ export async function searchUsers() {
         const [usernameSnapshot, emailSnapshot] = await Promise.all([byUsername, byEmail]);
         
         const results = new Map();
-        usernameSnapshot.forEach(doc => { if (doc.id !== userId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
-        emailSnapshot.forEach(doc => { if (doc.id !== userId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
+        // DÜZELTME: userId yerine currentUserId kullanılıyor.
+        usernameSnapshot.forEach(doc => { if (doc.id !== currentUserId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
+        emailSnapshot.forEach(doc => { if (doc.id !== currentUserId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
 
         if (results.size === 0) {
             friendSearchResults.innerHTML = '<p class="text-gray-400">Kullanıcı bulunamadı.</p>';
@@ -55,11 +60,12 @@ export async function searchUsers() {
 }
 
 async function sendFriendRequest(receiverId) {
-    if (!userId || !receiverId) return;
+    const currentUserId = state.getUserId();
+    if (!currentUserId || !receiverId) return;
     try {
         const friendshipData = {
-            users: [userId, receiverId],
-            senderId: userId,
+            users: [currentUserId, receiverId],
+            senderId: currentUserId,
             receiverId: receiverId,
             status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -100,7 +106,10 @@ async function removeFriend(friendshipId) {
 }
 
 export function listenToFriendships() {
-    return db.collection('friendships').where('users', 'array-contains', userId)
+    const currentUserId = state.getUserId();
+    if (!currentUserId) return; // Güvenlik kontrolü: Kullanıcı yoksa dinleyiciyi başlatma.
+
+    return db.collection('friendships').where('users', 'array-contains', currentUserId)
         .onSnapshot(async (snapshot) => {
             const friendPromises = [];
             const requestPromises = [];
@@ -109,7 +118,7 @@ export function listenToFriendships() {
             snapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
                 if (data.status === 'accepted') {
-                    const friendId = data.users.find(id => id !== userId);
+                    const friendId = data.users.find(id => id !== currentUserId);
                     if (friendId) friendPromises.push(
                         db.collection('users').doc(friendId).get().then(userDoc => ({
                             friendshipId: data.id,
@@ -117,7 +126,7 @@ export function listenToFriendships() {
                             ...userDoc.data()
                         }))
                     );
-                } else if (data.status === 'pending' && data.receiverId === userId) {
+                } else if (data.status === 'pending' && data.receiverId === currentUserId) {
                     pendingCount++;
                     requestPromises.push(
                         db.collection('users').doc(data.senderId).get().then(userDoc => ({
@@ -213,9 +222,6 @@ function renderFriends(friends, requests) {
 }
 
 export function createGameWithFriend(friendId) {
-    // Bu fonksiyonu doğrudan createGame'e bağlamak yerine,
-    // ana dosyada bir event listener'da kullanacağız.
-    // Şimdilik sadece setup ekranını gösterip bir mesaj verelim.
     document.getElementById('create-game-btn').onclick = () => createGame(friendId);
     showScreen('multiplayer-setup-screen');
     showToast(`Oyun kurarak arkadaşına meydan oku.`, false);
@@ -223,7 +229,10 @@ export function createGameWithFriend(friendId) {
 
 
 export function listenForGameInvites() {
-    return db.collection('games').where('invitedPlayerId', '==', userId).where('status', '==', 'invited')
+    const currentUserId = state.getUserId();
+    if (!currentUserId) return; // Güvenlik kontrolü
+
+    return db.collection('games').where('invitedPlayerId', '==', currentUserId).where('status', '==', 'invited')
         .onSnapshot(async (snapshot) => {
             if (snapshot.docs.length > 0) {
                 const inviteDoc = snapshot.docs[0];

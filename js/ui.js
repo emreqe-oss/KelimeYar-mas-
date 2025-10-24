@@ -1,55 +1,55 @@
 // js/ui.js
-import { currentUserProfile } from './state.js';
 
-// --- ELEMENT SEÇİCİLERİ ---
-// Ekranlar
-export const loginScreen = document.getElementById('login-screen');
-export const registerScreen = document.getElementById('register-screen');
-export const modeSelectionScreen = document.getElementById('mode-selection-screen');
-export const singleplayerSetupScreen = document.getElementById('singleplayer-setup-screen');
-export const multiplayerSetupScreen = document.getElementById('multiplayer-setup-screen');
-export const gameScreen = document.getElementById('game-screen');
-export const scoreboardScreen = document.getElementById('scoreboard-screen');
-export const profileScreen = document.getElementById('profile-screen');
-export const howToPlayScreen = document.getElementById('how-to-play-screen');
-export const friendsScreen = document.getElementById('friends-screen');
-export const invitationModal = document.getElementById('invitation-modal');
+import * as state from './state.js';
+// DÜZELTME: Ortak fonksiyonu alet çantamızdan (utils.js) import ediyoruz.
+import { getStatsFromProfile } from './utils.js';
 
-// Genel Elementler
-export const guessGrid = document.getElementById('guess-grid');
-export const keyboardContainer = document.getElementById('keyboard');
-export const turnDisplay = document.getElementById('turn-display');
-export const timerDisplay = document.getElementById('timer-display');
-export const gameIdDisplay = document.getElementById('game-id-display');
-export const startGameBtn = document.getElementById('start-game-btn');
-export const roundCounter = document.getElementById('round-counter');
-export const shareGameBtn = document.getElementById('share-game-btn');
-export const userDisplay = document.getElementById('user-display');
+// Değişkenler burada sadece tanımlanıyor.
+export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount;
 
-// Friends Ekranı Elementleri
-export const friendsTab = document.getElementById('friends-tab');
-export const requestsTab = document.getElementById('requests-tab');
-export const addFriendTab = document.getElementById('add-friend-tab');
-export const showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
-export const showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
-export const showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
-export const friendRequestCount = document.getElementById('friend-request-count');
-
-
-// --- ARAYÜZ FONKSİYONLARI ---
+export function initUI() {
+    // Değer atamaları burada yapılıyor.
+    guessGrid = document.getElementById('guess-grid');
+    keyboardContainer = document.getElementById('keyboard');
+    turnDisplay = document.getElementById('turn-display');
+    timerDisplay = document.getElementById('timer-display');
+    gameIdDisplay = document.getElementById('game-id-display');
+    startGameBtn = document.getElementById('start-game-btn');
+    roundCounter = document.getElementById('round-counter');
+    shareGameBtn = document.getElementById('share-game-btn');
+    userDisplay = document.getElementById('user-display');
+    invitationModal = document.getElementById('invitation-modal');
+    friendsTab = document.getElementById('friends-tab');
+    requestsTab = document.getElementById('requests-tab');
+    addFriendTab = document.getElementById('add-friend-tab');
+    showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
+    showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
+    showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
+    friendRequestCount = document.getElementById('friend-request-count');
+}
 
 export function showScreen(screenId) {
-    [
+    const screens = [
         'login-screen', 'register-screen', 'mode-selection-screen', 
         'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 
         'scoreboard-screen', 'profile-screen', 'how-to-play-screen', 'friends-screen'
-    ].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
+    ];
+    screens.forEach(id => {
+        const screenElement = document.getElementById(id);
+        if (screenElement) {
+            screenElement.classList.add('hidden');
+        }
     });
-    document.getElementById(screenId).classList.remove('hidden');
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.remove('hidden');
+    } else {
+        console.error(`showScreen fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
+    }
 }
 
 export function createGrid(wordLength, GUESS_COUNT) {
+    if (!guessGrid) return;
     guessGrid.innerHTML = '';
     guessGrid.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
     for (let i = 0; i < GUESS_COUNT; i++) {
@@ -69,6 +69,7 @@ export function createGrid(wordLength, GUESS_COUNT) {
 }
 
 export function createKeyboard(handleKeyPress) {
+    if (!keyboardContainer) return;
     keyboardContainer.innerHTML = '';
     const keyRows = [
         ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
@@ -105,6 +106,7 @@ export function createKeyboard(handleKeyPress) {
 }
 
 export function updateKeyboard(gameData) {
+    if (!gameData || !gameData.players) return;
     const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
     const keyStates = {};
     allGuesses.forEach(({ word, colors }) => {
@@ -126,16 +128,17 @@ export function updateKeyboard(gameData) {
 }
 
 export function getUsername() {
-    return currentUserProfile?.username || 'Oyuncu';
+    // DÜZELTME: state.currentUserProfile -> state.getCurrentUserProfile()
+    const profile = state.getCurrentUserProfile();
+    return profile?.username || 'Oyuncu';
 }
 
-function getStats(profileData) {
-    const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 } };
-    return profileData?.stats ? { ...defaultStats, ...profileData.stats } : defaultStats;
-}
+// DÜZELTME: Bu fonksiyon artık gereksiz, utils'e taşıdık. SİLİNDİ.
+// function getStats(profileData) { ... }
 
 export function displayStats(profileData) {
-    const stats = getStats(profileData);
+    // DÜZELTME: Artık yeni, ortak fonksiyonu kullanıyoruz.
+    const stats = getStatsFromProfile(profileData);
     document.getElementById('stats-played').textContent = stats.played;
     const winPercentage = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
     document.getElementById('stats-win-percentage').textContent = winPercentage;
@@ -148,7 +151,7 @@ export function displayStats(profileData) {
     if (maxDistribution === 0) maxDistribution = 1;
 
     for (let i = 1; i <= 6; i++) {
-        const count = stats.guessDistribution[i] || 0;
+        const count = stats.guessDistribution[String(i)] || 0;
         const percentage = (count / maxDistribution) * 100;
         const bar = `<div class="flex items-center"><div class="w-4">${i}</div><div class="flex-grow bg-gray-700 rounded"><div class="bg-amber-500 text-right pr-2 rounded text-black font-bold" style="width: ${percentage > 0 ? percentage : 1}%">${count > 0 ? count : ''}</div></div></div>`;
         distributionContainer.innerHTML += bar;
@@ -159,11 +162,15 @@ export function switchFriendTab(tabName) {
     const tabs = { friends: friendsTab, requests: requestsTab, add: addFriendTab };
     const buttons = { friends: showFriendsTabBtn, requests: showRequestsTabBtn, add: showAddFriendTabBtn };
     for (const key in tabs) {
-        tabs[key].classList.add('hidden');
-        buttons[key].classList.remove('border-indigo-500', 'text-white');
-        buttons[key].classList.add('text-gray-400');
+        if(tabs[key]) tabs[key].classList.add('hidden');
+        if(buttons[key]) {
+            buttons[key].classList.remove('border-indigo-500', 'text-white');
+            buttons[key].classList.add('text-gray-400');
+        }
     }
-    tabs[tabName].classList.remove('hidden');
-    buttons[tabName].classList.add('border-indigo-500', 'text-white');
-    buttons[tabName].classList.remove('text-gray-400');
+    if(tabs[tabName]) tabs[tabName].classList.remove('hidden');
+    if(buttons[tabName]){
+        buttons[tabName].classList.add('border-indigo-500', 'text-white');
+        buttons[tabName].classList.remove('text-gray-400');
+    }
 }

@@ -1,10 +1,9 @@
 // js/auth.js
 import { auth, db } from './firebase.js';
 import { showToast, getFirebaseErrorMessage } from './utils.js';
-import { showScreen } from './ui.js';
-import { setFriendsUnsubscribe, setInvitesUnsubscribe } from './state.js';
+import * as state from './state.js'; // DÜZELTME: state modülünü tam olarak import ediyoruz.
 
-// Elementleri burada tekrar seçiyoruz çünkü sadece bu modülde kullanılıyorlar.
+// Elementler
 const emailInput = document.getElementById('email-input');
 const passwordInput = document.getElementById('password-input');
 const registerEmail = document.getElementById('register-email');
@@ -70,11 +69,18 @@ export const handleRegister = async () => {
     authLoading.classList.add('hidden');
 };
 
-export const handleLogout = async (friendsUnsubscribe, invitesUnsubscribe) => {
+// DÜZELTME: Fonksiyon artık parametre almıyor, state'ten kendi okuyor.
+export const handleLogout = async () => {
+    const friendsUnsubscribe = state.getFriendsUnsubscribe();
     if (friendsUnsubscribe) friendsUnsubscribe();
+    
+    const invitesUnsubscribe = state.getInvitesUnsubscribe();
     if (invitesUnsubscribe) invitesUnsubscribe();
-    setFriendsUnsubscribe(null);
-    setInvitesUnsubscribe(null);
+
+    // Düzgün bir temizlik için state'teki referansları sıfırlıyoruz.
+    state.setFriendsUnsubscribe(null);
+    state.setInvitesUnsubscribe(null);
+
     try {
         await auth.signOut();
     } catch (error) {

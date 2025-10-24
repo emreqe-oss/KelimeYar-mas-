@@ -1,31 +1,58 @@
 // js/state.js
 
-export let kelimeSozlugu = {};
-export let cevapSozlugu = {};
+// --- ÖZEL (PRIVATE) DEĞİŞKENLER ---
+// Bu değişkenlere artık başka hiçbir dosya doğrudan erişemez.
+// Başlarına alt çizgi (_) koymak, onların özel olduğunu belirten bir gelenektir.
 
-export let userId = null;
-export let currentUserProfile = null;
-export let currentGameId = null;
-export let gameUnsubscribe = null;
-export let turnTimerInterval = null;
-export let localGameData = null;
-export let gameMode = null;
-export let singlePlayerMode = null;
-export let gameIdFromUrl = null;
-export let friendsUnsubscribe = null;
-export let invitesUnsubscribe = null;
+let _userId = null;
+let _currentUserProfile = null;
+let _currentGameId = null;
+let _localGameData = null;
+let _gameMode = null;
+let _singlePlayerMode = null;
+let _gameIdFromUrl = null;
 
-// Bu fonksiyonlar, state'i güvenli bir şekilde değiştirmemizi sağlar.
-export function setKelimeSozlugu(data) { kelimeSozlugu = data; }
-export function setCevapSozlugu(data) { cevapSozlugu = data; }
-export function setUserId(id) { userId = id; }
-export function setCurrentUserProfile(profile) { currentUserProfile = profile; }
-export function setCurrentGameId(id) { currentGameId = id; }
-export function setGameUnsubscribe(func) { gameUnsubscribe = func; }
-export function setTurnTimerInterval(interval) { turnTimerInterval = interval; }
-export function setLocalGameData(data) { localGameData = data; }
-export function setGameMode(mode) { gameMode = mode; }
-export function setSinglePlayerMode(mode) { singlePlayerMode = mode; }
-export function setGameIdFromUrl(id) { gameIdFromUrl = id; }
-export function setFriendsUnsubscribe(func) { friendsUnsubscribe = func; }
-export function setInvitesUnsubscribe(func) { invitesUnsubscribe = func; }
+// Fonksiyon ve interval referansları
+let _gameUnsubscribe = null;
+let _turnTimerInterval = null;
+let _friendsUnsubscribe = null;
+let _invitesUnsubscribe = null;
+
+// --- GENEL (PUBLIC) FONKSİYONLAR ---
+// Değişkenleri değiştirmek (set) veya okumak (get) için sadece bu fonksiyonlar kullanılacak.
+
+// --- Kullanıcı ve Oturum State'i ---
+export function setUserId(id) { _userId = id; }
+export function getUserId() { return _userId; }
+
+export function setCurrentUserProfile(profile) { _currentUserProfile = profile; }
+export function getCurrentUserProfile() { return _currentUserProfile; }
+
+// --- Oyun State'i ---
+export function setCurrentGameId(id) { _currentGameId = id; }
+export function getCurrentGameId() { return _currentGameId; }
+
+export function setLocalGameData(data) { _localGameData = data; }
+export function getLocalGameData() { return _localGameData; }
+
+export function setGameMode(mode) { _gameMode = mode; }
+export function getGameMode() { return _gameMode; }
+
+export function setSinglePlayerMode(mode) { _singlePlayerMode = mode; }
+export function getSinglePlayerMode() { return _singlePlayerMode; }
+
+export function setGameIdFromUrl(id) { _gameIdFromUrl = id; }
+export function getGameIdFromUrl() { return _gameIdFromUrl; }
+
+// --- Dinleyici (Listener) ve Interval State'i ---
+export function setGameUnsubscribe(func) { _gameUnsubscribe = func; }
+export function getGameUnsubscribe() { return _gameUnsubscribe; }
+
+export function setTurnTimerInterval(interval) { _turnTimerInterval = interval; }
+export function getTurnTimerInterval() { return _turnTimerInterval; }
+
+export function setFriendsUnsubscribe(func) { _friendsUnsubscribe = func; }
+export function getFriendsUnsubscribe() { return _friendsUnsubscribe; }
+
+export function setInvitesUnsubscribe(func) { _invitesUnsubscribe = func; }
+export function getInvitesUnsubscribe() { return _invitesUnsubscribe; }

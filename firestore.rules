@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // "users" koleksiyonu için kurallar
+    match /users/{userId} {
+      // Herkes (giriş yapmış olan) bir kullanıcının profilini okuyabilir.
+      allow read: if request.auth != null;
+      // Bir kullanıcı sadece kendi profilini oluşturabilir veya güncelleyebilir.
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // "games" koleksiyonu için kurallar (BİZİM SORUNUMUZ BURADA!)
+    match /games/{gameId} {
+      // Giriş yapmış herhangi bir kullanıcı, bir oyunun bilgilerini okuyabilir.
+      allow read: if request.auth != null;
+      // Giriş yapmış herhangi bir kullanıcı, yeni bir oyun oluşturabilir.
+      allow create: if request.auth != null;
+      // Bir oyunu GÜNCELLEMEK için (yani bir hamle yapmak veya katılmak için):
+      // 1. Ya oyunun içindeki bir oyuncu olmalısın,
+      // 2. YA DA oyun 'bekliyor' durumundaysa ve sen henüz oyuncu değilsen (katılma durumu).
+      allow update: if request.auth.uid in resource.data.players 
+                    || (resource.data.status == 'waiting' && !(request.auth.uid in resource.data.players));
+    }
+    
+    // "friendships" koleksiyonu için kurallar
+    match /friendships/{friendshipId} {
+      // Bir arkadaşlık belgesini sadece o arkadaşlığın içindeki iki kişiden biri okuyabilir, güncelleyebilir veya silebilir.
+      allow read, update, delete: if request.auth.uid in resource.data.users;
+      // Giriş yapmış herhangi bir kullanıcı, yeni bir arkadaşlık isteği oluşturabilir.
+      allow create: if request.auth != null;
+    }
+  }
+}
