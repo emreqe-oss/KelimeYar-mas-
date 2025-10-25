@@ -632,4 +632,4 @@ export async function createBRGame() {
     }
 }
 
-export { startDailyGame, setupAndStartGame, showScoreboard, startNewRound, stopTurnTimer, failTurn };
+export { startDailyGame, setupAndStartGame, showScoreboard, stopTurnTimer, failTurn };
