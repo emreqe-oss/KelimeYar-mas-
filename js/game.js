@@ -658,4 +658,4 @@ export async function setupAndStartGame(mode) {
     await renderGameState(gameData);
 }
 
-export { startDailyGame, setupAndStartGame, stopTurnTimer, failTurn };
+export { startDailyGame, showScoreboard, stopTurnTimer, failTurn };
