@@ -5,8 +5,7 @@ import { showToast } from './utils.js';
 import { showScreen, displayStats } from './ui.js';
 import { joinGame } from './game.js';
 
-// Elementler: ui.js'te tanımlandığı varsayılıyor, ancak bu dosyada kullanılanları
-// hatasız çalıştırmak için tekrar tanımlayalım (alternatif olarak ui.js'ten import edilebilirler)
+// Elementler
 const friendsList = document.getElementById('friends-list');
 const friendRequestsList = document.getElementById('friend-requests-list');
 const searchFriendInput = document.getElementById('search-friend-input');
@@ -223,8 +222,23 @@ export function listenForGameInvites() {
 }
 async function acceptInvite(gameId) {
     invitationModal.classList.add('hidden');
-    // joinGame, game.js modülünden doğru şekilde çağrılacaktır.
-    await joinGame(gameId);
+    try {
+        // 1. Oyuna Katıl
+        await joinGame(gameId);
+
+        // 2. Oyun belgesinden invitedPlayerId alanını sil ve durumu 'waiting' yap
+        // Bu, davetin dinleyici tarafından tekrar yakalanmasını önler ve yaratıcının 'Oyunu Başlat' 
+        // butonunu görmesi için gereken koşulu sağlar.
+        await db.collection('games').doc(gameId).update({
+            invitedPlayerId: firebase.firestore.FieldValue.delete(),
+            status: 'waiting'
+        });
+        
+    } catch (error) {
+        console.error('Davet kabul edilemedi:', error);
+        showToast('Oyuna katılırken bir hata oluştu.', true);
+        // Hata durumunda modalın tekrar görünmesi için herhangi bir işlem yapılmaz.
+    }
 }
 async function rejectInvite(gameId) {
     invitationModal.classList.add('hidden');
