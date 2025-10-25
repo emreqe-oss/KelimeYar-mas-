@@ -208,20 +208,23 @@ export function listenForGameInvites() {
                 
                 let creatorUsername = 'Bir arkadaşın'; 
                 
-                try {
-                    // Kullanıcı adını çekmeyi tekrar dene
-                    const creatorDoc = await db.collection('users').doc(inviteData.creatorId).get();
-                    
-                    // Firestore'un get() metodu DocumentSnapshot döndürür ve .exists() metodu vardır. 
-                    // Ancak buradaki hata nedeniyle, dönen objenin yapısını bir kez daha kontrol edelim.
-                    if (creatorDoc && typeof creatorDoc.exists === 'function' && creatorDoc.exists()) {
-                        creatorUsername = creatorDoc.data().username;
-                    }
-                } catch (error) {
-                    // Eğer hata devam ederse, konsola yazdır ama uygulamanın çökmesine izin verme
-                    console.error("Davet gönderenin kullanıcı adı çekilemedi:", error);
-                }
+                // Oyuncu listesinden kullanıcı adını güvenli bir şekilde çekiyoruz
+                const creatorId = inviteData.creatorId;
                 
+                if (inviteData.players && inviteData.players[creatorId] && inviteData.players[creatorId].username) {
+                    creatorUsername = inviteData.players[creatorId].username;
+                } else {
+                    // Eğer oyuncular map'i henüz tam oluşmadıysa, users koleksiyonundan çekmeyi dene
+                    try {
+                        const creatorDoc = await db.collection('users').doc(creatorId).get();
+                        if (creatorDoc.exists) {
+                            creatorUsername = creatorDoc.data().username;
+                        }
+                    } catch (error) {
+                        console.error("Davet gönderenin kullanıcı adı çekilemedi:", error);
+                    }
+                }
+
                 invitationText.innerHTML = `<strong class="text-yellow-400">${creatorUsername}</strong> seni bir oyuna davet ediyor!`;
                 
                 acceptInviteBtn.onclick = () => acceptInvite(inviteData.id);
@@ -235,9 +238,6 @@ async function acceptInvite(gameId) {
     try {
         await joinGame(gameId);
         
-        // Davet belgesini temizleyerek dinleyicinin tekrar tetiklenmesini önle.
-        // Ayrıca oyun durumunu 'waiting' yaparak, yaratıcının 'Oyunu Başlat' 
-        // butonunu görmesi için gerekli koşulu sağla.
         await db.collection('games').doc(gameId).update({
             invitedPlayerId: firebase.firestore.FieldValue.delete(),
             status: 'waiting' 
