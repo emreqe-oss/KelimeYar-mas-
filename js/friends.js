@@ -206,11 +206,21 @@ export function listenForGameInvites() {
                 const inviteDoc = snapshot.docs[0];
                 const inviteData = { id: inviteDoc.id, ...inviteDoc.data() };
                 
-                // Hata veren Firestore çağrısı atlandı.
-                // const creatorDoc = await db.collection('users').doc(inviteData.creatorId).get();
-                // const creatorUsername = creatorDoc.exists() ? creatorDoc.data().username : 'Bir arkadaşın';
+                let creatorUsername = 'Bir arkadaşın'; 
                 
-                const creatorUsername = 'Bir arkadaşın'; 
+                try {
+                    // Kullanıcı adını çekmeyi tekrar dene
+                    const creatorDoc = await db.collection('users').doc(inviteData.creatorId).get();
+                    
+                    // Firestore'un get() metodu DocumentSnapshot döndürür ve .exists() metodu vardır. 
+                    // Ancak buradaki hata nedeniyle, dönen objenin yapısını bir kez daha kontrol edelim.
+                    if (creatorDoc && typeof creatorDoc.exists === 'function' && creatorDoc.exists()) {
+                        creatorUsername = creatorDoc.data().username;
+                    }
+                } catch (error) {
+                    // Eğer hata devam ederse, konsola yazdır ama uygulamanın çökmesine izin verme
+                    console.error("Davet gönderenin kullanıcı adı çekilemedi:", error);
+                }
                 
                 invitationText.innerHTML = `<strong class="text-yellow-400">${creatorUsername}</strong> seni bir oyuna davet ediyor!`;
                 
@@ -223,21 +233,19 @@ export function listenForGameInvites() {
 async function acceptInvite(gameId) {
     invitationModal.classList.add('hidden');
     try {
-        // 1. Oyuna Katıl
         await joinGame(gameId);
-
-        // 2. Oyun belgesinden invitedPlayerId alanını sil ve durumu 'waiting' yap
-        // Bu, davetin dinleyici tarafından tekrar yakalanmasını önler ve yaratıcının 'Oyunu Başlat' 
-        // butonunu görmesi için gereken koşulu sağlar.
+        
+        // Davet belgesini temizleyerek dinleyicinin tekrar tetiklenmesini önle.
+        // Ayrıca oyun durumunu 'waiting' yaparak, yaratıcının 'Oyunu Başlat' 
+        // butonunu görmesi için gerekli koşulu sağla.
         await db.collection('games').doc(gameId).update({
             invitedPlayerId: firebase.firestore.FieldValue.delete(),
-            status: 'waiting'
+            status: 'waiting' 
         });
         
     } catch (error) {
         console.error('Davet kabul edilemedi:', error);
         showToast('Oyuna katılırken bir hata oluştu.', true);
-        // Hata durumunda modalın tekrar görünmesi için herhangi bir işlem yapılmaz.
     }
 }
 async function rejectInvite(gameId) {
