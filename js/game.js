@@ -519,5 +519,117 @@ export async function shareGame() {
         showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true);
     }
 }
-// EXPORT EKLENEN FONKSİYONLAR
-export { startDailyGame, setupAndStartGame, createGame, createBRGame, joinBRGame, joinGame, showScoreboard, startBRTimer, stopTurnTimer, failTurn };
+
+export async function joinGame(gameId) {
+    if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
+    const username = getUsername();
+    const gameRef = db.collection("games").doc(gameId);
+    const currentUserId = state.getUserId();
+
+    try {
+        const gameDoc = await gameRef.get();
+        if (!gameDoc.exists) {
+            localStorage.removeItem('activeGameId');
+            return showToast("Oyun bulunamadı!", true);
+        }
+        
+        const gameData = gameDoc.data();
+        
+        if (gameData.MAX_PLAYERS > 0) {
+             return showToast("Bu bir BR oyunudur, lütfen ilgili BR katılma butonunu kullanın.", true);
+        }
+
+        if (Object.keys(gameData.players).length < 2 && !gameData.players[currentUserId]) {
+            await gameRef.update({
+                [`players.${currentUserId}`]: { username, guesses: [], score: 0 }
+            });
+        } else if (!gameData.players[currentUserId] && Object.keys(gameData.players).length >= 2) {
+            return showToast("Bu oyun dolu veya başlamış.", true);
+        }
+        
+        state.setGameMode('multiplayer');
+        localStorage.setItem('activeGameId', gameId);
+        state.setCurrentGameId(gameId);
+        showScreen('game-screen');
+        initializeGameUI(gameData);
+        listenToGameUpdates(gameId);
+    } catch (error) {
+        console.error("Error joining game:", error);
+        showToast("Oyuna katılırken hata oluştu.", true);
+    }
+}
+
+export async function joinBRGame(gameId) {
+    if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
+    if (!gameId) return showToast("Lütfen bir Oyun ID'si girin.", true);
+
+    state.setGameMode('multiplayer-br');
+    const username = getUsername();
+    const gameRef = db.collection("games").doc(gameId);
+    const currentUserId = state.getUserId();
+
+    try {
+        const gameDoc = await gameRef.get();
+        if (!gameDoc.exists) {
+            localStorage.removeItem('activeGameId');
+            return showToast("Oyun bulunamadı!", true);
+        }
+        
+        const gameData = gameDoc.data();
+        const numPlayers = Object.keys(gameData.players).length;
+
+        if (gameData.status !== 'waiting' || numPlayers >= MAX_BR_PLAYERS) {
+            return showToast("Bu oyun başladı veya dolu.", true);
+        }
+
+        if (!gameData.players[currentUserId]) {
+            await gameRef.update({
+                [`players.${currentUserId}`]: { username, guesses: [], score: 0, isWinner: false, isEliminated: false }
+            });
+        }
+
+        localStorage.setItem('activeGameId', gameId);
+        state.setCurrentGameId(gameId);
+        showScreen('game-screen');
+        initializeGameUI(gameData);
+        listenToGameUpdates(gameId);
+    } catch (error) {
+        console.error("Error joining BR game:", error);
+        showToast("BR oyuna katılırken hata oluştu.", true);
+    }
+}
+
+export async function createBRGame() {
+    if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
+    state.setGameMode('multiplayer-br');
+    const username = getUsername();
+    const selectedLength = parseInt(document.getElementById('word-length-select-br').value);
+    const selectedTime = parseInt(document.getElementById('time-select-br').value);
+    const isHard = document.getElementById('hard-mode-checkbox-br').checked;
+    const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const secretWord = await getNewSecretWord(selectedLength);
+    if(!secretWord) return;
+
+    const gameData = {
+        gameId, wordLength: selectedLength, secretWord, timeLimit: selectedTime,
+        creatorId: state.getUserId(), isHardMode: isHard, matchLength: 1, currentRound: 1, 
+        players: { [state.getUserId()]: { username, guesses: [], score: 0, isWinner: false, isEliminated: false } },
+        currentPlayerId: null, 
+        status: 'waiting', 
+        roundWinner: null, createdAt: new Date(),
+        turnStartTime: firebase.firestore.FieldValue.serverTimestamp(), 
+        MAX_PLAYERS: MAX_BR_PLAYERS,
+        GUESS_COUNT: GUESS_COUNT
+    };
+
+    try {
+        await db.collection("games").doc(gameId).set(gameData);
+        await joinBRGame(gameId);
+    } catch (error) {
+        console.error("Error creating BR game:", error);
+        showToast("BR oyun oluşturulamadı!", true);
+    }
+}
+
+export { startDailyGame, setupAndStartGame, showScoreboard, startNewRound, stopTurnTimer, failTurn };
