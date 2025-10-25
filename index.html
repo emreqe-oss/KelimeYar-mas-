@@ -62,9 +62,13 @@
                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3M5.636 5.636l-1.414-1.414m15.556 15.556l-1.414-1.414M18.364 5.636l-1.414 1.414m-12.728 12.728l-1.414 1.414"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg>
                      <span>Bilgisayara Karşı Oyna</span>
                  </button>
+                 <button id="multiplayer-br-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
+                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                     <span>Battle Royale (4 Kişilik)</span>
+                 </button>
                  <button id="multiplayer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
-                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                     <span>İki Kişilik (Online)</span>
+                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                     <span>İki Kişilik (Sıralı)</span>
                  </button>
                  <button id="rejoin-game-btn" class="hidden w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 px-4 rounded-lg text-lg mt-4">Devam Et</button>
                  <div class="grid grid-cols-2 gap-4 mt-4">
@@ -140,11 +144,11 @@
 
         <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
              <button id="back-to-mode-multi-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
-            <h1 class="text-3xl font-bold text-center mb-6">İki Kişilik Oyun</h1>
+            <h1 class="text-3xl font-bold text-center mb-6">Online Oyun Kurulumu</h1>
             <div class="mb-4">
                 <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4">Arkadaşına Meydan Oku</button>
                 <hr class="border-gray-600 my-4">
-                <h2 class="text-2xl font-semibold mb-3">Rastgele Oyun</h2>
+                <h2 class="text-2xl font-semibold mb-3">Rastgele veya Davetli Oyun</h2>
                 <div class="grid grid-cols-3 gap-2">
                     <div>
                         <label for="word-length-select-multi" class="block text-sm font-medium text-gray-400">Harf</label>
@@ -186,9 +190,51 @@
                 <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyuna Katıl</button>
             </div>
         </div>
+        
+        <div id="br-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex-col justify-center">
+             <button id="back-to-mode-br-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
+            <h1 class="text-3xl font-bold text-center mb-6">Battle Royale (4 Kişilik)</h1>
+            <p class="text-sm text-gray-400 mb-4">Eş zamanlı tahmin. İlk çözen kazanır, 6 tahminde bulamazsan elenirsin.</p>
+            <div class="mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="word-length-select-br" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
+                        <select id="word-length-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="4">4</option>
+                            <option value="5" selected>5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label for="time-select-br" class="block text-sm font-medium text-gray-400">Tahmin Süresi</label>
+                        <select id="time-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="30">30sn</option>
+                            <option value="45" selected>45sn</option>
+                            <option value="60">60sn</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-center">
+                    <input id="hard-mode-checkbox-br" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <label for="hard-mode-checkbox-br" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
+                </div>
+                <button id="create-br-game-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyun Kur (BR)</button>
+            </div>
+            <hr class="my-4 border-gray-600">
+            <div>
+                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl</h2>
+                <input type="text" id="game-id-input-br" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-red-500">
+                <button id="join-br-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyuna Katıl (BR)</button>
+            </div>
+            <p id="br-waiting-for-players" class="text-gray-400 mt-4 hidden">Diğer oyuncular bekleniyor (1/4)</p>
+        </div>
+
 
         <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
-             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0">
+             <div id="multiplayer-score-board" class="w-full bg-gray-800 p-2 rounded-lg shadow flex flex-wrap justify-center gap-2 flex-shrink-0 mb-2">
+                </div>
+             
+             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0 hidden" id="sequential-game-info">
                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
                 <div class="text-center w-1/5">
                     <p id="round-counter" class="text-xs text-gray-400"></p>
@@ -197,6 +243,7 @@
                 </div>
                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
             </div>
+            
             <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
                  <div class="flex items-center gap-2">
                      <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
@@ -208,9 +255,11 @@
                  </div>
                  <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
             </div>
+            
             <div class="w-full flex-grow flex flex-col justify-center min-h-0">
                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
             </div>
+            
             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
             <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>

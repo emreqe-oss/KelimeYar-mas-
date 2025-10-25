@@ -1,11 +1,10 @@
 // js/ui.js
 
 import * as state from './state.js';
-// DÜZELTME: Ortak fonksiyonu alet çantamızdan (utils.js) import ediyoruz.
 import { getStatsFromProfile } from './utils.js';
 
 // Değişkenler burada sadece tanımlanıyor.
-export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount;
+export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
 
 export function initUI() {
     // Değer atamaları burada yapılıyor.
@@ -26,13 +25,16 @@ export function initUI() {
     showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
     showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
     friendRequestCount = document.getElementById('friend-request-count');
+    // YENİ EKLEME
+    multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
 }
 
 export function showScreen(screenId) {
     const screens = [
         'login-screen', 'register-screen', 'mode-selection-screen', 
         'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 
-        'scoreboard-screen', 'profile-screen', 'how-to-play-screen', 'friends-screen'
+        'scoreboard-screen', 'profile-screen', 'how-to-play-screen', 'friends-screen',
+        'br-setup-screen' // YENİ EKRAN
     ];
     screens.forEach(id => {
         const screenElement = document.getElementById(id);
@@ -47,6 +49,8 @@ export function showScreen(screenId) {
         console.error(`showScreen fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
     }
 }
+
+// ... (createGrid ve createKeyboard fonksiyonları aynı kalmalı)
 
 export function createGrid(wordLength, GUESS_COUNT) {
     if (!guessGrid) return;
@@ -105,8 +109,11 @@ export function createKeyboard(handleKeyPress) {
     });
 }
 
+
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
+    // BR modu: Sadece kendi tahminlerimizi dikkate almalıyız, başkalarınınkini değil.
+    // Ancak genel olarak klavye, oyundaki tüm bilgileri göstermeli (ortak tecrübe).
     const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
     const keyStates = {};
     allGuesses.forEach(({ word, colors }) => {
@@ -128,16 +135,11 @@ export function updateKeyboard(gameData) {
 }
 
 export function getUsername() {
-    // DÜZELTME: state.currentUserProfile -> state.getCurrentUserProfile()
     const profile = state.getCurrentUserProfile();
     return profile?.username || 'Oyuncu';
 }
 
-// DÜZELTME: Bu fonksiyon artık gereksiz, utils'e taşıdık. SİLİNDİ.
-// function getStats(profileData) { ... }
-
 export function displayStats(profileData) {
-    // DÜZELTME: Artık yeni, ortak fonksiyonu kullanıyoruz.
     const stats = getStatsFromProfile(profileData);
     document.getElementById('stats-played').textContent = stats.played;
     const winPercentage = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
@@ -158,9 +160,60 @@ export function displayStats(profileData) {
     }
 }
 
+// YENİ FONKSİYON: 4 KİŞİLİK SKOR TABLOSUNU GÜNCELLE
+export function updateMultiplayerScoreBoard(gameData) {
+    if (!multiplayerScoreBoard) return;
+    const isBR = state.getGameMode() === 'multiplayer-br';
+    const currentUserId = state.getUserId();
+    const players = Object.entries(gameData.players);
+
+    // Sıralı 2 kişilik mod için eski skor panosunu gizle, BR için yenisini göster
+    const sequentialGameInfo = document.getElementById('sequential-game-info');
+    if (isBR) {
+        multiplayerScoreBoard.classList.remove('hidden');
+        sequentialGameInfo?.classList.add('hidden');
+    } else {
+        multiplayerScoreBoard.classList.add('hidden');
+        sequentialGameInfo?.classList.remove('hidden');
+        return;
+    }
+    
+    multiplayerScoreBoard.innerHTML = '';
+
+    players.forEach(([id, data]) => {
+        const isMe = id === currentUserId;
+        const isEliminated = data.guesses.length >= gameData.GUESS_COUNT && !data.isWinner;
+        const isCurrentTurn = gameData.currentPlayerId === id;
+        const isWinner = gameData.roundWinner === id;
+
+        let playerStatus = '';
+        if(isWinner) {
+             playerStatus = '<span class="text-green-400 font-bold">KAZANDI!</span>';
+        } else if (isEliminated) {
+            playerStatus = '<span class="text-red-400 font-bold">ELENDİ</span>';
+        } else if (isBR && gameData.status === 'playing') {
+            playerStatus = `<span class="text-xs text-gray-400">${data.guesses.length}/${gameData.GUESS_COUNT}</span>`;
+        }
+
+        const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : 'bg-gray-600');
+        const borderColor = isCurrentTurn ? 'border-4 border-yellow-400' : '';
+        
+        const playerDiv = document.createElement('div');
+        playerDiv.className = `${bgColor} ${borderColor} p-2 rounded-lg shadow w-full sm:w-1/2 md:w-1/4 flex-grow`;
+        playerDiv.style.maxWidth = '100%'; // BR modunda 4 oyuncu göstermek için genişliği ayarla
+
+        playerDiv.innerHTML = `
+            <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
+            <p class="text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'}">${playerStatus}</p>
+        `;
+        multiplayerScoreBoard.appendChild(playerDiv);
+    });
+}
+
+
 export function switchFriendTab(tabName) {
-    const tabs = { friends: friendsTab, requests: requestsTab, add: addFriendTab };
-    const buttons = { friends: showFriendsTabBtn, requests: showRequestsTabBtn, add: showAddFriendTabBtn };
+    const tabs = { friends: document.getElementById('friends-tab'), requests: document.getElementById('requests-tab'), add: document.getElementById('add-friend-tab') };
+    const buttons = { friends: document.getElementById('show-friends-tab-btn'), requests: document.getElementById('show-requests-tab-btn'), add: document.getElementById('show-add-friend-tab-btn') };
     for (const key in tabs) {
         if(tabs[key]) tabs[key].classList.add('hidden');
         if(buttons[key]) {

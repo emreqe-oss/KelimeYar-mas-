@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const buttonId = button.id;
 
             switch (buttonId) {
-                // ... (diğer case'ler aynı kalacak) ...
                 case 'theme-light-btn': document.body.classList.add('theme-light'); break;
                 case 'theme-dark-btn': document.body.classList.remove('theme-light'); break;
                 case 'daily-word-btn': game.startDailyGame(); break;
@@ -37,27 +36,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     ui.showScreen('singleplayer-setup-screen');
                     break;
                 case 'multiplayer-btn':
-                    // DÜZELTME: Bu ekrandaki "Oyun Kur" butonunun tıklama olayını artık
-                    // aşağıdaki 'create-game-btn' case'i yönetecek. Burayı temizliyoruz.
-                    state.setChallengedFriendId(null); // Rastgele oyun için meydan okumayı temizle
+                    state.setChallengedFriendId(null); 
+                    state.setGameMode('multiplayer'); // Sıralı 2 kişilik mod
                     if (state.getGameIdFromUrl()) game.joinGame(state.getGameIdFromUrl());
                     else ui.showScreen('multiplayer-setup-screen');
                     break;
+                // YENİ BR BUTON OLAYI
+                case 'multiplayer-br-btn':
+                    state.setGameMode('multiplayer-br'); // Yeni BR modunu ayarla
+                    ui.showScreen('br-setup-screen');
+                    break;
                 case 'start-single-game-btn': game.setupAndStartGame(state.getSinglePlayerMode()); break;
 
-                // ========================================================================
-                // MEYDAN OKUMA MANTIĞINI BURADA TAMAMLIYORUZ
-                // ========================================================================
+                // BR OYUN KURMA VE KATILMA BUTONLARI (Yeni Ekran)
+                case 'create-br-game-btn': game.createBRGame(); break;
+                case 'join-br-game-btn': 
+                    const brGameIdInput = document.getElementById('game-id-input-br');
+                    if (brGameIdInput) game.joinBRGame(brGameIdInput.value.toUpperCase());
+                    break;
+                case 'back-to-mode-br-btn': ui.showScreen('mode-selection-screen'); break;
+                
                 case 'create-game-btn':
-                    // Hafızaya bakıyoruz, meydan okunan bir arkadaş var mı?
                     const friendId = state.getChallengedFriendId();
-                    // Oyunu bu arkadaşa özel (veya rastgele ise null) olarak kuruyoruz.
                     game.createGame(friendId);
-                    // Oyunu kurduktan sonra hafızayı temizliyoruz ki bir sonraki oyun etilenmesin.
                     state.setChallengedFriendId(null);
                     break;
 
-                // ... (dosyanın geri kalanı önceki adımlardaki güncel haliyle aynı) ...
                 case 'join-game-btn':
                     const gameIdInput = document.getElementById('game-id-input');
                     if (gameIdInput) game.joinGame(gameIdInput.value.toUpperCase());
@@ -75,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'share-game-btn': game.shareGame(); break;
                 case 'start-game-btn':
-                    if (!state.getCurrentGameId() || state.getGameMode() !== 'multiplayer') return;
+                    if (!state.getCurrentGameId() || state.getGameMode() === 'multiplayer-br') return;
                     const gameRef = db.collection("games").doc(state.getCurrentGameId());
                     gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
                     break;
@@ -133,6 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.onAuthStateChanged(async user => {
             const createBtn = document.getElementById('create-game-btn');
             const joinBtn = document.getElementById('join-game-btn');
+            const createBrBtn = document.getElementById('create-br-game-btn');
+            const joinBrBtn = document.getElementById('join-br-game-btn');
 
             if (user && !user.isAnonymous) {
                 state.setUserId(user.uid);
@@ -148,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (createBtn) createBtn.disabled = false;
                 if (joinBtn) joinBtn.disabled = false;
+                if (createBrBtn) createBrBtn.disabled = false;
+                if (joinBrBtn) joinBrBtn.disabled = false;
+
 
                 const lastGameId = localStorage.getItem('activeGameId');
                 const rejoinBtn = document.getElementById('rejoin-game-btn');
@@ -159,11 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const singleBtn = document.getElementById('single-player-btn');
                 const vsCpuBtn = document.getElementById('vs-cpu-btn');
                 const multiBtn = document.getElementById('multiplayer-btn');
+                const multiBrBtn = document.getElementById('multiplayer-br-btn');
 
                 if(dailyBtn) dailyBtn.disabled = false;
                 if(singleBtn) singleBtn.disabled = false;
                 if(vsCpuBtn) vsCpuBtn.disabled = false;
                 if(multiBtn) multiBtn.disabled = false;
+                if(multiBrBtn) multiBrBtn.disabled = false;
 
                 state.setFriendsUnsubscribe(friends.listenToFriendships());
                 state.setInvitesUnsubscribe(friends.listenForGameInvites());
@@ -185,7 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (createBtn) createBtn.disabled = true;
                 if (joinBtn) joinBtn.disabled = true;
-                
+                if (createBrBtn) createBrBtn.disabled = true;
+                if (joinBrBtn) joinBrBtn.disabled = true;
+
                 const friendsUnsubscribe = state.getFriendsUnsubscribe();
                 if (friendsUnsubscribe) friendsUnsubscribe();
                 
