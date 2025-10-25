@@ -519,3 +519,5 @@ export async function shareGame() {
         showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true);
     }
 }
+// EXPORT EKLENEN FONKSİYONLAR
+export { startDailyGame, setupAndStartGame, createGame, createBRGame, joinBRGame, joinGame, showScoreboard, startBRTimer, stopTurnTimer, failTurn };
