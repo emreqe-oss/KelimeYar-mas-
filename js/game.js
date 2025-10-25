@@ -355,7 +355,7 @@ async function updateStats(didWin, guessCount) {
     }
 }
 
-async function showScoreboard(gameData) {
+export async function showScoreboard(gameData) {
     stopTurnTimer();
     showScreen('scoreboard-screen');
     const roundWinnerDisplay = document.getElementById('round-winner-display');
@@ -632,4 +632,30 @@ export async function createBRGame() {
     }
 }
 
-export { startDailyGame, setupAndStartGame, showScoreboard, stopTurnTimer, failTurn };
+export async function setupAndStartGame(mode) {
+    state.setGameMode(mode);
+    wordLength = parseInt(document.getElementById('word-length-select-single').value);
+    timeLimit = parseInt(document.getElementById('time-select-single').value);
+    const isHard = document.getElementById('hard-mode-checkbox').checked;
+    const username = getUsername();
+    
+    const secretWord = await getNewSecretWord(wordLength);
+    if(!secretWord) return;
+
+    const gameData = {
+        wordLength, secretWord, timeLimit, isHardMode: isHard, currentRound: 1, matchLength: 1,
+        players: { [state.getUserId()]: { username, guesses: [], score: 0 } },
+        currentPlayerId: state.getUserId(), status: 'playing', turnStartTime: new Date(),
+        GUESS_COUNT: GUESS_COUNT
+    };
+    if (state.getGameMode() === 'vsCPU') {
+        gameData.players['cpu'] = { username: 'Bilgisayar', guesses: [], score: 0 };
+    }
+    
+    state.setLocalGameData(gameData);
+    showScreen('game-screen');
+    initializeGameUI(gameData);
+    await renderGameState(gameData);
+}
+
+export { startDailyGame, setupAndStartGame, stopTurnTimer, failTurn };
