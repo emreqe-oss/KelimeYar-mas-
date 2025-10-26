@@ -115,3 +115,10 @@ body.theme-light .tile.absent,
 body.theme-light .tile.failed {
     color: white;
 }
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}

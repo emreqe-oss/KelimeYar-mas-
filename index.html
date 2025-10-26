@@ -9,12 +9,73 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-900 text-gray-200">
     <div id="app" class="w-full max-w-md mx-auto flex flex-col h-full p-2">
         
+        <div id="main-menu-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
+            <header class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234B5563'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full bg-gray-700">
+                    <div>
+                        <p id="main-menu-username" class="font-bold text-lg">kullanici_adi</p>
+                        <p id="main-menu-stats" class="text-xs text-gray-400">Başarı: %0 | Puan: 0</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="stats-btn" class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></button>
+                    <button id="settings-btn" class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
+                </div>
+            </header>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="new-game-btn" class="bg-green-600 hover:bg-green-700 rounded-lg py-6 text-2xl font-bold transition">Yeni Oyun</button>
+                <button id="my-games-btn" class="bg-amber-600 hover:bg-amber-700 rounded-lg py-6 text-2xl font-bold transition">Oyunlarım</button>
+            </div>
+            <div class="overflow-x-auto whitespace-nowrap space-x-3 py-2 scrollbar-hide">
+                <button id="kelimelig-btn" class="inline-block bg-purple-800 hover:bg-purple-700 rounded-lg p-4 text-center w-32 transition"><p class="font-bold text-lg">KelimeLİG</p><p class="text-xs">Turnuva</p></button>
+                <button id="daily-word-btn" class="inline-block bg-teal-600 hover:bg-teal-700 rounded-lg p-4 text-center w-32 transition"><p class="font-bold text-lg">Günün Kelimesi</p><p class="text-xs">Her Gün Yeni</p></button>
+                <button id="friends-btn" class="inline-block bg-blue-600 hover:bg-blue-700 rounded-lg p-4 text-center w-32 transition"><p class="font-bold text-lg">Arkadaşlar</p><p class="text-xs">Meydan Oku</p></button>
+                <button id="stats-scroll-btn" class="inline-block bg-gray-600 hover:bg-gray-500 rounded-lg p-4 text-center w-32 transition"><p class="font-bold text-lg">İstatistik</p><p class="text-xs">Başarım</p></button>
+            </div>
+            <div class="flex-grow"></div>
+            <div class="flex justify-between items-center text-sm text-gray-400">
+                <button id="how-to-play-btn" class="hover:text-white transition">Nasıl Oynanır?</button>
+                <div class="flex items-center gap-2">
+                    <span>Tema:</span>
+                    <button id="theme-light-btn" class="w-6 h-6 rounded-full border-2 border-gray-500" style="background-color: #faedcd;"></button>
+                    <button id="theme-dark-btn" class="w-6 h-6 rounded-full bg-gray-900 border-2 border-gray-500"></button>
+                </div>
+            </div>
+        </div>
+        <div id="new-game-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
+            <header class="flex items-center">
+                <button id="back-to-main-menu-btn" class="p-2 -ml-2"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></button>
+                <h1 class="text-2xl font-bold text-center flex-grow -ml-8">Yeni Oyun</h1>
+            </header>
+            <div class="grid grid-cols-2 gap-4 flex-grow">
+                <button id="random-game-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M5.52 9.48A8 8 0 112.63 7.01M20 20v-5h-5"></path></svg><span class="font-bold text-lg">GEVŞEK (12 saat)</span></button>
+                <button id="series-game-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="font-bold text-lg">Seri Oyun</span></button>
+                <button id="with-friends-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><span class="font-bold text-lg">Arkadaşınla</span></button>
+                <button id="multiplayer-br-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z"></path></svg><span class="font-bold text-lg">Çoklu Oyuncu</span></button>
+                <button id="vs-cpu-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg><span class="font-bold text-lg">Bilgisayara Karşı</span></button>
+            </div>
+        </div>
+        <div id="my-games-screen" class="hidden flex-1 flex flex-col p-2">
+             <header class="flex items-center mb-4">
+                <button id="back-to-main-menu-from-games-btn" class="p-2 -ml-2"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></button>
+                <h1 class="text-2xl font-bold text-center flex-grow -ml-8">Oyunlarım</h1>
+            </header>
+            <div class="flex border-b border-gray-600 mb-4">
+                <button id="show-active-games-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Aktif</button>
+                <button id="show-finished-games-tab-btn" class="flex-1 py-2 text-center text-gray-400">Biten</button>
+                <button id="show-invites-tab-btn" class="flex-1 py-2 text-center text-gray-400">Davetler</button>
+            </div>
+            <div id="active-games-tab" class="flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Aktif oyununuz bulunmuyor.</p></div>
+            <div id="finished-games-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Henüz biten oyununuz yok.</p></div>
+            <div id="invites-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Yeni davetiniz yok.</p></div>
+        </div>
         <div id="login-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
             <div class="space-y-4">
@@ -25,7 +86,6 @@
             </div>
             <p id="auth-loading" class="text-gray-400 mt-4 hidden">İşlem yapılıyor...</p>
         </div>
-
         <div id="register-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h1 class="text-3xl font-bold text-center mb-4">Yeni Hesap Oluştur</h1>
             <div class="space-y-3">
@@ -41,68 +101,18 @@
                 <button id="back-to-login-btn" class="text-sm text-gray-400 hover:text-white mt-2">Zaten hesabım var</button>
             </div>
         </div>
-
-        <div id="mode-selection-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <div id="user-info" class="absolute top-4 right-4 text-xs text-right">
-                <p id="user-display" class="font-bold"></p>
-                <button id="logout-btn" class="text-red-400 hover:text-red-500">Çıkış Yap</button>
-            </div>
-            <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
-            <div class="space-y-4">
-                 <button id="daily-word-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <span>Günün Kelimesi</span>
-                 </button>
-                 <hr class="border-gray-600">
-                 <button id="single-player-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
-                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                     <span>Tek Kişilik Oyna</span>
-                 </button>
-                 <button id="vs-cpu-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
-                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3M5.636 5.636l-1.414-1.414m15.556 15.556l-1.414-1.414M18.364 5.636l-1.414 1.414m-12.728 12.728l-1.414 1.414"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg>
-                     <span>Bilgisayara Karşı Oyna</span>
-                 </button>
-                 <button id="multiplayer-br-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
-                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                     <span>Battle Royale (4 Kişilik)</span>
-                 </button>
-                 <button id="multiplayer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-2" disabled>
-                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                     <span>İki Kişilik (Sıralı)</span>
-                 </button>
-                 <button id="rejoin-game-btn" class="hidden w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 px-4 rounded-lg text-lg mt-4">Devam Et</button>
-                 <div class="grid grid-cols-2 gap-4 mt-4">
-                    <button id="friends-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Arkadaşlar</button>
-                    <button id="profile-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Profil</button>
-                 </div>
-            </div>
-            <div class="mt-6 flex justify-between items-center px-4">
-                <button id="how-to-play-btn" class="text-sm text-gray-400 hover:text-white">Nasıl Oynanır?</button>
-                <div class="flex items-center gap-4">
-                    <p class="text-sm text-gray-400">Tema:</p>
-                    <button id="theme-light-btn" class="w-8 h-8 rounded-full border-2 border-gray-500" style="background-color: #faedcd;"></button>
-                    <button id="theme-dark-btn" class="w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-500"></button>
-                </div>
-            </div>
-            <p id="loading-words" class="text-gray-400 mt-4 hidden">Kelimeler yükleniyor...</p>
-        </div>
-
         <div id="friends-screen" class="hidden bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col">
-            <button id="back-to-menu-from-friends-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Ana Menü</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">Arkadaşlar</h2>
+            <header class="flex items-center mb-4">
+                 <button id="back-to-main-from-friends-btn" class="p-2 -ml-2"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></button>
+                 <h1 class="text-2xl font-bold text-center flex-grow -ml-8">Arkadaşlar</h1>
+            </header>
             <div class="flex border-b border-gray-600 mb-4">
                 <button id="show-friends-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Arkadaşlarım</button>
                 <button id="show-requests-tab-btn" class="flex-1 py-2 text-center text-gray-400">İstekler <span id="friend-request-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span></button>
                 <button id="show-add-friend-tab-btn" class="flex-1 py-2 text-center text-gray-400">Arkadaş Ekle</button>
             </div>
-            <div id="friends-tab" class="flex-1 overflow-y-auto">
-                <p id="friends-list-placeholder" class="text-gray-500 text-center mt-8">Henüz hiç arkadaşın yok.</p>
-                <div id="friends-list" class="space-y-2"></div>
-            </div>
-            <div id="requests-tab" class="hidden flex-1 overflow-y-auto">
-                <p id="friend-requests-placeholder" class="text-gray-500 text-center mt-8">Yeni arkadaşlık isteği yok.</p>
-                <div id="friend-requests-list" class="space-y-2"></div>
-            </div>
+            <div id="friends-tab" class="flex-1 overflow-y-auto"><p id="friends-list-placeholder" class="text-gray-500 text-center mt-8">Henüz hiç arkadaşın yok.</p><div id="friends-list" class="space-y-2"></div></div>
+            <div id="requests-tab" class="hidden flex-1 overflow-y-auto"><p id="friend-requests-placeholder" class="text-gray-500 text-center mt-8">Yeni arkadaşlık isteği yok.</p><div id="friend-requests-list" class="space-y-2"></div></div>
             <div id="add-friend-tab" class="hidden flex-1">
                 <div class="flex gap-2">
                     <input type="text" id="search-friend-input" placeholder="Kullanıcı adı veya e-posta" class="flex-grow p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
@@ -111,173 +121,6 @@
                 <div id="friend-search-results" class="mt-4 space-y-2"></div>
             </div>
         </div>
-
-        <div id="singleplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-             <button id="back-to-mode-single-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
-            <h1 id="singleplayer-title" class="text-3xl font-bold text-center mb-6">Oyun Ayarları</h1>
-            <div class="mb-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="word-length-select-single" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
-                        <select id="word-length-select-single" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                        </select>
-                    </div>
-                     <div>
-                        <label for="time-select-single" class="block text-sm font-medium text-gray-400">Tahmin Süresi</label>
-                        <select id="time-select-single" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="30">30sn</option>
-                            <option value="45" selected>45sn</option>
-                            <option value="60">60sn</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-center">
-                    <input id="hard-mode-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <label for="hard-mode-checkbox" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
-                </div>
-                <button id="start-single-game-btn" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyuna Başla</button>
-            </div>
-        </div>
-
-        <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-             <button id="back-to-mode-multi-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
-            <h1 class="text-3xl font-bold text-center mb-6">Online Oyun Kurulumu</h1>
-            <div class="mb-4">
-                <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4">Arkadaşına Meydan Oku</button>
-                <hr class="border-gray-600 my-4">
-                <h2 class="text-2xl font-semibold mb-3">Rastgele veya Davetli Oyun</h2>
-                <div class="grid grid-cols-3 gap-2">
-                    <div>
-                        <label for="word-length-select-multi" class="block text-sm font-medium text-gray-400">Harf</label>
-                        <select id="word-length-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                        </select>
-                    </div>
-                     <div>
-                        <label for="time-select-multi" class="block text-sm font-medium text-gray-400">Süre</label>
-                        <select id="time-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="30">30sn</option>
-                            <option value="45" selected>45sn</option>
-                            <option value="60">60sn</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="match-length-select" class="block text-sm font-medium text-gray-400">Tur</label>
-                        <select id="match-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="1">1</option>
-                            <option value="5" selected>5</option>
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="20">20</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-center">
-                    <input id="hard-mode-checkbox-multi" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <label for="hard-mode-checkbox-multi" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
-                </div>
-                <button id="create-game-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyun Kur</button>
-            </div>
-            <hr class="my-4 border-gray-600">
-            <div>
-                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl</h2>
-                <input type="text" id="game-id-input" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-red-500">
-                <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyuna Katıl</button>
-            </div>
-        </div>
-        
-        <div id="br-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex-col justify-center">
-             <button id="back-to-mode-br-btn" class="absolute top-4 left-4 text-sm text-gray-400 hover:text-white">&lt; Geri</button>
-            <h1 class="text-3xl font-bold text-center mb-6">Battle Royale (4 Kişilik)</h1>
-            <p class="text-sm text-gray-400 mb-4">Eş zamanlı tahmin. İlk çözen kazanır, 6 tahminde bulamazsan elenirsin.</p>
-            <div class="mb-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="word-length-select-br" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
-                        <select id="word-length-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                        </select>
-                    </div>
-                     <div>
-                        <label for="time-select-br" class="block text-sm font-medium text-gray-400">Tahmin Süresi</label>
-                        <select id="time-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="30">30sn</option>
-                            <option value="45" selected>45sn</option>
-                            <option value="60">60sn</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-center">
-                    <input id="hard-mode-checkbox-br" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <label for="hard-mode-checkbox-br" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
-                </div>
-                <button id="create-br-game-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyun Kur (BR)</button>
-            </div>
-            <hr class="my-4 border-gray-600">
-            <div>
-                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl</h2>
-                <input type="text" id="game-id-input-br" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-red-500">
-                <button id="join-br-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Oyuna Katıl (BR)</button>
-            </div>
-            <p id="br-waiting-for-players" class="text-gray-400 mt-4 hidden">Diğer oyuncular bekleniyor (1/4)</p>
-        </div>
-
-
-        <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
-             <div id="multiplayer-score-board" class="w-full bg-gray-800 p-2 rounded-lg shadow flex flex-wrap justify-center gap-2 flex-shrink-0 mb-2">
-                </div>
-             
-             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0 hidden" id="sequential-game-info">
-                <div id="player1-score" class="text-left w-2/5 truncate"></div>
-                <div class="text-center w-1/5">
-                    <p id="round-counter" class="text-xs text-gray-400"></p>
-                    <p id="turn-display" class="font-bold text-md"></p>
-                    <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
-                </div>
-                <div id="player2-score" class="text-right w-2/5 truncate"></div>
-            </div>
-            
-            <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
-                 <div class="flex items-center gap-2">
-                     <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
-                     <button id="copy-game-id-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-0 px-2 rounded text-xs">Kopyala</button>
-                     <button id="share-game-btn" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-0 px-2 rounded text-xs flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg>
-                        <span>Paylaş</span>
-                    </button>
-                 </div>
-                 <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
-            </div>
-            
-            <div class="w-full flex-grow flex flex-col justify-start overflow-y-auto min-h-0 py-2">
-                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
-            </div>
-            <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
-            <div id="keyboard" class="w-full flex-shrink-0"></div>
-        </div>
-        
-        <div id="scoreboard-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
-            <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
-            <div class="mb-4">
-                <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
-                <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
-            </div>
-            <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-            <div class="flex gap-2">
-                <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Oyun</button>
-                <button id="share-results-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonucu Paylaş</button>
-            </div>
-            <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
-        </div>
-
         <div id="profile-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h2 class="text-3xl font-bold mb-4">Profil & İstatistikler</h2>
             <div class="bg-gray-700 p-3 rounded-lg mb-4 text-left">
@@ -298,60 +141,57 @@
             <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
             <button id="close-profile-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kapat</button>
         </div>
-
         <div id="how-to-play-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center text-left">
-            <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
-            <p class="mb-2">Kelimeyi 6 denemede bulun.</p>
-            <p class="mb-4">Her tahmin, kelime listesinde bulunan geçerli bir kelime olmalıdır.</p>
-            <hr class="border-gray-600 my-4">
-            <h3 class="font-bold mb-2">Örnekler</h3>
-            <div class="flex justify-center gap-1 mb-2">
-                <div class="tile example-tile static correct"><div class="tile-inner">K</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">A</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">L</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">E</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">M</div></div>
-            </div>
-            <p class="mb-4"><strong class="text-green-400">K</strong> harfi kelimede var ve doğru yerde.</p>
-            <div class="flex justify-center gap-1 mb-2">
-                <div class="tile example-tile static"><div class="tile-inner">S</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">İ</div></div>
-                <div class="tile example-tile static present"><div class="tile-inner">L</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">G</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">İ</div></div>
-            </div>
-            <p class="mb-4"><strong class="text-yellow-400">L</strong> harfi kelimede var ama yanlış yerde.</p>
-            <div class="flex justify-center gap-1 mb-2">
-                <div class="tile example-tile static"><div class="tile-inner">K</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">A</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">Ğ</div></div>
-                <div class="tile example-tile static absent"><div class="tile-inner">I</div></div>
-                <div class="tile example-tile static"><div class="tile-inner">T</div></div>
-            </div>
-            <p class="mb-4"><strong class="text-gray-400">I</strong> harfi kelimede yok.</p>
-            <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
+             <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
+             <p>İçerik buraya gelecek...</p>
+             <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
         </div>
-
-        <div id="invitation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center max-w-sm w-full">
-                <h2 class="text-2xl font-bold mb-4">Oyun Daveti</h2>
-                <p id="invitation-text" class="mb-6">Bir arkadaşın seni oyuna davet ediyor!</p>
-                <div class="flex gap-4">
-                    <button id="accept-invite-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Kabul Et</button>
-                    <button id="reject-invite-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Reddet</button>
-                </div>
-            </div>
+        <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
+             <div id="multiplayer-score-board" class="w-full bg-gray-800 p-2 rounded-lg shadow flex flex-wrap justify-center gap-2 flex-shrink-0 mb-2"></div>
+             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0 hidden" id="sequential-game-info">
+                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
+                 <div class="text-center w-1/5">
+                     <p id="round-counter" class="text-xs text-gray-400"></p>
+                     <p id="turn-display" class="font-bold text-md"></p>
+                     <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
+                 </div>
+                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
+             </div>
+             <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
+                 <div class="flex items-center gap-2">
+                     <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
+                     <button id="copy-game-id-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-0 px-2 rounded text-xs">Kopyala</button>
+                     <button id="share-game-btn" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-0 px-2 rounded text-xs flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg><span>Paylaş</span></button>
+                 </div>
+                 <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
+             </div>
+             <div class="w-full flex-grow flex flex-col justify-start overflow-y-auto min-h-0 py-2">
+                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
+             </div>
+             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
+             <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
-
+        <div id="scoreboard-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
+            <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
+            <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
+            <div class="mb-4">
+                <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
+                <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
+            </div>
+            <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
+            <div class="flex gap-2">
+                <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Oyun</button>
+                <button id="share-results-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonucu Paylaş</button>
+            </div>
+            <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
+        </div>
     </div>
     <div id="toast" class="toast"></div>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-    
-    <script type="module" src="js/main.js?v=1.0.1"></script>
+    <script type="module" src="js/main.js?v=2.0.3"></script>
 </body>
 </html>

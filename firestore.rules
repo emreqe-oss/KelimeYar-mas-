@@ -16,10 +16,10 @@ service cloud.firestore {
         let data = request.resource.data;
         return data.username is string && data.username.size() > 2 && data.username.size() < 15
                && data.fullname is string && data.fullname.size() > 2
-               && data.email is string && data.email.matches('.+@.+\\..+')  // <-- DÜZELTME BURADA YAPILDI
+               && data.email is string && data.email.matches('.+@.+\\..+')
                && data.age is number && data.age > 0
                && data.city is string
-               && data.createdAt == request.time // Sadece oluşturulurken sunucu zamanı kullanılabilir
+               && (data.createdAt == request.time || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']))
                && hasValidStatsData(data.stats); // İstatistik verisini doğrula
       }
       
@@ -58,7 +58,7 @@ service cloud.firestore {
       function hasValidNewGameData() {
         let data = request.resource.data;
         return data.wordLength is number && (data.wordLength == 4 || data.wordLength == 5 || data.wordLength == 6)
-               && data.timeLimit is number && (data.timeLimit == 30 || data.timeLimit == 45 || data.timeLimit == 60)
+               && data.timeLimit is number && data.timeLimit >= 30 // 30 saniye ve üzeri tüm sürelere izin ver
                && data.isHardMode is bool
                && data.status is string && (data.status == 'waiting' || data.status == 'invited')
                && data.players[request.auth.uid].username is string;

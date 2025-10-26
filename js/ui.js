@@ -1,7 +1,7 @@
 // js/ui.js
 
 import * as state from './state.js';
-import { getStatsFromProfile, createElement } from './utils.js'; // createElement'i import et
+import { getStatsFromProfile, createElement } from './utils.js';
 
 // Değişkenler
 export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
@@ -29,10 +29,9 @@ export function initUI() {
 
 export function showScreen(screenId) {
     const screens = [
-        'login-screen', 'register-screen', 'mode-selection-screen', 
-        'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 
-        'scoreboard-screen', 'profile-screen', 'how-to-play-screen', 'friends-screen',
-        'br-setup-screen'
+        'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
+        'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
+        'how-to-play-screen', 'friends-screen', 'br-setup-screen'
     ];
     screens.forEach(id => {
         const screenElement = document.getElementById(id);
@@ -97,7 +96,6 @@ export function createKeyboard(handleKeyPress) {
     });
 }
 
-
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
     const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
@@ -159,7 +157,6 @@ export function updateMultiplayerScoreBoard(gameData) {
     } else {
         multiplayerScoreBoard.classList.add('hidden');
         sequentialGameInfo?.classList.remove('hidden');
-        // Sıralı mod için skorları da güncelleyelim
         const p1ScoreEl = document.getElementById('player1-score');
         const p2ScoreEl = document.getElementById('player2-score');
         if (p1ScoreEl && p2ScoreEl) {
@@ -177,15 +174,15 @@ export function updateMultiplayerScoreBoard(gameData) {
                  p2ScoreEl.innerHTML = '';
              }
         }
-        return; // BR değilse aşağısı çalışmaz
+        return;
     }
     
     multiplayerScoreBoard.innerHTML = '';
 
     players.forEach(([id, data]) => {
         const isMe = id === currentUserId;
-        const isEliminated = data.isEliminated; // BR'de isEliminated alanı var
-        const isWinner = data.isWinner; // BR'de isWinner alanı var
+        const isEliminated = data.isEliminated;
+        const isWinner = data.isWinner;
 
         let playerStatus = '';
         if(isWinner) {
@@ -210,7 +207,6 @@ export function updateMultiplayerScoreBoard(gameData) {
     });
 }
 
-
 export function switchFriendTab(tabName) {
     const tabs = { friends: document.getElementById('friends-tab'), requests: document.getElementById('requests-tab'), add: document.getElementById('add-friend-tab') };
     const buttons = { friends: document.getElementById('show-friends-tab-btn'), requests: document.getElementById('show-requests-tab-btn'), add: document.getElementById('show-add-friend-tab-btn') };
@@ -223,6 +219,33 @@ export function switchFriendTab(tabName) {
     }
     if(tabs[tabName]) tabs[tabName].classList.remove('hidden');
     if(buttons[tabName]){
+        buttons[tabName].classList.add('border-indigo-500', 'text-white');
+        buttons[tabName].classList.remove('text-gray-400');
+    }
+}
+
+export function switchMyGamesTab(tabName) {
+    const tabs = { 
+        active: document.getElementById('active-games-tab'), 
+        finished: document.getElementById('finished-games-tab'), 
+        invites: document.getElementById('invites-tab') 
+    };
+    const buttons = { 
+        active: document.getElementById('show-active-games-tab-btn'), 
+        finished: document.getElementById('show-finished-games-tab-btn'), 
+        invites: document.getElementById('show-invites-tab-btn') 
+    };
+
+    for (const key in tabs) {
+        if (tabs[key]) tabs[key].classList.add('hidden');
+        if (buttons[key]) {
+            buttons[key].classList.remove('border-indigo-500', 'text-white');
+            buttons[key].classList.add('text-gray-400');
+        }
+    }
+
+    if (tabs[tabName]) tabs[tabName].classList.remove('hidden');
+    if (buttons[tabName]){
         buttons[tabName].classList.add('border-indigo-500', 'text-white');
         buttons[tabName].classList.remove('text-gray-400');
     }
