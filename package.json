@@ -1,0 +1,26 @@
+{
+  "name": "kelimeyar-mas",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Çok oyunculu kelime oyunu",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emrege-oss/KelimeYar-mas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/emrege-oss/KelimeYar-mas/issues"
+  },
+  "homepage": "https://github.com/emrege-oss/KelimeYar-mas#readme"
+}
