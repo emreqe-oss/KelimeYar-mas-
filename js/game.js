@@ -11,6 +11,7 @@ const GUESS_COUNT = 6;
 const DAILY_WORD_LENGTH = 5;
 const MAX_BR_PLAYERS = 4;
 
+// --- STATE DEĞİŞKENLERİ ---
 let isGameOver = false;
 let wordLength = 5;
 let timeLimit = 45;
@@ -103,51 +104,60 @@ async function submitGuess() {
     const colors = calculateColors(guessWord, secretWord);
     const newGuess = { word: guessWord, colors: colors };
     
-    const gameRef = db.collection("games").doc(state.getCurrentGameId());
-    const playerGuesses = playerState.guesses || [];
-    playerGuesses.push(newGuess);
+    // --- DÜZELTME: Oyun moduna göre ayrım yap ---
+    if (gameMode === 'multiplayer' || isBattleRoyale(gameMode)) {
+        // --- ONLINE MODLAR İÇİN FIRESTORE GÜNCELLEMESİ ---
+        const gameRef = db.collection("games").doc(state.getCurrentGameId());
+        const playerGuesses = playerState.guesses || [];
+        playerGuesses.push(newGuess);
 
-    const updates = {
-        [`players.${currentUserId}.guesses`]: playerGuesses,
-    };
-    
-    let isWinner = (guessWord === secretWord);
-
-    if (isBattleRoyale(gameMode)) {
-        // --- BATTLE ROYALE MANTIK ---
-        if (isWinner) {
-            updates.status = 'finished';
-            updates.roundWinner = currentUserId; 
-            updates[`players.${currentUserId}.isWinner`] = true;
-        } else if (playerGuesses.length >= GUESS_COUNT) {
-            updates[`players.${currentUserId}.isEliminated`] = true;
-        }
+        const updates = {
+            [`players.${currentUserId}.guesses`]: playerGuesses,
+        };
         
-    } else if (gameMode === 'multiplayer') {
-        // --- SIRALI MULTIPLAYER MANTIK ---
-        const playerIds = Object.keys(localGameData.players);
-        const myIndex = playerIds.indexOf(currentUserId);
-        const nextPlayerIndex = (myIndex + 1) % playerIds.length;
-        updates.currentPlayerId = playerIds[nextPlayerIndex];
-        updates.turnStartTime = firebase.firestore.FieldValue.serverTimestamp();
+        let isWinner = (guessWord === secretWord);
 
-        if (isWinner) {
-            updates.status = 'finished';
-            updates.roundWinner = currentUserId;
-            const scoreToAdd = scorePoints[playerGuesses.length - 1] || 0;
-            updates[`players.${currentUserId}.score`] = (playerState.score || 0) + scoreToAdd;
-        } else if (playerGuesses.length >= GUESS_COUNT) {
-            updates.status = 'finished';
-            updates.roundWinner = null;
+        if (isBattleRoyale(gameMode)) {
+            if (isWinner) {
+                updates.status = 'finished';
+                updates.roundWinner = currentUserId; 
+                updates[`players.${currentUserId}.isWinner`] = true;
+            } else if (playerGuesses.length >= GUESS_COUNT) {
+                updates[`players.${currentUserId}.isEliminated`] = true;
+            }
+        } else { // Sıralı multiplayer
+            const playerIds = Object.keys(localGameData.players);
+            const myIndex = playerIds.indexOf(currentUserId);
+            const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+            updates.currentPlayerId = playerIds[nextPlayerIndex];
+            updates.turnStartTime = firebase.firestore.FieldValue.serverTimestamp();
+
+            if (isWinner) {
+                updates.status = 'finished';
+                updates.roundWinner = currentUserId;
+                const scoreToAdd = scorePoints[playerGuesses.length - 1] || 0;
+                updates[`players.${currentUserId}.score`] = (playerState.score || 0) + scoreToAdd;
+            } else if ((Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1) >= GUESS_COUNT * playerIds.length) {
+                updates.status = 'finished';
+                updates.roundWinner = null;
+            }
         }
-        
-    } else { // Single player, vsCPU, daily
+
+        await gameRef.update(updates).finally(() => { 
+            if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto'; 
+            if (isBattleRoyale(gameMode) && localGameData.status === 'playing') startBRTimer();
+        });
+
+    } else { 
+        // --- YEREL MODLAR İÇİN GÜNCELLEME ---
         localGameData.players[currentUserId].guesses.push(newGuess);
+        let isWinner = (guessWord === secretWord);
+
         if (isWinner) {
             localGameData.status = 'finished';
             localGameData.roundWinner = currentUserId;
         } else {
-            if (playerGuesses.length >= GUESS_COUNT) {
+            if (localGameData.players[currentUserId].guesses.length >= GUESS_COUNT) {
                 localGameData.status = 'finished';
                 localGameData.roundWinner = null;
             } else if (gameMode === 'vsCPU') {
@@ -159,7 +169,7 @@ async function submitGuess() {
         const guessCount = didWin ? localGameData.players[currentUserId].guesses.length : 0;
         
         if (localGameData.status === 'finished') {
-            if (gameMode !== 'multiplayer') await updateStats(didWin, guessCount);
+            await updateStats(didWin, guessCount);
             if (gameMode === 'daily') saveDailyGameState(localGameData);
         }
 
@@ -171,14 +181,7 @@ async function submitGuess() {
             }
         });
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
-        return;
     }
-
-    // Multiplayer ve BR için Firestore güncellemesi
-    await gameRef.update(updates).finally(() => { 
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto'; 
-        if (isBattleRoyale(gameMode) && localGameData.status === 'playing') startBRTimer();
-    });
 }
 
 export async function failTurn(guessWord = '') {
@@ -213,7 +216,7 @@ export async function failTurn(guessWord = '') {
             turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
         };
 
-        if (playerGuesses.length >= GUESS_COUNT) {
+        if ((Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1) >= GUESS_COUNT * playerIds.length) {
             updates.status = 'finished';
             updates.roundWinner = null;
         }
@@ -693,7 +696,6 @@ export async function createGame(invitedFriendId = null) {
     }
 }
 
-// Internal (private) functions
 function initializeGameUI(gameData) {
     wordLength = gameData.wordLength;
     if (guessGrid) {
