@@ -1,7 +1,7 @@
 // js/ui.js
 
 import * as state from './state.js';
-import { getStatsFromProfile } from './utils.js';
+import { getStatsFromProfile, createElement } from './utils.js'; // createElement'i import et
 
 // Değişkenler
 export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
@@ -54,13 +54,9 @@ export function createGrid(wordLength, GUESS_COUNT) {
     guessGrid.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
     for (let i = 0; i < GUESS_COUNT; i++) {
         for (let j = 0; j < wordLength; j++) {
-            const tile = document.createElement('div');
-            tile.classList.add('tile');
-            tile.id = `tile-${i}-${j}`;
-            const tileInnerFront = document.createElement('div');
-            tileInnerFront.classList.add('tile-inner', 'front');
-            const tileInnerBack = document.createElement('div');
-            tileInnerBack.classList.add('tile-inner', 'back');
+            const tile = createElement('div', { id: `tile-${i}-${j}`, className: 'tile' });
+            const tileInnerFront = createElement('div', { className: 'tile-inner front' });
+            const tileInnerBack = createElement('div', { className: 'tile-inner back' });
             tile.appendChild(tileInnerFront);
             tile.appendChild(tileInnerBack);
             guessGrid.appendChild(tile);
@@ -78,12 +74,16 @@ export function createKeyboard(handleKeyPress) {
         ['⌫', 'ENTER']
     ];
     keyRows.forEach((row, rowIndex) => {
-        const rowDiv = document.createElement('div');
-        rowDiv.classList.add('flex', 'justify-center', 'gap-1', 'my-1', 'w-full');
-        if (rowIndex === 3) rowDiv.classList.add('gap-2');
+        const rowDiv = createElement('div', { className: `flex justify-center gap-1 my-1 w-full ${rowIndex === 3 ? 'gap-2' : ''}` });
         row.forEach(key => {
-            const keyButton = document.createElement('button');
-            keyButton.dataset.key = key;
+            const isSpecialKey = key === '⌫' || key === 'ENTER';
+            const keyButton = createElement('button', {
+                className: `keyboard-key rounded font-semibold uppercase bg-gray-500 ${isSpecialKey ? 'bg-gray-600' : ''}`,
+                dataset: { key: key },
+                onclick: () => handleKeyPress(key),
+                style: { flex: isSpecialKey ? '6' : '1' }
+            });
+
             if (key === '⌫') {
                 keyButton.innerHTML = `<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>`;
             } else if (key === 'ENTER') {
@@ -91,14 +91,6 @@ export function createKeyboard(handleKeyPress) {
             } else {
                 keyButton.textContent = key;
             }
-            keyButton.classList.add('keyboard-key', 'rounded', 'font-semibold', 'uppercase', 'bg-gray-500');
-            if (rowIndex === 3) {
-                keyButton.style.flex = '6';
-                keyButton.classList.add('bg-gray-600');
-            } else {
-                keyButton.style.flex = '1';
-            }
-            keyButton.onclick = () => handleKeyPress(key);
             rowDiv.appendChild(keyButton);
         });
         keyboardContainer.appendChild(rowDiv);
@@ -206,14 +198,14 @@ export function updateMultiplayerScoreBoard(gameData) {
 
         const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : 'bg-gray-600');
         
-        const playerDiv = document.createElement('div');
-        playerDiv.className = `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`; // Daha esnek genişlik
-        playerDiv.style.minWidth = '100px'; // Minimum genişlik
-
-        playerDiv.innerHTML = `
-            <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
-            <p class="text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'}">${playerStatus}</p>
-        `;
+        const playerDiv = createElement('div', {
+            className: `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`,
+            style: { minWidth: '100px' },
+            innerHTML: `
+                <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
+                <p class="text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'}">${playerStatus}</p>
+            `
+        });
         multiplayerScoreBoard.appendChild(playerDiv);
     });
 }

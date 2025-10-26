@@ -1,7 +1,7 @@
 // js/friends.js
 import { db } from './firebase.js';
 import * as state from './state.js';
-import { showToast } from './utils.js';
+import { showToast, createElement } from './utils.js'; // createElement'i import et
 import { showScreen, displayStats } from './ui.js';
 import { joinGame } from './game.js';
 
@@ -30,18 +30,21 @@ export async function searchUsers() {
         const results = new Map();
         usernameSnapshot.forEach(doc => { if (doc.id !== currentUserId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
         emailSnapshot.forEach(doc => { if (doc.id !== currentUserId) results.set(doc.id, { id: doc.id, ...doc.data() }); });
+        
         if (results.size === 0) {
             friendSearchResults.innerHTML = '<p class="text-gray-400">Kullanıcı bulunamadı.</p>';
         } else {
             friendSearchResults.innerHTML = '';
             results.forEach(user => {
-                const userDiv = document.createElement('div');
-                userDiv.className = 'bg-gray-700 p-2 rounded flex justify-between items-center';
-                userDiv.innerHTML = `<span>${user.username} <span class="text-xs text-gray-400">(${user.fullname})</span></span>`;
-                const addButton = document.createElement('button');
-                addButton.className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
-                addButton.textContent = 'Ekle';
-                addButton.onclick = () => sendFriendRequest(user.id);
+                const addButton = createElement('button', {
+                    className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-lg text-xs',
+                    textContent: 'Ekle',
+                    onclick: () => sendFriendRequest(user.id)
+                });
+                const userDiv = createElement('div', {
+                    className: 'bg-gray-700 p-2 rounded flex justify-between items-center',
+                    innerHTML: `<span>${user.username} <span class="text-xs text-gray-400">(${user.fullname})</span></span>`
+                });
                 userDiv.appendChild(addButton);
                 friendSearchResults.appendChild(userDiv);
             });
@@ -134,32 +137,17 @@ function renderFriends(friends, requests) {
     if (friends.length > 0) {
         friendsListPlaceholder.classList.add('hidden');
         friends.forEach(friend => {
-            const friendDiv = document.createElement('div');
-            friendDiv.className = 'bg-gray-700 p-2 rounded flex justify-between items-center';
+            const profileButton = createElement('button', { className: 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-lg text-xs', textContent: 'Profil', onclick: () => showFriendProfile(friend.id) });
+            const inviteButton = createElement('button', { className: 'bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-1 px-2 rounded-lg text-xs', textContent: 'Davet Et', onclick: () => challengeFriend(friend) });
+            const removeButton = createElement('button', { className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs', textContent: 'Sil', onclick: () => removeFriend(friend.friendshipId) });
+            
+            const buttonsWrapper = createElement('div', { className: 'flex gap-2 items-center' });
+            buttonsWrapper.append(profileButton, inviteButton, removeButton);
+
+            const friendDiv = createElement('div', { className: 'bg-gray-700 p-2 rounded flex justify-between items-center' });
             friendDiv.innerHTML = `<span>${friend.username}</span>`;
-            
-            const buttonsWrapper = document.createElement('div');
-            buttonsWrapper.className = 'flex gap-2 items-center';
-            
-            const profileButton = document.createElement('button');
-            profileButton.className = 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
-            profileButton.textContent = 'Profil';
-            profileButton.onclick = () => showFriendProfile(friend.id);
-
-            const inviteButton = document.createElement('button');
-            inviteButton.className = 'bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
-            inviteButton.textContent = 'Davet Et';
-            inviteButton.onclick = () => challengeFriend(friend);
-
-            const removeButton = document.createElement('button');
-            removeButton.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
-            removeButton.textContent = 'Sil';
-            removeButton.onclick = () => removeFriend(friend.friendshipId);
-
-            buttonsWrapper.appendChild(profileButton);
-            buttonsWrapper.appendChild(inviteButton);
-            buttonsWrapper.appendChild(removeButton);
             friendDiv.appendChild(buttonsWrapper);
+
             friendsList.appendChild(friendDiv);
         });
     } else {
@@ -169,26 +157,16 @@ function renderFriends(friends, requests) {
     if (requests.length > 0) {
         friendRequestsPlaceholder.classList.add('hidden');
         requests.forEach(request => {
-            const requestDiv = document.createElement('div');
-            requestDiv.className = 'bg-gray-700 p-2 rounded flex justify-between items-center';
+            const acceptButton = createElement('button', { className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-lg text-xs', textContent: 'Kabul Et', onclick: () => handleFriendRequest(request.friendshipId, 'accept') });
+            const rejectButton = createElement('button', { className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs', textContent: 'Reddet', onclick: () => handleFriendRequest(request.friendshipId, 'reject') });
+            
+            const buttonsWrapper = createElement('div', { className: 'flex gap-2' });
+            buttonsWrapper.append(acceptButton, rejectButton);
+
+            const requestDiv = createElement('div', { className: 'bg-gray-700 p-2 rounded flex justify-between items-center' });
             requestDiv.innerHTML = `<span>${request.username}</span>`;
-
-            const buttonsWrapper = document.createElement('div');
-            buttonsWrapper.className = 'flex gap-2';
-
-            const acceptButton = document.createElement('button');
-            acceptButton.className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
-            acceptButton.textContent = 'Kabul Et';
-            acceptButton.onclick = () => handleFriendRequest(request.friendshipId, 'accept');
-
-            const rejectButton = document.createElement('button');
-            rejectButton.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-lg text-xs';
-            rejectButton.textContent = 'Reddet';
-            rejectButton.onclick = () => handleFriendRequest(request.friendshipId, 'reject');
-
-            buttonsWrapper.appendChild(acceptButton);
-            buttonsWrapper.appendChild(rejectButton);
             requestDiv.appendChild(buttonsWrapper);
+            
             friendRequestsList.appendChild(requestDiv);
         });
     } else {
@@ -208,13 +186,11 @@ export function listenForGameInvites() {
                 
                 let creatorUsername = 'Bir arkadaşın'; 
                 
-                // Oyuncu listesinden kullanıcı adını güvenli bir şekilde çekiyoruz
                 const creatorId = inviteData.creatorId;
                 
                 if (inviteData.players && inviteData.players[creatorId] && inviteData.players[creatorId].username) {
                     creatorUsername = inviteData.players[creatorId].username;
                 } else {
-                    // Eğer oyuncular map'i henüz tam oluşmadıysa, users koleksiyonundan çekmeyi dene
                     try {
                         const creatorDoc = await db.collection('users').doc(creatorId).get();
                         if (creatorDoc.exists) {

@@ -1,5 +1,32 @@
 // js/utils.js
 
+// --- YENİ EKLENDİ: Dinamik Element Oluşturma Fonksiyonu ---
+/**
+ * Verilen seçeneklerle yeni bir HTML elemanı oluşturur.
+ * @param {string} tag - Oluşturulacak elemanın etiketi (örn: 'div', 'button').
+ * @param {object} options - Elemana uygulanacak özellikler.
+ * @returns {HTMLElement} Oluşturulan HTML elemanı.
+ */
+export function createElement(tag, options = {}) {
+    const el = document.createElement(tag);
+    if (options.className) el.className = options.className;
+    if (options.id) el.id = options.id;
+    if (options.textContent) el.textContent = options.textContent;
+    if (options.innerHTML) el.innerHTML = options.innerHTML;
+    if (options.onclick) el.onclick = options.onclick;
+    if (options.dataset) {
+        for (const key in options.dataset) {
+            el.dataset[key] = options.dataset[key];
+        }
+    }
+    if (options.style) {
+        for (const key in options.style) {
+            el.style[key] = options.style[key];
+        }
+    }
+    return el;
+}
+
 // --- SES EFEKTLERİ ---
 const sounds = {
     click: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
@@ -56,8 +83,7 @@ export function shakeCurrentRow(wordLength, currentRow) {
     }
 }
 
-// --- YENİ EKLENEN ORTAK FONKSİYON ---
-// Bu fonksiyon hem game.js hem de ui.js tarafından kullanılacak.
+// --- ORTAK İSTATİSTİK FONKSİYONU ---
 export function getStatsFromProfile(profileData) {
     const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, guessDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 } };
     
@@ -66,7 +92,6 @@ export function getStatsFromProfile(profileData) {
     }
 
     const userStats = profileData.stats;
-    // Güvenlik: guessDistribution'ın varlığını ve tüm anahtarlarını kontrol et
     if (!userStats.guessDistribution || typeof userStats.guessDistribution !== 'object') {
         userStats.guessDistribution = {};
     }

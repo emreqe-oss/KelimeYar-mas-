@@ -4,6 +4,7 @@ import { db, getNewSecretWord, checkWordValidity } from './firebase.js';
 import * as state from './state.js';
 import { showToast, playSound, shakeCurrentRow, getStatsFromProfile } from './utils.js';
 import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, turnDisplay, timerDisplay, gameIdDisplay, roundCounter, shareGameBtn, startGameBtn, keyboardContainer, updateMultiplayerScoreBoard } from './ui.js';
+import { cpuWordList } from './cpu-words.js';
 
 // --- SABİTLER ---
 const scorePoints = [1000, 800, 600, 400, 200, 100];
@@ -53,6 +54,41 @@ function saveDailyGameState(gameState) {
     localStorage.setItem(`dailyGameState_${state.getUserId()}`, JSON.stringify(toSave));
 }
 
+function checkHardMode(guessWord, playerGuesses) {
+    const correctLetters = {}; // Yeşil harfler ve pozisyonları: { 0: 'A', 3: 'L' }
+    const presentLetters = new Set(); // Sarı harfler: Set('B', 'E')
+
+    // Önceki tahminlerden tüm ipuçlarını topla
+    playerGuesses.forEach(guess => {
+        for (let i = 0; i < guess.word.length; i++) {
+            if (guess.colors[i] === 'correct') {
+                correctLetters[i] = guess.word[i];
+                presentLetters.add(guess.word[i]);
+            } else if (guess.colors[i] === 'present') {
+                presentLetters.add(guess.word[i]);
+            }
+        }
+    });
+
+    // 1. Kural: Tüm yeşil harfler doğru yerde mi?
+    for (const pos in correctLetters) {
+        if (guessWord[pos] !== correctLetters[pos]) {
+            showToast(`Zor Mod: ${parseInt(pos) + 1}. harf "${correctLetters[pos]}" olmalı!`, true);
+            return false;
+        }
+    }
+
+    // 2. Kural: Tüm sarı harfler yeni tahminde var mı?
+    for (const letter of presentLetters) {
+        if (!guessWord.includes(letter)) {
+            showToast(`Zor Mod: Kelime "${letter}" harfini içermeli!`, true);
+            return false;
+        }
+    }
+
+    return true; // Tüm kurallar geçerli
+}
+
 
 async function submitGuess() {
     const localGameData = state.getLocalGameData();
@@ -83,8 +119,12 @@ async function submitGuess() {
         guessWord += tileInner.textContent;
     }
     
-    if (gameMode !== 'daily' && gameMode !== 'single' && gameMode !== 'vsCPU' && localGameData.isHardMode) {
-        // Hard Mode mantığı buraya gelir
+    // --- YENİ EKLENDİ: Zor Mod Kontrolü ---
+    if (localGameData.isHardMode && playerState.guesses.length > 0) {
+        if (!checkHardMode(guessWord, playerState.guesses)) {
+            shakeCurrentRow(wordLength, currentRow);
+            return;
+        }
     }
     
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
@@ -104,7 +144,6 @@ async function submitGuess() {
     const colors = calculateColors(guessWord, secretWord);
     const newGuess = { word: guessWord, colors: colors };
     
-    // --- DÜZELTME: Oyun moduna göre ayrım yap ---
     if (gameMode === 'multiplayer' || isBattleRoyale(gameMode)) {
         // --- ONLINE MODLAR İÇİN FIRESTORE GÜNCELLEMESİ ---
         const gameRef = db.collection("games").doc(state.getCurrentGameId());
@@ -311,19 +350,124 @@ function calculateColors(guess, secret) {
     return colors;
 }
 
-function cpuTurn() {
+function findBestCpuGuess() {
+    const localGameData = state.getLocalGameData();
+    const allGuesses = [...localGameData.players[state.getUserId()].guesses, ...localGameData.players['cpu'].guesses];
+    const wordLenStr = String(localGameData.wordLength);
+
+    let possibleWords = [...(cpuWordList[wordLenStr] || [])];
+
+    const correctLetters = {}; // { 0: 'A', 2: 'L' } gibi
+    const presentLetters = new Set();
+    const absentLetters = new Set();
+
+    allGuesses.forEach(g => {
+        for (let i = 0; i < g.word.length; i++) {
+            const letter = g.word[i];
+            const color = g.colors[i];
+            if (color === 'correct') {
+                correctLetters[i] = letter;
+                presentLetters.add(letter); // Yeşil harf aynı zamanda sarı kuralını da sağlar
+            } else if (color === 'present') {
+                presentLetters.add(letter);
+            } else if (color === 'absent') {
+                absentLetters.add(letter);
+            }
+        }
+    });
+    
+    // Filtreleme mantığı
+    possibleWords = possibleWords.filter(word => {
+        // Yeşil harf kuralı: Harf doğru yerde olmalı
+        for (const pos in correctLetters) {
+            if (word[pos] !== correctLetters[pos]) return false;
+        }
+
+        // Gri harf kuralı: Kelime, yeşil/sarı olmayan gri harfleri içermemeli
+        for (const letter of absentLetters) {
+            if (!presentLetters.has(letter) && word.includes(letter)) {
+                return false;
+            }
+        }
+
+        // Sarı harf kuralı: Kelime tüm sarı harfleri içermeli
+        for (const letter of presentLetters) {
+            if (!word.includes(letter)) return false;
+        }
+
+        // Sarı harf pozisyon kuralı: Harf, sarı olduğu yerde olmamalı
+        for (const g of allGuesses) {
+            for (let i = 0; i < g.word.length; i++) {
+                if (g.colors[i] === 'present' && word[i] === g.word[i]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    });
+
+    // Daha önce tahmin edilen kelimeleri listeden çıkar
+    const guessedWords = new Set(allGuesses.map(g => g.word));
+    const finalWords = possibleWords.filter(w => !guessedWords.has(w));
+
+    if (finalWords.length > 0) {
+        // Filtrelenmiş listeden rastgele bir kelime seç
+        return finalWords[Math.floor(Math.random() * finalWords.length)];
+    } else {
+        // Eğer akıllı bir seçenek kalmadıysa, en azından denenmemiş rastgele bir kelime seç
+        const emergencyList = (cpuWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
+        return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : null;
+    }
+}
+
+async function cpuTurn() {
     const localGameData = state.getLocalGameData();
     if (isGameOver || !localGameData || localGameData.currentPlayerId !== 'cpu') return;
 
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
     
-    setTimeout(async () => {
-        console.warn("CPU sırası atlandı (henüz yapay zeka entegre edilmedi).");
+    // CPU'nun düşünmesi için bir gecikme ekleyelim
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const guess = findBestCpuGuess();
+    if (!guess) {
+        console.error("CPU tahmin edecek kelime bulamadı.");
+        // Hata durumunda sırayı oyuncuya geri ver.
         localGameData.currentPlayerId = state.getUserId();
         await renderGameState(localGameData);
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+        return;
+    }
 
-    }, 1000);
+    // CPU'nun tahminini yerel oyun durumuna işle
+    const secretWord = localGameData.secretWord;
+    const colors = calculateColors(guess, secretWord);
+    const newGuess = { word: guess, colors: colors };
+    
+    localGameData.players['cpu'].guesses.push(newGuess);
+
+    // Oyunun bitip bitmediğini kontrol et
+    if (guess === secretWord) {
+        localGameData.status = 'finished';
+        localGameData.roundWinner = 'cpu';
+    } else if (localGameData.players[state.getUserId()].guesses.length >= GUESS_COUNT && localGameData.players['cpu'].guesses.length >= GUESS_COUNT) {
+        localGameData.status = 'finished';
+        localGameData.roundWinner = null; // Berabere
+    } else {
+        // Oyun bitmediyse sırayı oyuncuya ver
+        localGameData.currentPlayerId = state.getUserId();
+    }
+    
+    // Arayüzü CPU'nun hamlesini animasyonla gösterecek şekilde güncelle
+    await renderGameState(localGameData, true);
+
+    if (localGameData.status === 'finished') {
+        await updateStats(false, 0); // Oyuncu kaybetti
+        setTimeout(() => showScoreboard(localGameData), wordLength * 300);
+    }
+
+    if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
 }
 
 async function updateStats(didWin, guessCount) {
