@@ -77,15 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'share-game-btn': game.shareGame(); break;
                 case 'start-game-btn':
-                    if (!state.getCurrentGameId() || state.getGameMode() === 'multiplayer-br') {
-                        // BR modunda butona basıldığında oyunu başlat
-                        if (state.getGameMode() === 'multiplayer-br') {
-                             const gameRef = db.collection("games").doc(state.getCurrentGameId());
-                             gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
-                        }
-                        return;
-                    }
-                    // Sıralı modda butona basıldığında oyunu başlat
+                    if (!state.getCurrentGameId()) return;
+                    
                     const gameRef = db.collection("games").doc(state.getCurrentGameId());
                     gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
                     break;
@@ -150,19 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     state.setUserId(user.uid);
                     
-                    // KRİTİK: Kullanıcı profilini güvenli bir şekilde çek
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
                         state.setCurrentUserProfile(userDoc.data());
                         if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
                     } else {
-                        // Eğer kullanıcı belgesi yoksa, sadece temel bilgileri kullan
                         const profileData = { username: user.email.split('@')[0], email: user.email };
                         state.setCurrentUserProfile(profileData);
                         if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
                     }
                     
-                    // Butonları ve Diğer İşlemleri Etkinleştir
                     if (createBtn) createBtn.disabled = false;
                     if (joinBtn) joinBtn.disabled = false;
                     if (createBrBtn) createBrBtn.disabled = false;
@@ -198,18 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.history.replaceState({}, document.title, window.location.pathname);
                         state.setGameIdFromUrl(null);
                     } else {
-                        // Başarılı giriş ve başlatma: Ana menüyü göster
                         ui.showScreen('mode-selection-screen');
                     }
                     
                 } catch (error) {
                     console.error("Uygulama başlatma sırasında kritik hata:", error);
                     showToast("Kritik başlatma hatası. Lütfen konsolu kontrol edin.", true);
-                    // Hata olsa bile login ekranına dön
                     ui.showScreen('login-screen');
                 }
             } else {
-                // Çıkış yapmış/anonim kullanıcı
                 state.setUserId(null);
                 state.setCurrentUserProfile(null);
                 

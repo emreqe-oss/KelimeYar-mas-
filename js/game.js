@@ -104,7 +104,6 @@ async function submitGuess() {
     const colors = calculateColors(guessWord, secretWord);
     const newGuess = { word: guessWord, colors: colors };
     
-    // --- DÜZELTME: Oyun moduna göre ayrım yap ---
     if (gameMode === 'multiplayer' || isBattleRoyale(gameMode)) {
         // --- ONLINE MODLAR İÇİN FIRESTORE GÜNCELLEMESİ ---
         const gameRef = db.collection("games").doc(state.getCurrentGameId());
@@ -182,56 +181,6 @@ async function submitGuess() {
         });
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
     }
-}
-
-export async function failTurn(guessWord = '') {
-    const localGameData = state.getLocalGameData();
-    if (!localGameData || localGameData.status !== 'playing') return;
-    
-    const currentUserId = state.getUserId();
-    const gameMode = state.getGameMode();
-    const playerState = localGameData.players[currentUserId];
-    const currentRow = playerState.guesses.length;
-
-    if (!isBattleRoyale(gameMode) && localGameData.currentPlayerId !== currentUserId) return;
-    if (playerState.isEliminated || playerState.isWinner || currentRow >= GUESS_COUNT) return;
-
-    stopTurnTimer();
-    
-    if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-    const newGuess = { word: guessWord.padEnd(wordLength, ' '), colors: Array(wordLength).fill('failed') };
-    
-    const playerGuesses = playerState.guesses || [];
-    playerGuesses.push(newGuess);
-
-    if (gameMode === 'multiplayer') {
-        const gameRef = db.collection("games").doc(state.getCurrentGameId());
-        const playerIds = Object.keys(localGameData.players);
-        const myIndex = playerIds.indexOf(currentUserId);
-        const nextPlayerIndex = (myIndex + 1) % playerIds.length;
-        
-        const updates = {
-            [`players.${currentUserId}.guesses`]: playerGuesses,
-            currentPlayerId: playerIds[nextPlayerIndex],
-            turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-        };
-
-        if ((Object.values(localGameData.players).reduce((acc, p) => acc + p.guesses.length, 0) + 1) >= GUESS_COUNT * playerIds.length) {
-            updates.status = 'finished';
-            updates.roundWinner = null;
-        }
-        await gameRef.update(updates);
-
-    } else if (isBattleRoyale(gameMode)) {
-        const gameRef = db.collection("games").doc(state.getCurrentGameId());
-        const updates = {
-            [`players.${currentUserId}.guesses`]: playerGuesses,
-            [`players.${currentUserId}.isEliminated`] : true
-        };
-        await gameRef.update(updates);
-    }
-    
-    if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
 }
 
 export function handleKeyPress(key) {
@@ -372,7 +321,7 @@ export async function showScoreboard(gameData) {
 
     if (!roundWinnerDisplay || !correctWordDisplay || !finalScores || !matchWinnerDisplay || !meaningDisplay || !newRoundBtn) return;
 
-    finalScores.style.display = (gameMode === 'daily' || gameMode === 'single' || gameMode === 'vsCPU') ? 'none' : 'block';
+    finalScores.style.display = (gameMode === 'daily' || gameMode === 'single' || gameMode === 'vsCPU' || isBR) ? 'none' : 'block';
     matchWinnerDisplay.style.display = gameMode === 'daily' ? 'none' : 'block';
     
     if (gameMode === 'single' || gameMode === 'vsCPU' || gameMode === 'daily') {
@@ -961,3 +910,5 @@ export function leaveGame() {
     const rejoinBtn = document.getElementById('rejoin-game-btn');
     if (rejoinBtn) rejoinBtn.classList.add('hidden');
 }
+
+export { startDailyGame, setupAndStartGame };
