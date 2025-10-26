@@ -2,14 +2,15 @@
 
 import { showToast } from './utils.js';
 
+// js/firebase.js - GÜVENLİ VE DOĞRU KOD
 const firebaseConfig = { 
-    apiKey: "AIzaSyA5FcmgM9GV79qGwS8MC3_4yCvwvHZO0iQ", 
-    authDomain: "kelime-oyunu-flaneur.firebaseapp.com", 
-    projectId: "kelime-oyunu-flaneur", 
-    storageBucket: "kelime-oyunu-flaneur.appspot.com", 
-    messagingSenderId: "888546992121", 
-    appId: "1:888546992121:web:3e29748729cca6fbbb2728", 
-    measurementId: "G-RVD6YZ8JYV" 
+    apiKey: import.meta.env.VITE_API_KEY, 
+    authDomain: import.meta.env.VITE_AUTH_DOMAIN, 
+    projectId: import.meta.env.VITE_PROJECT_ID, 
+    storageBucket: import.meta.env.VITE_STORAGE_BUCKET, 
+    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID, 
+    appId: import.meta.env.VITE_APP_ID, 
+    measurementId: import.meta.env.VITE_MEASUREMENT_ID 
 };
 
 firebase.initializeApp(firebaseConfig);
