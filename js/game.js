@@ -9,9 +9,8 @@ import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, di
 const scorePoints = [1000, 800, 600, 400, 200, 100];
 const GUESS_COUNT = 6;
 const DAILY_WORD_LENGTH = 5;
-const MAX_BR_PLAYERS = 4; // Yeni BR modu oyuncu limiti
+const MAX_BR_PLAYERS = 4;
 
-// --- STATE DEĞİŞKENLERİ ---
 let isGameOver = false;
 let wordLength = 5;
 let timeLimit = 45;
@@ -657,5 +656,3 @@ export async function setupAndStartGame(mode) {
     initializeGameUI(gameData);
     await renderGameState(gameData);
 }
-
-export { startDailyGame, stopTurnTimer, failTurn };
