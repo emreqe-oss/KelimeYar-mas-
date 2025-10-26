@@ -37,18 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'multiplayer-btn':
                     state.setChallengedFriendId(null); 
-                    state.setGameMode('multiplayer'); // Sıralı 2 kişilik mod
+                    state.setGameMode('multiplayer');
                     if (state.getGameIdFromUrl()) game.joinGame(state.getGameIdFromUrl());
                     else ui.showScreen('multiplayer-setup-screen');
                     break;
-                // YENİ BR BUTON OLAYI
                 case 'multiplayer-br-btn':
-                    state.setGameMode('multiplayer-br'); // Yeni BR modunu ayarla
+                    state.setGameMode('multiplayer-br');
                     ui.showScreen('br-setup-screen');
                     break;
                 case 'start-single-game-btn': game.setupAndStartGame(state.getSinglePlayerMode()); break;
 
-                // BR OYUN KURMA VE KATILMA BUTONLARI (Yeni Ekran)
                 case 'create-br-game-btn': game.createBRGame(); break;
                 case 'join-br-game-btn': 
                     const brGameIdInput = document.getElementById('game-id-input-br');
@@ -79,7 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'share-game-btn': game.shareGame(); break;
                 case 'start-game-btn':
-                    if (!state.getCurrentGameId() || state.getGameMode() === 'multiplayer-br') return;
+                    if (!state.getCurrentGameId() || state.getGameMode() === 'multiplayer-br') {
+                        // BR modunda butona basıldığında oyunu başlat
+                        if (state.getGameMode() === 'multiplayer-br') {
+                             const gameRef = db.collection("games").doc(state.getCurrentGameId());
+                             gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
+                        }
+                        return;
+                    }
+                    // Sıralı modda butona basıldığında oyunu başlat
                     const gameRef = db.collection("games").doc(state.getCurrentGameId());
                     gameRef.update({ status: 'playing', turnStartTime: firebase.firestore.FieldValue.serverTimestamp() });
                     break;
@@ -141,56 +147,69 @@ document.addEventListener('DOMContentLoaded', () => {
             const joinBrBtn = document.getElementById('join-br-game-btn');
 
             if (user && !user.isAnonymous) {
-                state.setUserId(user.uid);
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
-                    state.setCurrentUserProfile(userDoc.data());
-                    if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
-                } else {
-                    const profileData = { username: user.email.split('@')[0], email: user.email };
-                    state.setCurrentUserProfile(profileData);
-                    if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
-                }
-                
-                if (createBtn) createBtn.disabled = false;
-                if (joinBtn) joinBtn.disabled = false;
-                if (createBrBtn) createBrBtn.disabled = false;
-                if (joinBrBtn) joinBrBtn.disabled = false;
+                try {
+                    state.setUserId(user.uid);
+                    
+                    // KRİTİK: Kullanıcı profilini güvenli bir şekilde çek
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        state.setCurrentUserProfile(userDoc.data());
+                        if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
+                    } else {
+                        // Eğer kullanıcı belgesi yoksa, sadece temel bilgileri kullan
+                        const profileData = { username: user.email.split('@')[0], email: user.email };
+                        state.setCurrentUserProfile(profileData);
+                        if(ui.userDisplay) ui.userDisplay.textContent = state.getCurrentUserProfile().username;
+                    }
+                    
+                    // Butonları ve Diğer İşlemleri Etkinleştir
+                    if (createBtn) createBtn.disabled = false;
+                    if (joinBtn) joinBtn.disabled = false;
+                    if (createBrBtn) createBrBtn.disabled = false;
+                    if (joinBrBtn) joinBrBtn.disabled = false;
 
+                    const lastGameId = localStorage.getItem('activeGameId');
+                    const rejoinBtn = document.getElementById('rejoin-game-btn');
+                    if(lastGameId && rejoinBtn) { 
+                        rejoinBtn.classList.remove('hidden'); 
+                    }
 
-                const lastGameId = localStorage.getItem('activeGameId');
-                const rejoinBtn = document.getElementById('rejoin-game-btn');
-                if(lastGameId && rejoinBtn) { 
-                    rejoinBtn.classList.remove('hidden'); 
-                }
+                    const dailyBtn = document.getElementById('daily-word-btn');
+                    const singleBtn = document.getElementById('single-player-btn');
+                    const vsCpuBtn = document.getElementById('vs-cpu-btn');
+                    const multiBtn = document.getElementById('multiplayer-btn');
+                    const multiBrBtn = document.getElementById('multiplayer-br-btn');
 
-                const dailyBtn = document.getElementById('daily-word-btn');
-                const singleBtn = document.getElementById('single-player-btn');
-                const vsCpuBtn = document.getElementById('vs-cpu-btn');
-                const multiBtn = document.getElementById('multiplayer-btn');
-                const multiBrBtn = document.getElementById('multiplayer-br-btn');
+                    if(dailyBtn) dailyBtn.disabled = false;
+                    if(singleBtn) singleBtn.disabled = false;
+                    if(vsCpuBtn) vsCpuBtn.disabled = false;
+                    if(multiBtn) multiBtn.disabled = false;
+                    if(multiBrBtn) multiBrBtn.disabled = false;
 
-                if(dailyBtn) dailyBtn.disabled = false;
-                if(singleBtn) singleBtn.disabled = false;
-                if(vsCpuBtn) vsCpuBtn.disabled = false;
-                if(multiBtn) multiBtn.disabled = false;
-                if(multiBrBtn) multiBrBtn.disabled = false;
+                    state.setFriendsUnsubscribe(friends.listenToFriendships());
+                    state.setInvitesUnsubscribe(friends.listenForGameInvites());
 
-                state.setFriendsUnsubscribe(friends.listenToFriendships());
-                state.setInvitesUnsubscribe(friends.listenForGameInvites());
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const gameId = urlParams.get('gameId');
+                    state.setGameIdFromUrl(gameId);
 
-                const urlParams = new URLSearchParams(window.location.search);
-                const gameId = urlParams.get('gameId');
-                state.setGameIdFromUrl(gameId);
-
-                if (gameId && !state.getCurrentGameId()) {
-                    game.joinGame(gameId);
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    state.setGameIdFromUrl(null);
-                } else {
-                    ui.showScreen('mode-selection-screen');
+                    if (gameId && !state.getCurrentGameId()) {
+                        game.joinGame(gameId);
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        state.setGameIdFromUrl(null);
+                    } else {
+                        // Başarılı giriş ve başlatma: Ana menüyü göster
+                        ui.showScreen('mode-selection-screen');
+                    }
+                    
+                } catch (error) {
+                    console.error("Uygulama başlatma sırasında kritik hata:", error);
+                    showToast("Kritik başlatma hatası. Lütfen konsolu kontrol edin.", true);
+                    // Hata olsa bile login ekranına dön
+                    ui.showScreen('login-screen');
                 }
             } else {
+                // Çıkış yapmış/anonim kullanıcı
                 state.setUserId(null);
                 state.setCurrentUserProfile(null);
                 
