@@ -3,11 +3,10 @@
 import * as state from './state.js';
 import { getStatsFromProfile } from './utils.js';
 
-// Değişkenler burada sadece tanımlanıyor.
+// Değişkenler
 export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
 
 export function initUI() {
-    // Değer atamaları burada yapılıyor.
     guessGrid = document.getElementById('guess-grid');
     keyboardContainer = document.getElementById('keyboard');
     turnDisplay = document.getElementById('turn-display');
@@ -25,7 +24,6 @@ export function initUI() {
     showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
     showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
     friendRequestCount = document.getElementById('friend-request-count');
-    // YENİ EKLEME
     multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
 }
 
@@ -34,7 +32,7 @@ export function showScreen(screenId) {
         'login-screen', 'register-screen', 'mode-selection-screen', 
         'singleplayer-setup-screen', 'multiplayer-setup-screen', 'game-screen', 
         'scoreboard-screen', 'profile-screen', 'how-to-play-screen', 'friends-screen',
-        'br-setup-screen' // YENİ EKRAN
+        'br-setup-screen'
     ];
     screens.forEach(id => {
         const screenElement = document.getElementById(id);
@@ -49,8 +47,6 @@ export function showScreen(screenId) {
         console.error(`showScreen fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
     }
 }
-
-// ... (createGrid ve createKeyboard fonksiyonları aynı kalmalı)
 
 export function createGrid(wordLength, GUESS_COUNT) {
     if (!guessGrid) return;
@@ -112,8 +108,6 @@ export function createKeyboard(handleKeyPress) {
 
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
-    // BR modu: Sadece kendi tahminlerimizi dikkate almalıyız, başkalarınınkini değil.
-    // Ancak genel olarak klavye, oyundaki tüm bilgileri göstermeli (ortak tecrübe).
     const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
     const keyStates = {};
     allGuesses.forEach(({ word, colors }) => {
@@ -160,14 +154,12 @@ export function displayStats(profileData) {
     }
 }
 
-// YENİ FONKSİYON: 4 KİŞİLİK SKOR TABLOSUNU GÜNCELLE
 export function updateMultiplayerScoreBoard(gameData) {
     if (!multiplayerScoreBoard) return;
     const isBR = state.getGameMode() === 'multiplayer-br';
     const currentUserId = state.getUserId();
     const players = Object.entries(gameData.players);
 
-    // Sıralı 2 kişilik mod için eski skor panosunu gizle, BR için yenisini göster
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     if (isBR) {
         multiplayerScoreBoard.classList.remove('hidden');
@@ -175,16 +167,33 @@ export function updateMultiplayerScoreBoard(gameData) {
     } else {
         multiplayerScoreBoard.classList.add('hidden');
         sequentialGameInfo?.classList.remove('hidden');
-        return;
+        // Sıralı mod için skorları da güncelleyelim
+        const p1ScoreEl = document.getElementById('player1-score');
+        const p2ScoreEl = document.getElementById('player2-score');
+        if (p1ScoreEl && p2ScoreEl) {
+             const playerIds = Object.keys(gameData.players);
+             let p1Id = gameData.creatorId || playerIds[0];
+             if (playerIds.length > 0) {
+                 const p1 = gameData.players[p1Id];
+                 if (p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
+             }
+             if (playerIds.length > 1) {
+                 const p2Id = playerIds.find(id => id !== p1Id);
+                 const p2 = gameData.players[p2Id];
+                 if (p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
+             } else {
+                 p2ScoreEl.innerHTML = '';
+             }
+        }
+        return; // BR değilse aşağısı çalışmaz
     }
     
     multiplayerScoreBoard.innerHTML = '';
 
     players.forEach(([id, data]) => {
         const isMe = id === currentUserId;
-        const isEliminated = data.guesses.length >= gameData.GUESS_COUNT && !data.isWinner;
-        const isCurrentTurn = gameData.currentPlayerId === id;
-        const isWinner = gameData.roundWinner === id;
+        const isEliminated = data.isEliminated; // BR'de isEliminated alanı var
+        const isWinner = data.isWinner; // BR'de isWinner alanı var
 
         let playerStatus = '';
         if(isWinner) {
@@ -196,11 +205,10 @@ export function updateMultiplayerScoreBoard(gameData) {
         }
 
         const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : 'bg-gray-600');
-        const borderColor = isCurrentTurn ? 'border-4 border-yellow-400' : '';
         
         const playerDiv = document.createElement('div');
-        playerDiv.className = `${bgColor} ${borderColor} p-2 rounded-lg shadow w-full sm:w-1/2 md:w-1/4 flex-grow`;
-        playerDiv.style.maxWidth = '100%'; // BR modunda 4 oyuncu göstermek için genişliği ayarla
+        playerDiv.className = `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`; // Daha esnek genişlik
+        playerDiv.style.minWidth = '100px'; // Minimum genişlik
 
         playerDiv.innerHTML = `
             <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
