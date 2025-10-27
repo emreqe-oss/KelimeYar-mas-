@@ -14,13 +14,13 @@ let isGameOver = false;
 let wordLength = 5;
 let timeLimit = 45;
 
+const getRandomWordLength = () => [4, 5, 6][Math.floor(Math.random() * 3)];
 function isBattleRoyale(mode) { return mode === 'multiplayer-br'; }
 function getDaysSinceEpoch() {
     const today = new Date();
     const epoch = new Date('2024-01-01');
     return Math.floor((today - epoch) / (1000 * 60 * 60 * 24));
 }
-const getRandomWordLength = () => [4, 5, 6][Math.floor(Math.random() * 3)];
 
 export async function findOrCreateRandomGame(config) {
     const { timeLimit, matchLength, gameType } = config;
@@ -126,8 +126,7 @@ export async function startNewGame(config) {
 function getDailySecretWord() {
     const dayIndex = getDaysSinceEpoch();
     const dailyWordList = cpuWordList["5"];
-    const word = dailyWordList[dayIndex % dailyWordList.length];
-    return word;
+    return dailyWordList[dayIndex % dailyWordList.length];
 }
 
 function getDailyGameState() {
@@ -649,7 +648,9 @@ export async function showScoreboard(gameData) {
                 const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
                 if (sortedPlayers.length > 1 && sortedPlayers[0].score > sortedPlayers[1].score) {
                     matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[0].username} KAZANDI!`;
-                } else {
+                } else if (sortedPlayers.length > 1 && sortedPlayers[0].score < sortedPlayers[1].score) {
+                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[1].username} KAZANDI!`;
+                } else if (sortedPlayers.length > 1) {
                      matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
                 }
             }
@@ -664,29 +665,43 @@ export async function startNewRound() {
     const localGameData = state.getLocalGameData();
     
     if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
-        if (localGameData.currentRound >= localGameData.matchLength) {
-            startNewGame({ mode: gameMode });
+        if (gameData.currentRound >= gameData.matchLength) {
+            // Seri bitti, oyunu baştan kur
+            if(gameMode === 'multiplayer') {
+                findOrCreateRandomGame({ timeLimit: localGameData.timeLimit, matchLength: localGameData.matchLength, gameType: localGameData.gameType });
+            } else {
+                startNewGame({ mode: gameMode });
+            }
             return;
         }
+
         const newWordLength = getRandomWordLength();
         const newSecretWord = await getNewSecretWord(newWordLength);
         if (!newSecretWord) return;
 
-        localGameData.wordLength = newWordLength;
-        localGameData.secretWord = newSecretWord;
-        localGameData.status = 'playing';
-        localGameData.currentRound += 1;
-        localGameData.currentPlayerId = state.getUserId();
-        localGameData.turnStartTime = new Date();
-        for (const playerId in localGameData.players) {
-            localGameData.players[playerId].guesses = [];
+        if (gameMode === 'multiplayer') {
+            const updates = {
+                wordLength: newWordLength, secretWord: newSecretWord, status: 'playing', currentRound: localGameData.currentRound + 1,
+                currentPlayerId: localGameData.creatorId, turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+                players: { ...localGameData.players }
+            };
+            for (const pid in updates.players) { updates.players[pid].guesses = []; }
+            await db.collection('games').doc(state.getCurrentGameId()).update(updates);
+        } else { // vsCPU
+            localGameData.wordLength = newWordLength;
+            localGameData.secretWord = newSecretWord;
+            localGameData.status = 'playing';
+            localGameData.currentRound += 1;
+            localGameData.currentPlayerId = state.getUserId();
+            localGameData.turnStartTime = new Date();
+            for (const playerId in localGameData.players) {
+                localGameData.players[playerId].guesses = [];
+            }
+            state.setLocalGameData(localGameData);
+            showScreen('game-screen');
+            initializeGameUI(localGameData);
+            await renderGameState(localGameData);
         }
-        
-        state.setLocalGameData(localGameData);
-        showScreen('game-screen');
-        initializeGameUI(localGameData);
-        await renderGameState(localGameData);
-
     } else {
         startNewGame({ mode: gameMode });
     }
@@ -734,17 +749,11 @@ export async function shareGame() {
     };
 
     if (navigator.share) {
-        try {
-            await navigator.share(shareData);
-        } catch (error) {
+        try { await navigator.share(shareData); } catch (error) {
             console.error('Paylaşım hatası:', error);
-            if (error.name !== 'AbortError') {
-                showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true);
-            }
+            if (error.name !== 'AbortError') { showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true); }
         }
-    } else {
-        showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true);
-    }
+    } else { showToast('Paylaşım desteklenmiyor. ID\'yi kopyalayın.', true); }
 }
 
 export async function joinGame(gameId) {
@@ -754,35 +763,35 @@ export async function joinGame(gameId) {
     const currentUserId = state.getUserId();
 
     try {
-        const gameDoc = await gameRef.get();
-        if (!gameDoc.exists) {
-            localStorage.removeItem('activeGameId');
-            return showToast("Oyun bulunamadı!", true);
-        }
-        
-        const gameData = gameDoc.data();
-        
-        if (gameData.MAX_PLAYERS > 0) {
-             return showToast("Bu bir BR oyunudur, lütfen ilgili BR katılma butonunu kullanın.", true);
-        }
+        await db.runTransaction(async (transaction) => {
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists) { throw new Error("Oyun bulunamadı!"); }
+            
+            const gameData = gameDoc.data();
+            
+            if (gameData.MAX_PLAYERS > 0) { throw new Error("Bu bir BR oyunudur."); }
 
-        if (Object.keys(gameData.players).length < 2 && !gameData.players[currentUserId]) {
-            await gameRef.update({
-                [`players.${currentUserId}`]: { username, guesses: [], score: 0 }
-            });
-        } else if (!gameData.players[currentUserId] && Object.keys(gameData.players).length >= 2) {
-            return showToast("Bu oyun dolu veya başlamış.", true);
-        }
+            if (Object.keys(gameData.players).length < 2 && !gameData.players[currentUserId]) {
+                transaction.update(gameRef, {
+                    [`players.${currentUserId}`]: { username, guesses: [], score: 0 },
+                    playerIds: firebase.firestore.FieldValue.arrayUnion(currentUserId)
+                });
+            } else if (!gameData.players[currentUserId] && Object.keys(gameData.players).length >= 2) {
+                throw new Error("Bu oyun dolu veya başlamış.");
+            }
+        });
         
         state.setGameMode('multiplayer');
         localStorage.setItem('activeGameId', gameId);
         state.setCurrentGameId(gameId);
         showScreen('game-screen');
-        initializeGameUI(gameData);
+        const finalDoc = await gameRef.get();
+        initializeGameUI(finalDoc.data());
         listenToGameUpdates(gameId);
     } catch (error) {
         console.error("Error joining game:", error);
-        showToast("Oyuna katılırken hata oluştu.", true);
+        showToast(error.message, true);
+        localStorage.removeItem('activeGameId');
     }
 }
 
@@ -790,7 +799,6 @@ export async function joinBRGame(gameId) { /* Bu fonksiyon değişmedi */ }
 
 export async function createGame(options = {}) {
     const { invitedFriendId = null, timeLimit = 45, matchLength = 5, gameType = 'friend' } = options;
-    
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
     state.setGameMode('multiplayer');
     const username = getUsername();
@@ -806,15 +814,14 @@ export async function createGame(options = {}) {
         gameId, wordLength: selectedLength, secretWord, timeLimit,
         creatorId: state.getUserId(), isHardMode: isHard, matchLength,
         currentRound: 1, players: { [state.getUserId()]: { username, guesses: [], score: 0 } },
+        playerIds: [state.getUserId()],
         currentPlayerId: state.getUserId(), status: invitedFriendId ? 'invited' : 'waiting',
         roundWinner: null, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         turnStartTime: firebase.firestore.FieldValue.serverTimestamp(),
         GUESS_COUNT: GUESS_COUNT, gameType
     };
 
-    if (invitedFriendId) {
-        gameData.invitedPlayerId = invitedFriendId;
-    }
+    if (invitedFriendId) { gameData.invitedPlayerId = invitedFriendId; }
     
     try {
         await db.collection("games").doc(gameId).set(gameData);
@@ -888,7 +895,7 @@ async function renderGameState(gameData, animateLastRow = false) {
     
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     if (sequentialGameInfo) {
-        sequentialGameInfo.classList.toggle('hidden', isBR || gameMode === 'vsCPU');
+        sequentialGameInfo.classList.toggle('hidden', isBR || gameMode === 'vsCPU' || gameMode === 'daily');
     }
     updateMultiplayerScoreBoard(gameData);
 

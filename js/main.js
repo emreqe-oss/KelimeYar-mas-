@@ -114,18 +114,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
+                // DÜZELTME BURADA: Artık sadece 2 ana dinleyiciyi başlatıyoruz.
                 state.setFriendsUnsubscribe(friends.listenToFriendships());
-                state.setInvitesUnsubscribe(friends.listenForGameInvites());
+                state.setMyGamesUnsubscribe(friends.listenToMyGames());
                 
                 ui.showScreen('main-menu-screen');
             } else {
                 state.setUserId(null);
                 state.setCurrentUserProfile(null);
                 
+                // DÜZELTME BURADA: Artık sadece 2 ana dinleyiciyi temizliyoruz.
                 const friendsUnsubscribe = state.getFriendsUnsubscribe();
                 if (friendsUnsubscribe) friendsUnsubscribe();
-                const invitesUnsubscribe = state.getInvitesUnsubscribe();
-                if (invitesUnsubscribe) invitesUnsubscribe();
+                const myGamesUnsubscribe = state.getMyGamesUnsubscribe();
+                if (myGamesUnsubscribe) myGamesUnsubscribe();
 
                 ui.showScreen('login-screen'); 
             }

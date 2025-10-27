@@ -53,36 +53,12 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
     40%, 60% { transform: translateX(4px); }
 }
 
-.tile.correct, .tile.static.correct {
-    background-color: #10b981;
-    border-color: #10b981;
-    color: white;
-}
-.tile.present, .tile.static.present {
-    background-color: #f59e0b;
-    border-color: #f59e0b;
-    color: white;
-}
-.tile.absent, .tile.static.absent {
-    background-color: #374151;
-    border-color: #374151;
-    color: white;
-}
-.tile.failed {
-    background-color: #ef4444;
-    border-color: #ef4444;
-    color: white;
-}
+.tile.correct, .tile.static.correct { background-color: #10b981; border-color: #10b981; color: white; }
+.tile.present, .tile.static.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
+.tile.absent, .tile.static.absent { background-color: #374151; border-color: #374151; color: white; }
+.tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
 
-.keyboard-key {
-    transition: background-color 0.2s;
-    height: 48px;
-    font-size: 1rem;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+.keyboard-key { transition: background-color 0.2s; height: 48px; font-size: 1rem; padding: 0; display: flex; align-items: center; justify-content: center; }
 .keyboard-key.correct { background-color: #10b981 !important; color: white; }
 .keyboard-key.present { background-color: #f59e0b !important; color: white; }
 .keyboard-key.absent { background-color: #374151 !important; color: white; }
@@ -94,31 +70,44 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* --- AÇIK TEMA GÜNCELLEMELERİ --- */
 body.theme-light { 
-    background-color: #faedcd; /* YENİ ARKA PLAN RENGİ */
-    color: #1f2937; 
+    background-color: #faedcd;
+    background-image: url('/arkaplan.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #3a2e1c;
 }
-body.theme-light .bg-gray-800, body.theme-light .bg-gray-900:not(#theme-dark-btn) { background-color: #ffffff; }
-body.theme-light .text-gray-200, body.theme-light .text-white { color: #1f2937; }
-body.theme-light .text-gray-400 { color: #6b7280; }
-body.theme-light .bg-gray-700 { background-color: #f3f4f6; }
-body.theme-light .border-gray-600 { border-color: #d1d5db; }
-body.theme-light .keyboard-key { background-color: #e5e7eb; color: #1f2937; }
-body.theme-light .tile { 
-    border-color: #1f2937; 
-    color: #1f2937;
+body.theme-light .bg-gray-800, body.theme-light .bg-gray-900:not(#theme-dark-btn) { 
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(5px);
 }
-body.theme-light #username-input::placeholder { color: #9ca3af; }
+body.theme-light .text-gray-200, body.theme-light .text-white { color: #3a2e1c; }
+body.theme-light .text-gray-400 { color: #57534e; }
+body.theme-light .bg-gray-700 { background-color: rgba(243, 244, 246, 0.8); }
+body.theme-light .border-gray-600 { border-color: #3a2e1c; }
+body.theme-light .tile { border-color: #3a2e1c; color: #3a2e1c; }
+body.theme-light .keyboard-key { background-color: rgba(229, 231, 235, 0.8); color: #1f2937; }
+body.theme-light .tile.correct, body.theme-light .tile.present, body.theme-light .tile.absent, body.theme-light .tile.failed { color: white; }
 
-body.theme-light .tile.correct,
-body.theme-light .tile.present,
-body.theme-light .tile.absent,
-body.theme-light .tile.failed {
-    color: white;
+/* --- GERİ BUTONU DÜZELTMESİ --- */
+.back-button-hitbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    margin-left: -12px; /* Geri tuşunu sol kenara yaslamak için */
+    border-radius: 9999px; 
+    transition: background-color 0.2s;
 }
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
+.back-button-hitbox:hover {
+    background-color: #4b5563; /* koyu temada hover rengi */
 }
-.scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+body.theme-light .back-button-hitbox:hover {
+    background-color: #e5e7eb; /* açık temada hover rengi */
 }
+
+/* --- KAYDIRMA ÇUBUĞUNU GİZLEME --- */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

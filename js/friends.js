@@ -1,8 +1,8 @@
 // js/friends.js
 import { db } from './firebase.js';
 import * as state from './state.js';
-import { showToast, createElement } from './utils.js'; // createElement'i import et
-import { showScreen, displayStats } from './ui.js';
+import { showToast, createElement } from './utils.js';
+import { showScreen, displayStats, renderMyGamesLists } from './ui.js';
 import { joinGame } from './game.js';
 
 // Elementler
@@ -13,10 +13,10 @@ const friendSearchResults = document.getElementById('friend-search-results');
 const friendRequestCount = document.getElementById('friend-request-count');
 const friendsListPlaceholder = document.getElementById('friends-list-placeholder');
 const friendRequestsPlaceholder = document.getElementById('friend-requests-placeholder');
-const invitationText = document.getElementById('invitation-text');
+const invitationModal = document.getElementById('invitation-modal');
 const acceptInviteBtn = document.getElementById('accept-invite-btn');
 const rejectInviteBtn = document.getElementById('reject-invite-btn');
-const invitationModal = document.getElementById('invitation-modal');
+const invitationText = document.getElementById('invitation-text');
 
 export async function searchUsers() {
     const query = searchFriendInput.value.trim();
@@ -91,7 +91,6 @@ async function removeFriend(friendshipId) {
         }
     }
 }
-
 
 export function listenToFriendships() {
     const currentUserId = state.getUserId();
@@ -174,41 +173,35 @@ function renderFriends(friends, requests) {
     }
 }
 
-export function listenForGameInvites() {
+export function listenToMyGames() {
     const currentUserId = state.getUserId();
-    if (!currentUserId) return; 
+    if (!currentUserId) return;
 
-    return db.collection('games').where('invitedPlayerId', '==', currentUserId).where('status', '==', 'invited')
+    return db.collection('games')
+        .where('playerIds', 'array-contains', currentUserId)
+        .orderBy('createdAt', 'desc')
         .onSnapshot(async (snapshot) => {
-            if (snapshot.docs.length > 0) {
-                const inviteDoc = snapshot.docs[0];
-                const inviteData = { id: inviteDoc.id, ...inviteDoc.data() };
-                
-                let creatorUsername = 'Bir arkadaşın'; 
-                
-                const creatorId = inviteData.creatorId;
-                
-                if (inviteData.players && inviteData.players[creatorId] && inviteData.players[creatorId].username) {
-                    creatorUsername = inviteData.players[creatorId].username;
-                } else {
-                    try {
-                        const creatorDoc = await db.collection('users').doc(creatorId).get();
-                        if (creatorDoc.exists) {
-                            creatorUsername = creatorDoc.data().username;
-                        }
-                    } catch (error) {
-                        console.error("Davet gönderenin kullanıcı adı çekilemedi:", error);
-                    }
-                }
+            const activeGames = [];
+            const finishedGames = [];
+            const invites = [];
 
-                invitationText.innerHTML = `<strong class="text-yellow-400">${creatorUsername}</strong> seni bir oyuna davet ediyor!`;
-                
-                acceptInviteBtn.onclick = () => acceptInvite(inviteData.id);
-                rejectInviteBtn.onclick = () => rejectInvite(inviteData.id);
-                invitationModal.classList.remove('hidden');
-            }
-        });
+            snapshot.forEach(doc => {
+                const game = { id: doc.id, ...doc.data() };
+                if (game.status === 'invited' && game.invitedPlayerId === currentUserId) {
+                    invites.push(game);
+                } else if (game.status === 'finished') {
+                    finishedGames.push(game);
+                } else if (game.status === 'waiting' || game.status === 'playing') {
+                    activeGames.push(game);
+                }
+            });
+            
+            renderMyGamesLists(activeGames, finishedGames, invites);
+
+        }, error => console.error("Oyunlar dinlenirken hata:", error));
 }
+
+
 async function acceptInvite(gameId) {
     invitationModal.classList.add('hidden');
     try {

@@ -2,6 +2,7 @@
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
+import { joinGame } from './game.js';
 
 // Değişkenler
 export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
@@ -95,6 +96,7 @@ export function createKeyboard(handleKeyPress) {
         keyboardContainer.appendChild(rowDiv);
     });
 }
+
 
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
@@ -248,5 +250,77 @@ export function switchMyGamesTab(tabName) {
     if (buttons[tabName]){
         buttons[tabName].classList.add('border-indigo-500', 'text-white');
         buttons[tabName].classList.remove('text-gray-400');
+    }
+}
+
+export function renderMyGamesLists(activeGames, finishedGames, invites) {
+    const activeTab = document.getElementById('active-games-tab');
+    const finishedTab = document.getElementById('finished-games-tab');
+    const invitesTab = document.getElementById('invites-tab');
+
+    activeTab.innerHTML = '';
+    finishedTab.innerHTML = '';
+    invitesTab.innerHTML = '';
+
+    if (activeGames.length > 0) {
+        activeGames.forEach(game => {
+            const opponentId = game.playerIds.find(id => id !== state.getUserId());
+            const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Rakip bekleniyor';
+            let statusText = game.status === 'waiting' ? 'Rakip bekleniyor...' : `Sıra: ${game.players[game.currentPlayerId]?.username || '...'}`;
+            if (game.currentPlayerId === state.getUserId()) statusText = "Sıra sende!";
+
+            const gameDiv = createElement('div', {
+                className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
+                onclick: () => joinGame(game.id),
+                innerHTML: `
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold">${opponentUsername}</p>
+                        <p class="text-sm ${game.currentPlayerId === state.getUserId() ? 'text-green-400 font-bold' : 'text-gray-400'}">${statusText}</p>
+                    </div>
+                `
+            });
+            activeTab.appendChild(gameDiv);
+        });
+    } else {
+        activeTab.innerHTML = '<p class="text-center text-gray-400 mt-16">Aktif oyununuz bulunmuyor.</p>';
+    }
+
+    if (finishedGames.length > 0) {
+        finishedGames.forEach(game => {
+             const opponentId = game.playerIds.find(id => id !== state.getUserId());
+             const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Bilinmiyor';
+             const isWinner = game.roundWinner === state.getUserId();
+             const resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
+
+             const gameDiv = createElement('div', {
+                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${isWinner ? 'border-green-500' : 'border-red-500'}`,
+                innerHTML: `
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold">${opponentUsername}</p>
+                        <p class="text-sm font-bold ${isWinner ? 'text-green-400' : 'text-red-400'}">${resultText}</p>
+                    </div>
+                `
+            });
+            finishedTab.appendChild(gameDiv);
+        });
+    } else {
+        finishedTab.innerHTML = '<p class="text-center text-gray-400 mt-16">Henüz biten oyununuz yok.</p>';
+    }
+
+    if (invites.length > 0) {
+        invites.forEach(invite => {
+            const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
+            const inviteDiv = createElement('div', {
+                className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
+                onclick: () => joinGame(invite.id),
+                innerHTML: `
+                    <p><strong>${creatorUsername}</strong> seni bir oyuna davet ediyor!</p>
+                    <p class="text-xs text-gray-400">Katılmak için tıkla.</p>
+                `
+            });
+            invitesTab.appendChild(inviteDiv);
+        });
+    } else {
+        invitesTab.innerHTML = '<p class="text-center text-gray-400 mt-16">Yeni davetiniz yok.</p>';
     }
 }

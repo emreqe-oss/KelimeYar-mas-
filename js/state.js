@@ -8,13 +8,14 @@ let _localGameData = null;
 let _gameMode = null;
 let _singlePlayerMode = null;
 let _gameIdFromUrl = null;
-let _challengedFriendId = null; // <-- YENİ EKLENDİ
+let _challengedFriendId = null;
 
 // Fonksiyon ve interval referansları
 let _gameUnsubscribe = null;
 let _turnTimerInterval = null;
 let _friendsUnsubscribe = null;
 let _invitesUnsubscribe = null;
+let _myGamesUnsubscribe = null; // Yeni dinleyici için
 
 // --- GENEL (PUBLIC) FONKSİYONLAR ---
 
@@ -41,7 +42,6 @@ export function getSinglePlayerMode() { return _singlePlayerMode; }
 export function setGameIdFromUrl(id) { _gameIdFromUrl = id; }
 export function getGameIdFromUrl() { return _gameIdFromUrl; }
 
-// --- Meydan Okuma State'i --- // <-- YENİ EKLENDİ
 export function setChallengedFriendId(id) { _challengedFriendId = id; }
 export function getChallengedFriendId() { return _challengedFriendId; }
 
@@ -57,3 +57,6 @@ export function getFriendsUnsubscribe() { return _friendsUnsubscribe; }
 
 export function setInvitesUnsubscribe(func) { _invitesUnsubscribe = func; }
 export function getInvitesUnsubscribe() { return _invitesUnsubscribe; }
+
+export function setMyGamesUnsubscribe(func) { _myGamesUnsubscribe = func; }
+export function getMyGamesUnsubscribe() { return _myGamesUnsubscribe; }
