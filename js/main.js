@@ -39,17 +39,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     game.findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'seri' });
                     break;
                 case 'with-friends-btn':
+                    // Burası arkadaş ekranına gitmeli, arkadaşlar ekranından çıkan akış multiplayer-setup-screen'i açar.
                     ui.showScreen('friends-screen');
                     showToast('Kime meydan okumak istersin?');
                     break;
                 case 'multiplayer-br-btn': showToast('Çoklu Oyuncu (BR) yakında!', false); break;
                 case 'vs-cpu-btn': game.startNewGame({ mode: 'vsCPU' }); break;
                 
-                // Geri Butonları
-                case 'back-to-main-menu-btn': ui.showScreen('main-menu-screen'); break;
-                case 'back-to-main-menu-from-games-btn': ui.showScreen('main-menu-screen'); break;
-                case 'close-profile-btn': ui.showScreen('main-menu-screen'); break;
-                case 'back-to-main-from-friends-btn': ui.showScreen('main-menu-screen'); break;
+                // Geri Butonları (TÜM GERİ BUTONLARI ARTIK MAIN-MENU'YE DÖNER)
+                case 'back-to-main-menu-btn': ui.showScreen('main-menu-screen'); break; // Yeni Oyun ekranından geri
+                case 'back-to-main-menu-from-games-btn': ui.showScreen('main-menu-screen'); break; // Oyunlarım ekranından geri
+                case 'close-profile-btn': ui.showScreen('main-menu-screen'); break; // Profil ekranından geri
+                case 'back-to-main-from-friends-btn': ui.showScreen('main-menu-screen'); break; // Arkadaşlar ekranından geri
+                case 'back-to-mode-multi-btn': ui.showScreen('new-game-screen'); break; // Multiplayer Setup'tan geri
                 
                 // Oyunlarım Ekranı Tabları
                 case 'show-active-games-tab-btn': ui.switchMyGamesTab('active'); break;
@@ -75,6 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'show-add-friend-tab-btn': ui.switchFriendTab('add'); break;
                 case 'search-friend-btn': friends.searchUsers(); break;
 
+                // Multiplayer Kurulum Butonları
+                case 'invite-friend-btn': showToast('Davet edilecek arkadaşını seç!', true); break; // Bu butona artık gerek kalmadı, friends ekranı yönlendiriyor
+                case 'create-game-btn': game.createGame({ 
+                    timeLimit: parseInt(document.getElementById('time-select-multi').value),
+                    matchLength: parseInt(document.getElementById('match-length-select').value),
+                    gameType: document.getElementById('time-select-multi').value === '43200' ? 'gevsek' : 'seri',
+                    invitedFriendId: state.getChallengedFriendId() // Davet edilen kişi varsa bu ID'yi gönder
+                });
+                break;
+                case 'join-game-btn': 
+                    const gameIdInput = document.getElementById('game-id-input');
+                    if (gameIdInput) game.joinGame(gameIdInput.value.toUpperCase());
+                    break;
+                
                 // Oyun İçi Butonlar
                 case 'leave-game-button': game.leaveGame(); break;
                 case 'main-menu-btn': game.leaveGame(); break;
@@ -114,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                // DÜZELTME BURADA: Artık sadece 2 ana dinleyiciyi başlatıyoruz.
                 state.setFriendsUnsubscribe(friends.listenToFriendships());
                 state.setMyGamesUnsubscribe(friends.listenToMyGames());
                 
@@ -123,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.setUserId(null);
                 state.setCurrentUserProfile(null);
                 
-                // DÜZELTME BURADA: Artık sadece 2 ana dinleyiciyi temizliyoruz.
                 const friendsUnsubscribe = state.getFriendsUnsubscribe();
                 if (friendsUnsubscribe) friendsUnsubscribe();
                 const myGamesUnsubscribe = state.getMyGamesUnsubscribe();

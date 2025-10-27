@@ -1,7 +1,7 @@
 // js/friends.js
 import { db } from './firebase.js';
 import * as state from './state.js';
-import { showToast, createElement } from './utils.js';
+import { showToast, createElement } from './utils.js'; // HATA DÜZELTİLDİ: createToast yerine showToast kullanıldı
 import { showScreen, displayStats, renderMyGamesLists } from './ui.js';
 import { joinGame } from './game.js';
 
@@ -125,8 +125,8 @@ export function listenToFriendships() {
 
 function challengeFriend(friend) {
     state.setChallengedFriendId(friend.id);
-    showScreen('multiplayer-setup-screen');
-    showToast(`${friend.username} adlı arkadaşına meydan okumak için ayarları yap.`, false);
+    showScreen('multiplayer-setup-screen'); 
+    showToast(`Lütfen ${friend.username} adlı arkadaşına meydan okumak için ayarları yap.`, false);
 }
 
 function renderFriends(friends, requests) {

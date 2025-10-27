@@ -16,11 +16,11 @@
     <div id="app" class="w-full max-w-md mx-auto flex flex-col h-full p-2">
         
         <div id="main-menu-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
-             <header class="flex justify-between items-center bg-gray-800 p-3 rounded-lg shadow">
+            <header class="flex justify-between items-center bg-gray-800 p-3 rounded-lg shadow">
                 <div class="flex items-center gap-3">
                     <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full border-2 border-gray-600">
                     <div>
-                        <p id="main-menu-username" class="font-extrabold text-lg">HÜSO</p>
+                        <p id="main-menu-username" class="font-extrabold text-lg">kullanici_adi</p>
                         <p id="main-menu-stats" class="text-xs text-gray-400">Başarı: %0 | Seri: 0</p>
                     </div>
                 </div>
@@ -57,7 +57,7 @@
 
         <div id="new-game-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
             <header class="flex items-center">
-                <button id="back-to-main-menu-btn" class="back-button-hitbox"> 
+                <button id="back-to-main-menu-btn" class="back-button-hitbox">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 </button>
                 <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Yeni Oyun</h1>
@@ -138,6 +138,97 @@
             </div>
         </div>
 
+        <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex-col justify-center">
+            <button id="back-to-mode-multi-btn" class="back-button-hitbox absolute top-4 left-4">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            </button>
+            <h1 class="text-3xl font-bold text-center mb-6" id="multiplayer-setup-title">Online Oyun Kurulumu</h1>
+            <div class="mb-4">
+                <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4">Arkadaşına Meydan Oku</button>
+                <hr class="border-gray-600 my-4">
+                <h2 class="text-2xl font-semibold mb-3">Oyun Ayarları</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label for="word-length-select-multi" class="block text-sm font-medium text-gray-400">Harf</label>
+                        <select id="word-length-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="4">4</option>
+                            <option value="5" selected>5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="time-select-multi" class="block text-sm font-medium text-gray-400">Süre</label>
+                        <select id="time-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="45" selected>45 sn (Seri)</option>
+                            <option value="43200">12 saat (Gevşek)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="match-length-select" class="block text-sm font-medium text-gray-400">Tur</label>
+                        <select id="match-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="1">1</option>
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-center">
+                    <input id="hard-mode-checkbox-multi" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <label for="hard-mode-checkbox-multi" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
+                </div>
+                <button id="create-game-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyun Kur</button>
+            </div>
+            <hr class="my-4 border-gray-600">
+            <div>
+                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl (ID ile)</h2>
+                <input type="text" id="game-id-input" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-gray-400">
+                <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyuna Katıl</button>
+            </div>
+        </div>
+
+        <div id="br-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex-col justify-center">
+            <button id="back-to-mode-br-btn" class="back-button-hitbox absolute top-4 left-4">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            </button>
+            <h1 class="text-3xl font-bold text-center mb-6">Battle Royale (4 Kişilik)</h1>
+            <p class="text-sm text-gray-400 mb-4">Eş zamanlı tahmin. İlk çözen kazanır, 6 tahminde bulamazsan elenirsin.</p>
+            <div class="mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="word-length-select-br" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
+                        <select id="word-length-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="4">4</option>
+                            <option value="5" selected>5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="time-select-br" class="block text-sm font-medium text-gray-400">Tahmin Süresi</label>
+                        <select id="time-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
+                            <option value="30">30sn</option>
+                            <option value="45" selected>45sn</option>
+                            <option value="60">60sn</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-center">
+                    <input id="hard-mode-checkbox-br" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <label for="hard-mode-checkbox-br" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
+                </div>
+                <button id="create-br-game-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyun Kur (BR)</button>
+            </div>
+            <hr class="my-4 border-gray-600">
+            <div>
+                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl (BR ID ile)</h2>
+                <input type="text" id="game-id-input-br" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-gray-400">
+                <button id="join-br-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyuna Katıl (BR)</button>
+            </div>
+            <p id="br-waiting-for-players" class="text-gray-400 mt-4 hidden">Diğer oyuncular bekleniyor (1/4)</p>
+        </div>
+
+
         <div id="profile-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h2 class="text-3xl font-bold mb-4">Profil & İstatistikler</h2>
             <div class="bg-gray-700 p-3 rounded-lg mb-4 text-left">
@@ -190,6 +281,7 @@
              <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
              <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
+
         <div id="scoreboard-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
             <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
@@ -212,6 +304,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-    <script type="module" src="js/main.js?v=2.0.6"></script>
+    <script type="module" src="js/main.js?v=2.0.7"></script>
 </body>
 </html>

@@ -32,7 +32,7 @@ export function showScreen(screenId) {
     const screens = [
         'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
         'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
-        'how-to-play-screen', 'friends-screen', 'br-setup-screen'
+        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen'
     ];
     screens.forEach(id => {
         const screenElement = document.getElementById(id);
@@ -44,7 +44,7 @@ export function showScreen(screenId) {
     if (targetScreen) {
         targetScreen.classList.remove('hidden');
     } else {
-        console.error(`showScreen fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
+        console.error(`showScreen Fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
     }
 }
 
@@ -147,66 +147,77 @@ export function displayStats(profileData) {
 }
 
 export function updateMultiplayerScoreBoard(gameData) {
+    // Bu fonksiyonu ikiye bölüyoruz: updateScoreBoardContent ve sequentialGameInfoContent
+    // updateMultiplayerScoreBoard sadece BR stilini güncelleyecek
+    // sequentialGameInfoContent ise sıralı oyun skorlarını güncelleyecek
+    
     if (!multiplayerScoreBoard) return;
+    
     const isBR = state.getGameMode() === 'multiplayer-br';
     const currentUserId = state.getUserId();
     const players = Object.entries(gameData.players);
 
+    // sequentialGameInfo'yu kontrol et
     const sequentialGameInfo = document.getElementById('sequential-game-info');
-    if (isBR) {
-        multiplayerScoreBoard.classList.remove('hidden');
-        sequentialGameInfo?.classList.add('hidden');
-    } else {
-        multiplayerScoreBoard.classList.add('hidden');
-        sequentialGameInfo?.classList.remove('hidden');
-        const p1ScoreEl = document.getElementById('player1-score');
-        const p2ScoreEl = document.getElementById('player2-score');
-        if (p1ScoreEl && p2ScoreEl) {
-             const playerIds = Object.keys(gameData.players);
-             let p1Id = gameData.creatorId || playerIds[0];
-             if (playerIds.length > 0) {
-                 const p1 = gameData.players[p1Id];
-                 if (p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score} Puan`;
-             }
-             if (playerIds.length > 1) {
-                 const p2Id = playerIds.find(id => id !== p1Id);
-                 const p2 = gameData.players[p2Id];
-                 if (p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score} Puan`;
-             } else {
-                 p2ScoreEl.innerHTML = '';
-             }
-        }
-        return;
+    if (sequentialGameInfo) {
+        sequentialGameInfo.classList.toggle('hidden', isBR || !gameData.gameType || gameData.gameType === 'daily');
     }
     
-    multiplayerScoreBoard.innerHTML = '';
+    // Sadece BR modunda göster
+    multiplayerScoreBoard.classList.toggle('hidden', !isBR);
 
-    players.forEach(([id, data]) => {
-        const isMe = id === currentUserId;
-        const isEliminated = data.isEliminated;
-        const isWinner = data.isWinner;
+    if (isBR) {
+        multiplayerScoreBoard.innerHTML = '';
 
-        let playerStatus = '';
-        if(isWinner) {
-             playerStatus = '<span class="text-green-400 font-bold">KAZANDI!</span>';
-        } else if (isEliminated) {
-            playerStatus = '<span class="text-red-400 font-bold">ELENDİ</span>';
-        } else if (isBR && gameData.status === 'playing') {
-            playerStatus = `<span class="text-xs text-gray-400">${data.guesses.length}/${gameData.GUESS_COUNT}</span>`;
-        }
+        players.forEach(([id, data]) => {
+            const isMe = id === currentUserId;
+            const isEliminated = data.isEliminated;
+            const isWinner = data.isWinner;
 
-        const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : 'bg-gray-600');
-        
-        const playerDiv = createElement('div', {
-            className: `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`,
-            style: { minWidth: '100px' },
-            innerHTML: `
-                <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
-                <p class="text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'}">${playerStatus}</p>
-            `
+            let playerStatus = '';
+            if(isWinner) {
+                playerStatus = '<span class="text-green-400 font-bold">KAZANDI!</span>';
+            } else if (isEliminated) {
+                playerStatus = '<span class="text-red-400 font-bold">ELENDİ</span>';
+            } else if (gameData.status === 'playing') {
+                playerStatus = `<span class="text-xs text-gray-400">${data.guesses.length}/${gameData.GUESS_COUNT}</span>`;
+            }
+
+            const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : 'bg-gray-600');
+            
+            const playerDiv = createElement('div', {
+                className: `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`,
+                style: { minWidth: '100px' },
+                innerHTML: `
+                    <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
+                    <p class="text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'}">${playerStatus}</p>
+                `
+            });
+            multiplayerScoreBoard.appendChild(playerDiv);
         });
-        multiplayerScoreBoard.appendChild(playerDiv);
-    });
+    }
+
+    // Sıralı Multiplayer/vsCPU için Skor Güncellemesi (sequential-game-info barı)
+    const p1ScoreEl = document.getElementById('player1-score');
+    const p2ScoreEl = document.getElementById('player2-score');
+    
+    if (p1ScoreEl && p2ScoreEl && !isBR) {
+         const playerIds = Object.keys(gameData.players);
+         let p1Id = gameData.creatorId || playerIds[0];
+         
+         if (playerIds.length > 0) {
+             const p1 = gameData.players[p1Id];
+             if (p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score || 0} Puan`;
+         }
+         
+         if (playerIds.length > 1) {
+             const p2Id = playerIds.find(id => id !== p1Id);
+             const p2 = gameData.players[p2Id];
+             if (p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score || 0} Puan`;
+         } else {
+             p2ScoreEl.innerHTML = '';
+         }
+    }
 }
 
 export function switchFriendTab(tabName) {
@@ -215,13 +226,13 @@ export function switchFriendTab(tabName) {
     for (const key in tabs) {
         if(tabs[key]) tabs[key].classList.add('hidden');
         if(buttons[key]) {
-            buttons[key].classList.remove('border-indigo-500', 'text-white');
+            buttons[key].classList.remove('text-white', 'border-indigo-500');
             buttons[key].classList.add('text-gray-400');
         }
     }
     if(tabs[tabName]) tabs[tabName].classList.remove('hidden');
     if(buttons[tabName]){
-        buttons[tabName].classList.add('border-indigo-500', 'text-white');
+        buttons[tabName].classList.add('text-white', 'border-b-2', 'border-indigo-500');
         buttons[tabName].classList.remove('text-gray-400');
     }
 }
@@ -241,14 +252,14 @@ export function switchMyGamesTab(tabName) {
     for (const key in tabs) {
         if (tabs[key]) tabs[key].classList.add('hidden');
         if (buttons[key]) {
-            buttons[key].classList.remove('border-indigo-500', 'text-white');
+            buttons[key].classList.remove('text-white', 'border-indigo-500');
             buttons[key].classList.add('text-gray-400');
         }
     }
 
     if (tabs[tabName]) tabs[tabName].classList.remove('hidden');
     if (buttons[tabName]){
-        buttons[tabName].classList.add('border-indigo-500', 'text-white');
+        buttons[tabName].classList.add('text-white', 'border-b-2', 'border-indigo-500');
         buttons[tabName].classList.remove('text-gray-400');
     }
 }
@@ -262,6 +273,9 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     finishedTab.innerHTML = '';
     invitesTab.innerHTML = '';
 
+    const createPlaceholder = (text) => `<p class="text-center text-gray-400 mt-16">${text}</p>`;
+
+    // Aktif Oyunları Render Et
     if (activeGames.length > 0) {
         activeGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
@@ -282,9 +296,10 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             activeTab.appendChild(gameDiv);
         });
     } else {
-        activeTab.innerHTML = '<p class="text-center text-gray-400 mt-16">Aktif oyununuz bulunmuyor.</p>';
+        activeTab.innerHTML = createPlaceholder('Aktif oyununuz bulunmuyor.');
     }
 
+    // Biten Oyunları Render Et
     if (finishedGames.length > 0) {
         finishedGames.forEach(game => {
              const opponentId = game.playerIds.find(id => id !== state.getUserId());
@@ -304,9 +319,10 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             finishedTab.appendChild(gameDiv);
         });
     } else {
-        finishedTab.innerHTML = '<p class="text-center text-gray-400 mt-16">Henüz biten oyununuz yok.</p>';
+        finishedTab.innerHTML = createPlaceholder('Henüz biten oyununuz yok.');
     }
 
+    // Davetleri Render Et
     if (invites.length > 0) {
         invites.forEach(invite => {
             const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
@@ -321,6 +337,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             invitesTab.appendChild(inviteDiv);
         });
     } else {
-        invitesTab.innerHTML = '<p class="text-center text-gray-400 mt-16">Yeni davetiniz yok.</p>';
+        invitesTab.innerHTML = createPlaceholder('Yeni davetiniz yok.');
     }
 }
