@@ -1,5 +1,7 @@
-// js/main.js
+// js/main.js - YENİ VE TAM KOD
 
+// Firebase v9'dan gerekli Firestore fonksiyonlarını import ediyoruz
+import { doc, getDoc } from "firebase/firestore"; 
 import { db, auth } from './firebase.js';
 import * as state from './state.js';
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
@@ -20,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const buttonId = button.id;
             
+            // Switch-case yapınız doğru, ona dokunmuyoruz.
             switch (buttonId) {
                 // Ana Ekran Navigasyonu
                 case 'new-game-btn': ui.showScreen('new-game-screen'); break;
@@ -39,19 +42,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     game.findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'seri' });
                     break;
                 case 'with-friends-btn':
-                    // Burası arkadaş ekranına gitmeli, arkadaşlar ekranından çıkan akış multiplayer-setup-screen'i açar.
                     ui.showScreen('friends-screen');
                     showToast('Kime meydan okumak istersin?');
                     break;
                 case 'multiplayer-br-btn': showToast('Çoklu Oyuncu (BR) yakında!', false); break;
                 case 'vs-cpu-btn': game.startNewGame({ mode: 'vsCPU' }); break;
                 
-                // Geri Butonları (TÜM GERİ BUTONLARI ARTIK MAIN-MENU'YE DÖNER)
-                case 'back-to-main-menu-btn': ui.showScreen('main-menu-screen'); break; // Yeni Oyun ekranından geri
-                case 'back-to-main-menu-from-games-btn': ui.showScreen('main-menu-screen'); break; // Oyunlarım ekranından geri
-                case 'close-profile-btn': ui.showScreen('main-menu-screen'); break; // Profil ekranından geri
-                case 'back-to-main-from-friends-btn': ui.showScreen('main-menu-screen'); break; // Arkadaşlar ekranından geri
-                case 'back-to-mode-multi-btn': ui.showScreen('new-game-screen'); break; // Multiplayer Setup'tan geri
+                // Geri Butonları
+                case 'back-to-main-menu-btn': ui.showScreen('main-menu-screen'); break;
+                case 'back-to-main-menu-from-games-btn': ui.showScreen('main-menu-screen'); break;
+                case 'close-profile-btn': ui.showScreen('main-menu-screen'); break;
+                case 'back-to-main-from-friends-btn': ui.showScreen('main-menu-screen'); break;
+                case 'back-to-mode-multi-btn': ui.showScreen('new-game-screen'); break;
                 
                 // Oyunlarım Ekranı Tabları
                 case 'show-active-games-tab-btn': ui.switchMyGamesTab('active'); break;
@@ -78,12 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'search-friend-btn': friends.searchUsers(); break;
 
                 // Multiplayer Kurulum Butonları
-                case 'invite-friend-btn': showToast('Davet edilecek arkadaşını seç!', true); break; // Bu butona artık gerek kalmadı, friends ekranı yönlendiriyor
                 case 'create-game-btn': game.createGame({ 
                     timeLimit: parseInt(document.getElementById('time-select-multi').value),
                     matchLength: parseInt(document.getElementById('match-length-select').value),
                     gameType: document.getElementById('time-select-multi').value === '43200' ? 'gevsek' : 'seri',
-                    invitedFriendId: state.getChallengedFriendId() // Davet edilen kişi varsa bu ID'yi gönder
+                    invitedFriendId: state.getChallengedFriendId()
                 });
                 break;
                 case 'join-game-btn': 
@@ -113,20 +114,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function initializeApp() {
-        if (typeof firebase === 'undefined') {
-            showToast("Firebase kütüphanesi yüklenemedi.", true);
-            return;
-        }
-        
+        // Bu fonksiyon artık Firebase'in yüklenip yüklenmediğini kontrol etmiyor,
+        // çünkü modül sistemi bunu bizim için garanti ediyor.
         auth.onAuthStateChanged(async user => {
             if (user && !user.isAnonymous) {
                 state.setUserId(user.uid);
                 
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
+                // --- BURASI DEĞİŞTİ ---
+                // YENİ YÖNTEM: Önce doküman referansı oluşturulur
+                const userDocRef = doc(db, 'users', user.uid);
+                // YENİ YÖNTEM: getDoc ile veri çekilir
+                const userDoc = await getDoc(userDocRef);
+                // --- DEĞİŞİKLİĞİN SONU ---
+
+                if (userDoc.exists()) {
                     state.setCurrentUserProfile(userDoc.data());
-                    if (document.getElementById('main-menu-username')) {
-                         document.getElementById('main-menu-username').textContent = state.getCurrentUserProfile().username;
+                    const usernameDisplay = document.getElementById('main-menu-username');
+                    if (usernameDisplay) {
+                        usernameDisplay.textContent = state.getCurrentUserProfile().username;
                     }
                 }
                 

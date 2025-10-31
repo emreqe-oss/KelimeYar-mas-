@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/emrege-oss/KelimeYar-mas/issues"
   },
-  "homepage": "https://github.com/emrege-oss/KelimeYar-mas#readme"
+  "homepage": "https://github.com/emrege-oss/KelimeYar-mas#readme",
+  "dependencies": {
+    "firebase": "^12.5.0"
+  }
 }

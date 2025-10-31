@@ -1,7 +1,16 @@
-// js/auth.js
+// js/auth.js - YENİ VE TAM KOD
+
+// Firebase v9'dan gerekli fonksiyonları import ediyoruz
+import { serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut 
+} from "firebase/auth";
+
 import { auth, db } from './firebase.js';
 import { showToast, getFirebaseErrorMessage } from './utils.js';
-import * as state from './state.js'; // DÜZELTME: state modülünü tam olarak import ediyoruz.
+import * as state from './state.js';
 
 // Elementler
 const emailInput = document.getElementById('email-input');
@@ -22,7 +31,8 @@ export const handleLogin = async () => {
     }
     authLoading.classList.remove('hidden');
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        // auth objesini direkt kullanmak yerine v9 fonksiyonunu kullanıyoruz
+        await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         showToast(getFirebaseErrorMessage(error), true);
     }
@@ -45,7 +55,7 @@ export const handleRegister = async () => {
     }
     authLoading.classList.remove('hidden');
     try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const initialStats = {
             played: 0,
@@ -54,22 +64,27 @@ export const handleRegister = async () => {
             maxStreak: 0,
             guessDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 }
         };
-        await db.collection('users').doc(user.uid).set({
+
+        // YENİ YÖNTEM: Önce doküman referansı oluşturulur
+        const userDocRef = doc(db, 'users', user.uid);
+        
+        // YENİ YÖNTEM: setDoc ile veri yazılır
+        await setDoc(userDocRef, {
             username: username,
             fullname: fullname,
             age: parseInt(age),
             city: city,
             email: email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(), // Bu fonksiyonu en üste import etmiştik
             stats: initialStats
         });
+        
     } catch (error) {
         showToast(getFirebaseErrorMessage(error), true);
     }
     authLoading.classList.add('hidden');
 };
 
-// DÜZELTME: Fonksiyon artık parametre almıyor, state'ten kendi okuyor.
 export const handleLogout = async () => {
     const friendsUnsubscribe = state.getFriendsUnsubscribe();
     if (friendsUnsubscribe) friendsUnsubscribe();
@@ -77,12 +92,11 @@ export const handleLogout = async () => {
     const invitesUnsubscribe = state.getInvitesUnsubscribe();
     if (invitesUnsubscribe) invitesUnsubscribe();
 
-    // Düzgün bir temizlik için state'teki referansları sıfırlıyoruz.
     state.setFriendsUnsubscribe(null);
     state.setInvitesUnsubscribe(null);
 
     try {
-        await auth.signOut();
+        await signOut(auth);
     } catch (error) {
         showToast(getFirebaseErrorMessage(error), true);
     }

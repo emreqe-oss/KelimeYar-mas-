@@ -1,89 +1,107 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
+  match /databases/{database}/documents {
 
-    // --- Kullanıcılar İçin Kurallar ---
-    match /users/{userId} {
-      // Herkes giriş yapmışsa başka bir kullanıcının profilini okuyabilir.
-      allow read: if request.auth != null;
+    // --- Kullanıcılar İçin Kurallar (Aynı Kaldı) ---
+    match /users/{userId} {
+      // Herkes giriş yapmışsa başka bir kullanıcının profilini okuyabilir.
+      allow read: if request.auth != null;
 
-      // Bir kullanıcı sadece kendi verisini yazabilir/güncelleyebilir.
-      allow write: if request.auth.uid == userId
-                   && hasValidProfileData(); // Veri doğrulama fonksiyonu
+      // Bir kullanıcı sadece kendi verisini yazabilir/güncelleyebilir.
+      allow write: if request.auth.uid == userId
+                   && hasValidProfileData(); // Veri doğrulama fonksiyonu
 
-      // Yeni bir kullanıcı profili oluştururken verinin doğru formatta olmasını sağlar.
-      function hasValidProfileData() {
-        let data = request.resource.data;
-        return data.username is string && data.username.size() > 2 && data.username.size() < 15
-               && data.fullname is string && data.fullname.size() > 2
-               && data.email is string && data.email.matches('.+@.+\\..+')
-               && data.age is number && data.age > 0
-               && data.city is string
-               && (data.createdAt == request.time || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']))
-               && hasValidStatsData(data.stats); // İstatistik verisini doğrula
-      }
-      
-      // İstatistik nesnesinin doğru yapıda olmasını sağlar.
-      function hasValidStatsData(stats) {
-          return stats.played is number && stats.played >= 0
-                 && stats.wins is number && stats.wins >= 0
-                 && stats.currentStreak is number && stats.currentStreak >= 0
-                 && stats.maxStreak is number && stats.maxStreak >= 0
-                 && stats.guessDistribution['1'] is number && stats.guessDistribution['2'] is number
-                 && stats.guessDistribution['3'] is number && stats.guessDistribution['4'] is number
-                 && stats.guessDistribution['5'] is number && stats.guessDistribution['6'] is number;
-      }
-    }
+      // Yeni bir kullanıcı profili oluştururken verinin doğru formatta olmasını sağlar.
+      function hasValidProfileData() {
+        let data = request.resource.data;
+        return data.username is string && data.username.size() > 2 && data.username.size() < 15
+               && data.fullname is string && data.fullname.size() > 2
+               && data.email is string && data.email.matches('.+@.+\\..+')
+               && data.age is number && data.age > 0
+               && data.city is string
+               && (data.createdAt == request.time || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']))
+               && hasValidStatsData(data.stats); // İstatistik verisini doğrula
+      }
+      
+      // İstatistik nesnesinin doğru yapıda olmasını sağlar.
+      function hasValidStatsData(stats) {
+          return stats.played is number && stats.played >= 0
+                 && stats.wins is number && stats.wins >= 0
+                 && stats.currentStreak is number && stats.currentStreak >= 0
+                 && stats.maxStreak is number && stats.maxStreak >= 0
+                 && stats.guessDistribution['1'] is number && stats.guessDistribution['2'] is number
+                 && stats.guessDistribution['3'] is number && stats.guessDistribution['4'] is number
+                 && stats.guessDistribution['5'] is number && stats.guessDistribution['6'] is number;
+      }
+    }
 
-    // --- Oyunlar İçin Kurallar ---
-    match /games/{gameId} {
-      // Giriş yapmış herhangi bir kullanıcı, oyun bilgilerini okuyabilir.
-      allow read: if request.auth != null;
+    // --- Oyunlar İçin Kurallar (GÜNCELLENDİ!) ---
+    match /games/{gameId} {
+      // Giriş yapmış herhangi bir kullanıcı, oyun bilgilerini okuyabilir.
+      allow read: if request.auth != null;
 
-      // Yeni bir oyun oluşturma kuralları
-      allow create: if request.auth != null
-                    && isGameCreator() // Oyunu oluşturan kişi olmalı
-                    && hasValidNewGameData(); // Yeni oyun verisi geçerli olmalı
-      
-      // Mevcut bir oyunu güncelleme/silme kuralları
-      allow update, delete: if request.auth != null
-                            && (isPlayerInGame() || isJoiningWaitingGame() || isInvitedPlayer());
+      // Yeni bir oyun oluşturma kuralları (Aynı Kaldı)
+      allow create: if request.auth != null
+                    && isGameCreator() 
+                    && hasValidNewGameData();
 
-      // Oyunu oluşturan kişinin, 'players' listesindeki ilk kişi olduğunu doğrular.
-      function isGameCreator() {
-        return request.auth.uid == request.resource.data.creatorId;
-      }
+      // Mevcut bir oyunu güncelleme/silme kuralları (KRİTİK GÜNCELLEME)
+      allow update: if isFunctionsCall() // 1. Functions'tan gelen güvenli yazma işlemine izin ver.
+                    || isJoiningWaitingGame() // 2. Bekleyen oyuna katılma işlemine izin ver.
+                    || isUpdatingAllowedFields(); // 3. Oyuncunun izin verilen alanları güncellemesine izin ver.
+        
+      // Oyun bitmeden silinemez
+      allow delete: if request.auth.uid == resource.data.creatorId && resource.data.status != 'playing'; 
+      
 
-      // Yeni bir oyun oluşturulurken gönderilen verinin doğruluğunu kontrol eder.
-      function hasValidNewGameData() {
-        let data = request.resource.data;
-        return data.wordLength is number && (data.wordLength == 4 || data.wordLength == 5 || data.wordLength == 6)
-               && data.timeLimit is number && data.timeLimit >= 30 // 30 saniye ve üzeri tüm sürelere izin ver
-               && data.isHardMode is bool
-               && data.status is string && (data.status == 'waiting' || data.status == 'invited')
-               && data.players[request.auth.uid].username is string;
-      }
+      // Cloud Functions'ın Admin SDK'sı ile yazıldığını varsayan kural (App Check/Özel Token olmadığı sürece en basit kural)
+      function isFunctionsCall() {
+        return request.auth == null 
+               && request.resource.data.size() < 1000; // Kabaca, bir sunucu isteği olduğunu varsayıyoruz (Çok kısıtlayıcı değil ama Functions'a alan açar)
+      }
 
-      function isPlayerInGame() {
-        return request.auth.uid in resource.data.players;
-      }
-      function isJoiningWaitingGame() {
-        return resource.data.status == 'waiting' && !(request.auth.uid in resource.data.players);
-      }
-      function isInvitedPlayer() {
-        return request.auth.uid == resource.data.invitedPlayerId;
-      }
-    }
+      // Oyuncunun kendi yazabileceği TEK alanlar (Hile yapılamayacak alanlar)
+      function isUpdatingAllowedFields() {
+        return (isPlayerInGame() || isInvitedPlayer())
+               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'status', 'invitedPlayerId']) // Sadece oyuncu listesi, status (oyun başlatma), davet güncellenebilir.
+               && !request.resource.data.keys().hasAny(['secretWord', 'currentRound', 'roundWinner', 'currentPlayerId', 'players.*.score', 'players.*.isEliminated', 'players.*.isWinner']); // KRİTİK: Bu alanlar Functions'ın kontrolündedir.
+      }
+    
+      // Oyunu oluşturan kişinin, 'players' listesindeki ilk kişi olduğunu doğrular.
+      function isGameCreator() {
+        return request.auth.uid == request.resource.data.creatorId;
+      }
 
-    // --- Arkadaşlıklar İçin Kurallar ---
-    match /friendships/{friendshipId} {
-      // Sadece arkadaşlık ilişkisindeki kullanıcılar okuyabilir, güncelleyebilir, silebilir.
-      allow read, update, delete: if request.auth.uid in resource.data.users;
-      
-      // Giriş yapmış herkes arkadaşlık isteği oluşturabilir.
-      allow create: if request.auth != null
-                    && request.resource.data.senderId == request.auth.uid // İsteği sadece kendi adına gönderebilirsin
-                    && request.resource.data.status == 'pending';
-    }
-  }
+      // Yeni bir oyun oluşturulurken gönderilen verinin doğruluğunu kontrol eder.
+      function hasValidNewGameData() {
+        let data = request.resource.data;
+        return data.wordLength is number && (data.wordLength == 4 || data.wordLength == 5 || data.wordLength == 6)
+               && data.timeLimit is number && data.timeLimit >= 30 
+               && data.isHardMode is bool
+               && data.status is string && (data.status == 'waiting' || data.status == 'invited')
+               && data.players[request.auth.uid].username is string;
+      }
+
+      function isPlayerInGame() {
+        return request.auth.uid in resource.data.players;
+      }
+      function isJoiningWaitingGame() {
+        return resource.data.status == 'waiting' && !(request.auth.uid in resource.data.players);
+      }
+      function isInvitedPlayer() {
+        return request.auth.uid == resource.data.invitedPlayerId;
+      }
+    }
+
+    // --- Arkadaşlıklar İçin Kurallar (Aynı Kaldı) ---
+    match /friendships/{friendshipId} {
+      // Sadece arkadaşlık ilişkisindeki kullanıcılar okuyabilir, güncelleyebilir, silebilir.
+      allow read, update, delete: if request.auth.uid in resource.data.users;
+      
+      // Giriş yapmış herkes arkadaşlık isteği oluşturabilir.
+      allow create: if request.auth != null
+                    && request.resource.data.senderId == request.auth.uid 
+                    && request.resource.data.status == 'pending';
+    }
+  }
 }
