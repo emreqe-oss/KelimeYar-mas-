@@ -114,13 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function initializeApp() {
-        // Bu fonksiyon artık Firebase'in yüklenip yüklenmediğini kontrol etmiyor,
-        // çünkü modül sistemi bunu bizim için garanti ediyor.
         auth.onAuthStateChanged(async user => {
             if (user && !user.isAnonymous) {
                 state.setUserId(user.uid);
                 
-                // --- BURASI DEĞİŞTİ ---
+                // --- BURASI DÜZELTİLDİ ---
                 // YENİ YÖNTEM: Önce doküman referansı oluşturulur
                 const userDocRef = doc(db, 'users', user.uid);
                 // YENİ YÖNTEM: getDoc ile veri çekilir

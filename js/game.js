@@ -67,6 +67,8 @@ export async function findOrCreateRandomGame(config) {
     }
 }
 
+// js/game.js İÇİNDEKİ createGame FONKSİYONUNU BUNUNLA DEĞİŞTİRİN
+
 export async function createGame(options = {}) {
     const { invitedFriendId = null, timeLimit = 45, matchLength = 5, gameType = 'friend' } = options;
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
@@ -79,11 +81,21 @@ export async function createGame(options = {}) {
 
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
 
+    // --- ANA DEĞİŞİKLİK BURADA ---
+    // Davet edilen oyuncunun ID'sini tutacak yeni bir liste oluşturuyoruz.
+    const playerIdsList = [currentUserId];
+    if (invitedFriendId) {
+        playerIdsList.push(invitedFriendId); // Arkadaşın ID'sini de listeye ekliyoruz
+    }
+    // --- DEĞİŞİKLİĞİN SONU ---
+
     const gameData = {
         gameId, wordLength: selectedLength, secretWord, timeLimit,
         creatorId: currentUserId, isHardMode: false, matchLength,
         currentRound: 1, players: { [currentUserId]: { username, guesses: [], score: 0 } },
-        playerIds: [currentUserId],
+        
+        playerIds: playerIdsList, // GÜNCELLENDİ: Artık her iki oyuncuyu da içerebilir
+        
         currentPlayerId: currentUserId, 
         status: invitedFriendId ? 'invited' : 'waiting',
         roundWinner: null,
@@ -92,7 +104,9 @@ export async function createGame(options = {}) {
         GUESS_COUNT: GUESS_COUNT, gameType
     };
 
-    if (invitedFriendId) { gameData.invitedPlayerId = invitedFriendId; }
+    if (invitedFriendId) { 
+        gameData.invitedPlayerId = invitedFriendId; 
+    }
 
     try {
         await setDoc(doc(db, "games", gameId), gameData);
@@ -100,12 +114,8 @@ export async function createGame(options = {}) {
         state.setGameMode('multiplayer');
         localStorage.setItem('activeGameId', gameId);
         state.setCurrentGameId(gameId);
-
-        // --- EKSİK OLAN KRİTİK SATIR BURAYA EKLENDİ ---
         state.setLocalGameData(gameData);
-
         showScreen('game-screen');
-        initializeGameUI(gameData);
         listenToGameUpdates(gameId);
 
     } catch (error) {
