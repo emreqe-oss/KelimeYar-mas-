@@ -1,4 +1,4 @@
-// js/utils.js
+// js/utils.js - Sıra Geldiğinde Ses Efekti Eklendi
 
 // --- YENİ EKLENDİ: Dinamik Element Oluşturma Fonksiyonu ---
 /**
@@ -33,7 +33,8 @@ const sounds = {
     error: new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination(),
     win: new Tone.PolySynth(Tone.Synth).toDestination(),
     lose: new Tone.PolySynth(Tone.Synth).toDestination(),
-    draw: new Tone.PolySynth(Tone.Synth).toDestination()
+    draw: new Tone.PolySynth(Tone.Synth).toDestination(),
+    turn: new Tone.PolySynth(Tone.Synth).toDestination() // YENİ SES EKLENTİSİ
 };
 
 export function playSound(sound) {
@@ -46,6 +47,7 @@ export function playSound(sound) {
         case 'win': sounds.win.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n', Tone.now()); break;
         case 'lose': sounds.lose.triggerAttackRelease(['C4', 'A3', 'F3', 'D3'], '8n', Tone.now()); break;
         case 'draw': sounds.draw.triggerAttackRelease(['C4', 'G4'], '8n', Tone.now()); break;
+        case 'turn': sounds.turn.triggerAttackRelease(['E5', 'G5', 'C6'], '16n', Tone.now()); break; // Yükselen, dikkat çekici bir ton
     }
 }
 

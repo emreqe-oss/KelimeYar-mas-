@@ -1,4 +1,4 @@
-// js/main.js - YENİ VE TAM KOD
+// js/main.js - ONARILMIŞ VE GÜNCEL KOD
 
 // Firebase v9'dan gerekli Firestore fonksiyonlarını import ediyoruz
 import { doc, getDoc } from "firebase/firestore"; 
