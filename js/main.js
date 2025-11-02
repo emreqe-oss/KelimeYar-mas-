@@ -1,6 +1,5 @@
-// js/main.js - ONARILMIŞ VE GÜNCEL KOD
+// js/main.js - Hata Ayıklama Kayıtları ile SON KOD
 
-// Firebase v9'dan gerekli Firestore fonksiyonlarını import ediyoruz
 import { doc, getDoc } from "firebase/firestore"; 
 import { db, auth } from './firebase.js';
 import * as state from './state.js';
@@ -17,12 +16,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const appContainer = document.getElementById('app');
     if (appContainer) {
         appContainer.addEventListener('click', (event) => {
-            const button = event.target.closest('button');
+            // Tıklanan elemanı veya en yakın butonu bul
+            const button = event.target.closest('button'); 
             if (!button) return;
 
             const buttonId = button.id;
             
-            // Switch-case yapınız doğru, ona dokunmuyoruz.
+            // HATA AYIKLAMA: Hangi butonun tıklandığını konsola yaz
+            console.log(`LOG: Buton tıklandı: ${buttonId}`); 
+            
             switch (buttonId) {
                 // Ana Ekran Navigasyonu
                 case 'new-game-btn': ui.showScreen('new-game-screen'); break;
@@ -35,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'settings-btn': showToast('Ayarlar menüsü yakında!', false); break;
 
                 // Yeni Oyun Ekranı Navigasyonu
-                case 'random-game-btn': // "GEVŞEK" butonu
+                case 'random-game-btn':
                     game.findOrCreateRandomGame({ timeLimit: 12 * 60 * 60, matchLength: 5, gameType: 'gevsek' });
                     break;
                 case 'series-game-btn':
@@ -45,16 +47,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     ui.showScreen('friends-screen');
                     showToast('Kime meydan okumak istersin?');
                     break;
-                case 'multiplayer-br-btn': showToast('Çoklu Oyuncu (BR) yakında!', false); break;
+                    
+                // ÇOKLU OYUNCU (BR) YÖNLENDİRMESİ
+                case 'multiplayer-br-btn': 
+                    ui.showScreen('br-setup-screen'); 
+                    break;
+                
                 case 'vs-cpu-btn': game.startNewGame({ mode: 'vsCPU' }); break;
                 
-                // Geri Butonları
+                // BR Kurulum Ekranı Butonları
+                case 'create-br-game-btn':
+                    console.log("LOG: create-br-game-btn tıklandı, game.createBRGame çağrılıyor."); // HATA AYIKLAMA
+                    game.createBRGame({
+                        wordLength: parseInt(document.getElementById('word-length-select-br').value),
+                        timeLimit: parseInt(document.getElementById('time-select-br').value),
+                        isHardMode: document.getElementById('hard-mode-checkbox-br').checked,
+                    });
+                    break;
+                case 'join-br-game-btn':
+                    const gameIdInputBR = document.getElementById('game-id-input-br');
+                    if (gameIdInputBR) game.joinBRGame(gameIdInputBR.value.toUpperCase());
+                    break;
+                case 'back-to-mode-br-btn': 
+                    ui.showScreen('new-game-screen');
+                    break;
+                case 'back-to-mode-multi-btn': 
+                    ui.showScreen('new-game-screen'); 
+                    break;
+                
+                // Geri ve Ayrıl Butonları
                 case 'back-to-main-menu-btn': ui.showScreen('main-menu-screen'); break;
                 case 'back-to-main-menu-from-games-btn': ui.showScreen('main-menu-screen'); break;
                 case 'close-profile-btn': ui.showScreen('main-menu-screen'); break;
                 case 'back-to-main-from-friends-btn': ui.showScreen('main-menu-screen'); break;
-                case 'back-to-mode-multi-btn': ui.showScreen('new-game-screen'); break;
                 
+                case 'leave-game-button': 
+                    console.log("LOG: leave-game-button tıklandı. game.leaveGame çağrılıyor."); // HATA AYIKLAMA
+                    game.leaveGame(); 
+                    break; 
+                case 'main-menu-btn': 
+                    console.log("LOG: main-menu-btn tıklandı. game.leaveGame çağrılıyor."); // HATA AYIKLAMA
+                    game.leaveGame(); 
+                    break; 
+
                 // Oyunlarım Ekranı Tabları
                 case 'show-active-games-tab-btn': ui.switchMyGamesTab('active'); break;
                 case 'show-finished-games-tab-btn': ui.switchMyGamesTab('finished'); break;
@@ -78,23 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'show-requests-tab-btn': ui.switchFriendTab('requests'); break;
                 case 'show-add-friend-tab-btn': ui.switchFriendTab('add'); break;
                 case 'search-friend-btn': friends.searchUsers(); break;
-
-                // Multiplayer Kurulum Butonları
-                case 'create-game-btn': game.createGame({ 
-                    timeLimit: parseInt(document.getElementById('time-select-multi').value),
-                    matchLength: parseInt(document.getElementById('match-length-select').value),
-                    gameType: document.getElementById('time-select-multi').value === '43200' ? 'gevsek' : 'seri',
-                    invitedFriendId: state.getChallengedFriendId()
-                });
-                break;
-                case 'join-game-btn': 
-                    const gameIdInput = document.getElementById('game-id-input');
-                    if (gameIdInput) game.joinGame(gameIdInput.value.toUpperCase());
-                    break;
                 
-                // Oyun İçi Butonlar
-                case 'leave-game-button': game.leaveGame(); break;
-                case 'main-menu-btn': game.leaveGame(); break;
+                // Oyun İçi Kontroller
                 case 'new-round-btn': game.startNewRound(); break;
                 case 'copy-game-id-btn':
                     if (ui.gameIdDisplay) {
@@ -118,12 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user && !user.isAnonymous) {
                 state.setUserId(user.uid);
                 
-                // --- BURASI DÜZELTİLDİ ---
-                // YENİ YÖNTEM: Önce doküman referansı oluşturulur
                 const userDocRef = doc(db, 'users', user.uid);
-                // YENİ YÖNTEM: getDoc ile veri çekilir
                 const userDoc = await getDoc(userDocRef);
-                // --- DEĞİŞİKLİĞİN SONU ---
 
                 if (userDoc.exists()) {
                     state.setCurrentUserProfile(userDoc.data());

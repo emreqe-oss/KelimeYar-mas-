@@ -1,4 +1,4 @@
-// js/firebase.js - YENİ VE DOĞRU KOD
+// js/firebase.js - YENİ VE DOĞRU KOD (getWordMeaning export edildi)
 
 // Gerekli Firebase fonksiyonlarını doğrudan paketten içe aktarıyoruz
 import { initializeApp } from "firebase/app";
@@ -8,6 +8,7 @@ import { getAuth } from "firebase/auth";
 import { showToast } from './utils.js';
 
 // Vite'nin .env dosyasından okuduğu environment değişkenleri
+// NOT: Bu config, projenizin kök dizinindeki .env dosyasından okunur.
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_API_KEY,
     authDomain: import.meta.env.VITE_AUTH_DOMAIN,
@@ -26,9 +27,12 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 // ========================================================================
-// MEVCUT FONKSİYONLARINIZ (Bunlar zaten doğru çalışıyordu, dokunmuyoruz)
+// CLOUD FUNCTIONS ÇAĞRILARI (Tüm fonksiyonlar export edilmiştir)
 // ========================================================================
 
+/**
+ * Sunucudan kelime geçerliliğini kontrol eder.
+ */
 export const checkWordValidity = async (wordToTest) => {
     try {
         const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/checkWordValidity";
@@ -47,6 +51,9 @@ export const checkWordValidity = async (wordToTest) => {
     }
 };
 
+/**
+ * Sunucudan yeni gizli kelimeyi çeker.
+ */
 export const getNewSecretWord = async (length) => {
     try {
         const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/getNewSecretWord";
@@ -65,6 +72,9 @@ export const getNewSecretWord = async (length) => {
     }
 };
 
+/**
+ * Sunucuya çoklu oyuncu tahminini gönderir.
+ */
 export const submitMultiplayerGuess = async (gameId, word, userId, isBR) => {
     try {
         const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/submitMultiplayerGuess";
@@ -85,6 +95,9 @@ export const submitMultiplayerGuess = async (gameId, word, userId, isBR) => {
     }
 };
 
+/**
+ * Sunucuya çoklu oyuncu turunun bittiğini (zaman dolduğunu) bildirir.
+ */
 export const failMultiplayerTurn = async (gameId, userId) => {
     try {
         const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/failMultiplayerTurn";
@@ -102,5 +115,31 @@ export const failMultiplayerTurn = async (gameId, userId) => {
         console.error("failMultiplayerTurn 'fetch' hatası:", error);
         showToast(error.message || "Tur sonlandırılırken kritik bir hata oluştu.", true);
         return { success: false };
+    }
+};
+
+/**
+ * Sunucudan kelime anlamını çeker (Yerel JSON'dan okur).
+ * HATA DÜZELTİLDİ: "export" anahtar kelimesi eklendi.
+ */
+export const getWordMeaning = async (wordToSearch) => {
+    try {
+        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/getWordMeaning"; 
+        
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: wordToSearch })
+        });
+        
+        if (!response.ok) throw new Error('Sunucudan kelime anlamı alınamadı.');
+        
+        const jsonResponse = await response.json();
+        return jsonResponse; 
+        
+    } catch (error) {
+        console.error("getWordMeaning 'fetch' hatası:", error);
+        // Hata durumunda game.js'in anlayacağı bir nesne döndürülür.
+        return { success: false, meaning: "Anlam yüklenirken bir sorun oluştu. (Sunucuya ulaşılamadı)" };
     }
 };

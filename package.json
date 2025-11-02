@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/emrege-oss/KelimeYar-mas#readme",
   "dependencies": {
-    "firebase": "^12.5.0"
+    "firebase": "^12.5.0",
+    "node-fetch": "^3.3.2"
   }
 }
