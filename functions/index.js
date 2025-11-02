@@ -1,334 +1,326 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Kelime Oyunu - Çok Oyunculu</title>
-    <meta name="theme-color" content="#111827"/>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg' viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        .back-button-hitbox {
-            padding: 8px !important;
-            margin-left: -8px !important;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
+// functions/index.js - TEMİZLENMİŞ, BR MANTIĞI VE DÜZELTMELER İLE TAM KOD
+
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const cors = require("cors");
+
+// CORS Yapılandırması: İzin verilen adresler
+const corsHandler = cors({
+    origin: [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://kelime-yar-mas.vercel.app" 
+    ],
+    methods: ["GET", "POST", "OPTIONS"], 
+});
+
+admin.initializeApp();
+
+// Kelime listelerini yerel olarak içeri aktarıyoruz.
+const kelimeler = require("./kelimeler.json");
+const cevaplar = require("./cevaplar.json");
+// kelimeAnlamlari geçici olarak devre dışı bırakıldı (JSON hatası nedeniyle)
+// const kelimeAnlamlari = require("./kelime_anlamlari.json"); 
+
+const SCORE_POINTS = [1000, 800, 600, 400, 200, 100];
+const GUESS_COUNT = 6;
+
+function calculateColors(guess, secret, wordLength) {
+    const secretLetters = secret.split('');
+    const guessLetters = guess.split('');
+    const colors = Array(wordLength).fill('absent');
+    const letterCounts = {};
+    for (const letter of secretLetters) {
+        letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+    }
+    for (let i = 0; i < wordLength; i++) {
+        if (guessLetters[i] === secretLetters[i]) {
+            colors[i] = 'correct';
+            letterCounts[guessLetters[i]]--;
         }
-        /* game-screen içindeki ayrıl butonu için de aynı şeyi yapıyoruz */
-        #leave-game-button {
-            cursor: pointer;
+    }
+    for (let i = 0; i < wordLength; i++) {
+        if (colors[i] !== 'correct' && secret.includes(guessLetters[i]) && letterCounts[guessLetters[i]] > 0) {
+            colors[i] = 'present';
+            letterCounts[guessLetters[i]]--;
         }
-    </style>
-    
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-gray-900 text-gray-200">
-    <div id="app" class="w-full max-w-md mx-auto flex flex-col h-full p-2">
+    }
+    return colors;
+}
+
+// 1. Yeni Gizli Kelime Çekme
+exports.getNewSecretWord = functions.https.onRequest((request, response) => {
+    corsHandler(request, response, () => {
+        try {
+            const wordLength = request.body.wordLength || 5;
+            if (!cevaplar[String(wordLength)]) {
+                return response.status(404).send({ error: "Belirtilen uzunlukta kelime listesi bulunamadı." });
+            }
+            const wordList = cevaplar[String(wordLength)];
+            const randomIndex = Math.floor(Math.random() * wordList.length);
+            const secretWord = wordList[randomIndex];
+            return response.status(200).send({ secretWord: secretWord });
+        } catch (error) {
+            console.error("getNewSecretWord hatası:", error);
+            return response.status(500).send({ error: "Sunucuda beklenmedik bir hata oluştu." });
+        }
+    });
+});
+
+// 2. Kelime Geçerliliğini Kontrol Etme
+exports.checkWordValidity = functions.https.onRequest((request, response) => {
+    corsHandler(request, response, async () => {
+        try {
+            const word = request.body.word;
+            if (!word || typeof word !== "string") {
+                return response.status(400).send({ error: "Fonksiyona 'word' parametresi gönderilmelidir." });
+            }
+            const wordLength = String(word.length);
+            const isValid = kelimeler[wordLength] && kelimeler[wordLength].includes(word);
+            return response.status(200).send({ isValid: isValid });
+        } catch (error) {
+            console.error("checkWordValidity hatası:", error);
+            return response.status(500).send({ error: "Sunucuda beklenmedik bir hata oluştu." });
+        }
+    });
+});
+
+// 3. Kelime Anlamı Çekme (Şimdilik Kapalı/Bakımda)
+exports.getWordMeaning = functions.https.onRequest((request, response) => {
+    corsHandler(request, response, () => {
+        // Geçici olarak bu fonksiyonu devre dışı bırakıyoruz (JSON hatası nedeniyle)
+        return response.status(200).send({ success: false, meaning: "Anlam çekme özelliği şu an bakımda." });
         
-        <div id="main-menu-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
-            <header class="flex justify-between items-center bg-gray-800 p-3 rounded-lg shadow">
-                <div class="flex items-center gap-3">
-                    <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full border-2 border-gray-600">
-                    <div>
-                        <p id="main-menu-username" class="font-extrabold text-lg">kullanici_adi</p>
-                        <p id="main-menu-stats" class="text-xs text-gray-400">Başarı: %0 | Seri: 0</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="stats-btn" class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></button>
-                    <button id="logout-btn" class="text-red-400 hover:text-red-500 text-sm font-semibold">Çıkış</button>
-                </div>
-            </header>
+        /* Orijinal mantık (kelimeAnlamlari değişkeni aktifken):
+        try {
+            //...
+            const meaning = kelimeAnlamlari[upperWord];
+            //...
+        } catch (error) {
+            //...
+        } */
+    });
+});
+
+// 4. Çoklu Oyuncu Tahmini Gönderme
+exports.submitMultiplayerGuess = functions.https.onRequest((request, response) => {
+    corsHandler(request, response, async () => {
+        if (request.method !== 'POST') {
+            return response.status(405).send({ error: 'Method Not Allowed' });
+        }
+        
+        const { gameId, word, userId, isBR } = request.body;
+        if (!gameId || !word || !userId) {
+            return response.status(400).send({ error: 'Eksik parametreler: gameId, word ve userId gereklidir.' });
+        }
+        
+        const gameRef = admin.firestore().collection('games').doc(gameId);
+        
+        try {
+            const result = await admin.firestore().runTransaction(async (transaction) => {
+                const gameDoc = await transaction.get(gameRef);
+                if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
+                
+                const gameData = gameDoc.data();
+                const secretWord = gameData.secretWord;
+                const wordLength = gameData.wordLength;
+                
+                if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
+                if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
+
+                const playerState = gameData.players[userId];
+                const currentRow = playerState.guesses ? playerState.guesses.length : 0;
+                
+                if (playerState.isWinner || playerState.isEliminated || currentRow >= GUESS_COUNT) {
+                    throw new Error("Tahmin hakkınız kalmamış.");
+                }
+
+                if (!isBR && gameData.currentPlayerId !== userId) {
+                    throw new Error("Sıra sizde değil!");
+                }
+                
+                if (word.length !== wordLength) throw new Error(`Kelime uzunluğu ${wordLength} olmalıdır.`);
+                
+                const colors = calculateColors(word, secretWord, wordLength);
+                const newGuess = { word: word, colors: colors };
+                const isWinner = (word === secretWord);
+                const playerGuesses = [...(playerState.guesses || []), newGuess];
+                
+                const updates = { [`players.${userId}.guesses`]: playerGuesses };
+
+                // =======================================================
+                // --- BATTLE ROYALE (BR) MANTIĞI ---
+                // =======================================================
+                if (isBR) {
+                    
+                    if (isWinner) {
+                        updates.status = 'finished';
+                        updates.roundWinner = userId;
+                        updates[`players.${userId}.isWinner`] = true;
+
+                        const scoreToAdd = SCORE_POINTS[playerGuesses.length - 1] || 0;
+                        updates[`players.${userId}.score`] = (playerState.score || 0) + scoreToAdd + 500; 
+                        
+                    } else if (playerGuesses.length >= GUESS_COUNT) {
+                        updates[`players.${userId}.isEliminated`] = true;
+                    }
+                    
+                    const allPlayers = Object.values(gameData.players);
+                    
+                    // Geçici olarak güncel durumu al
+                    const currentStatusPlayers = allPlayers.map(p => {
+                        return (p.userId === userId) ? {...p, guesses: playerGuesses, isEliminated: updates[`players.${userId}.isEliminated`], isWinner: updates[`players.${userId}.isWinner`]} : p;
+                    });
+
+                    const winners = currentStatusPlayers.filter(p => p.isWinner);
+                    const activePlayers = currentStatusPlayers.filter(p => !p.isWinner && !p.isEliminated);
+                    const allFinished = currentStatusPlayers.every(p => p.isWinner || p.isEliminated);
+
+                    // Kural 1: Bir kazanan varsa hemen bitir (hızlı BR)
+                    if (winners.length >= 1) {
+                        updates.status = 'finished';
+                        updates.roundWinner = winners[0].userId; 
+                    } 
+                    // Kural 2: Sadece bir aktif kişi kaldıysa VEYA herkes bitirdiyse (eleme/haksızlık)
+                    else if (activePlayers.length <= 1 || allFinished) {
+                        updates.status = 'finished';
+                        updates.roundWinner = activePlayers[0]?.userId || null; 
+                        if(activePlayers[0]) updates[`players.${activePlayers[0].userId}.isWinner`] = true; 
+                    }
+
+                } 
+                // =======================================================
+                // --- SIRALI MULTIPLAYER MANTIĞI ---
+                // =======================================================
+                else { 
+                    const playerIds = Object.keys(gameData.players);
+                    const myIndex = playerIds.indexOf(userId);
+                    const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+                    updates.currentPlayerId = playerIds[nextPlayerIndex];
+                    updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp(); 
+
+                    if (isWinner) {
+                        updates.status = 'finished';
+                        updates.roundWinner = userId;
+                        const scoreToAdd = SCORE_POINTS[playerGuesses.length - 1] || 0;
+                        updates[`players.${userId}.score`] = (playerState.score || 0) + scoreToAdd;
+                    } else {
+                        const allPlayers = Object.values(gameData.players);
+                        allPlayers[myIndex].guesses = playerGuesses; 
+                        const allGuessed = allPlayers.every(p => (p.guesses || []).length >= GUESS_COUNT || p.isWinner);
+                        if(allGuessed) {
+                            updates.status = 'finished';
+                            updates.roundWinner = null;
+                        }
+                    }
+                }
+                
+                transaction.update(gameRef, updates);
+                return { isWinner, newGuess };
+            });
             
-            <div class="flex-grow"></div>
-            <div class="flex space-x-4 justify-center">
-                <button id="new-game-btn" class="w-1/2 bg-green-600 hover:bg-green-700 rounded-lg py-6 text-2xl font-bold transition">Yeni Oyun</button>
-                <button id="my-games-btn" class="w-1/2 bg-amber-600 hover:bg-amber-700 rounded-lg py-6 text-2xl font-bold transition">Oyunlarım</button>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <button id="kelimelig-btn" class="bg-purple-800 hover:bg-purple-700 rounded-lg py-6 text-xl font-bold transition">KelimeLİG</button>
-                <button id="daily-word-btn" class="bg-teal-600 hover:bg-teal-700 rounded-lg py-6 text-xl font-bold transition">Günün Kelimesi</button>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <button id="friends-btn" class="bg-blue-600 hover:bg-blue-700 rounded-lg py-6 text-xl font-bold transition">Arkadaşlar</button>
-                <button id="stats-btn" class="bg-gray-600 hover:bg-gray-500 rounded-lg py-6 text-xl font-bold transition">İstatistik</button>
-            </div>
-            
-            <div class="flex-grow"></div>
-            <div class="flex justify-between items-center text-sm text-gray-400">
-                <button id="how-to-play-btn" class="hover:text-white transition">Nasıl Oynanır?</button>
-                <div class="flex items-center gap-2">
-                    <span>Tema:</span>
-                    <button id="theme-light-btn" class="w-6 h-6 rounded-full border-2 border-gray-500" style="background-color: #faedcd;"></button>
-                    <button id="theme-dark-btn" class="w-6 h-6 rounded-full bg-gray-900 border-2 border-gray-500"></button>
-                </div>
-            </div>
-        </div>
+            return response.status(200).send({ 
+                success: true, 
+                message: "Tahmin başarıyla işlendi.",
+                isWinner: result.isWinner,
+                newGuess: result.newGuess
+            });
+        } catch (error) {
+            console.error(`Oyun ${gameId} için tahmin işlenirken hata:`, error);
+            return response.status(500).send({ error: error.message || "Tahmin işlenirken bir hata oluştu." });
+        }
+    });
+});
 
-        <div id="new-game-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
-            <header class="flex items-center">
-                <button id="back-to-main-menu-btn" class="back-button-hitbox">
-                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                </button>
-                <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Yeni Oyun</h1>
-            </header>
-            <div class="grid grid-cols-2 gap-4 flex-grow">
-                <button id="random-game-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M5.52 9.48A8 8 0 112.63 7.01M20 20v-5h-5"></path></svg><span class="font-bold text-lg">GEVŞEK (12 saat)</span></button>
-                <button id="series-game-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="font-bold text-lg">Seri Oyun</span></button>
-                <button id="with-friends-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><span class="font-bold text-lg">Arkadaşınla</span></button>
-                <button id="multiplayer-br-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z"></path></svg><span class="font-bold text-lg">Çoklu Oyuncu</span></button>
-                <button id="vs-cpu-btn" class="bg-gray-700 hover:bg-gray-600 transition rounded-lg p-4 flex flex-col items-center justify-center space-y-2"><svg class="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2m-3 14v-2m0-16V3m-4 6H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg><span class="font-bold text-lg">Bilgisayara Karşı</span></button>
-            </div>
-        </div>
-        
-        <div id="my-games-screen" class="hidden flex-1 flex flex-col p-2">
-             <header class="flex items-center mb-4">
-                 <button id="back-to-main-menu-from-games-btn" class="back-button-hitbox">
-                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                 </button>
-                 <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Oyunlarım</h1>
-             </header>
-             <div class="flex border-b border-gray-600 mb-4">
-                 <button id="show-active-games-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Aktif</button>
-                 <button id="show-finished-games-tab-btn" class="flex-1 py-2 text-center text-gray-400">Biten</button>
-                 <button id="show-invites-tab-btn" class="flex-1 py-2 text-center text-gray-400">Davetler</button>
-             </div>
-             <div id="active-games-tab" class="flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Aktif oyununuz bulunmuyor.</p></div>
-             <div id="finished-games-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Henüz biten oyununuz yok.</p></div>
-             <div id="invites-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Yeni davetiniz yok.</p></div>
-        </div>
-
-        <div id="login-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h1 class="text-4xl font-bold text-center mb-6">Kelime Yarışması</h1>
-            <div class="space-y-4">
-                <input type="email" id="email-input" placeholder="E-posta Adresiniz" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 text-center text-white text-lg">
-                <input type="password" id="password-input" placeholder="Şifreniz" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 text-center text-white text-lg">
-                <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Giriş Yap</button>
-                <button id="go-to-register-btn" class="text-sm text-gray-400 hover:text-white mt-2">Hesabın yok mu? Kayıt Ol</button>
-            </div>
-            <p id="auth-loading" class="text-gray-400 mt-4 hidden">İşlem yapılıyor...</p>
-        </div>
-
-        <div id="register-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h1 class="text-3xl font-bold text-center mb-4">Yeni Hesap Oluştur</h1>
-            <div class="space-y-3">
-                <input type="text" id="register-fullname" placeholder="Ad Soyad" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                <input type="text" id="register-username" placeholder="Kullanıcı Adı" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white" maxlength="12">
-                <input type="email" id="register-email" placeholder="E-posta Adresi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                <input type="password" id="register-password" placeholder="Şifre (en az 6 karakter)" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                <div class="flex gap-2">
-                    <input type="number" id="register-age" placeholder="Yaş" class="w-1/2 p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                    <input type="text" id="register-city" placeholder="Şehir" class="w-1/2 p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                </div>
-                <button id="register-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kaydı Tamamla</button>
-                <button id="back-to-login-btn" class="text-sm text-gray-400 hover:text-white mt-2">Zaten hesabım var</button>
-            </div>
-        </div>
-
-        <div id="friends-screen" class="hidden bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col">
-            <header class="flex items-center mb-4">
-                 <button id="back-to-main-from-friends-btn" class="back-button-hitbox">
-                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                 </button>
-                 <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Arkadaşlar</h1>
-             </header>
-            <div class="flex border-b border-gray-600 mb-4">
-                <button id="show-friends-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Arkadaşlarım</button>
-                <button id="show-requests-tab-btn" class="flex-1 py-2 text-center text-gray-400">İstekler <span id="friend-request-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span></button>
-                <button id="show-add-friend-tab-btn" class="flex-1 py-2 text-center text-gray-400">Arkadaş Ekle</button>
-            </div>
-            <div id="friends-tab" class="flex-1 overflow-y-auto"><p id="friends-list-placeholder" class="text-gray-500 text-center mt-8">Henüz hiç arkadaşın yok.</p><div id="friends-list" class="space-y-2"></div></div>
-            <div id="requests-tab" class="hidden flex-1 overflow-y-auto"><p id="friend-requests-placeholder" class="text-gray-500 text-center mt-8">Yeni arkadaşlık isteği yok.</p><div id="friend-requests-list" class="space-y-2"></div></div>
-            <div id="add-friend-tab" class="hidden flex-1">
-                <div class="flex gap-2">
-                    <input type="text" id="search-friend-input" placeholder="Kullanıcı adı veya e-posta" class="flex-grow p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                    <button id="search-friend-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Ara</button>
-                </div>
-                <div id="friend-search-results" class="mt-4 space-y-2"></div>
-            </div>
-        </div>
-
-        <div id="multiplayer-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex-col justify-center">
-            <button id="back-to-mode-multi-btn" class="back-button-hitbox absolute top-4 left-4">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-            </button>
-            <h1 class="text-3xl font-bold text-center mb-6" id="multiplayer-setup-title">Online Oyun Kurulumu</h1>
-            <div class="mb-4">
-                <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4">Arkadaşına Meydan Oku</button>
-                <hr class="border-gray-600 my-4">
-                <h2 class="text-2xl font-semibold mb-3">Oyun Ayarları</h2>
-                <div class="grid grid-cols-3 gap-2">
-                    <div>
-                        <label for="word-length-select-multi" class="block text-sm font-medium text-gray-400">Harf</label>
-                        <select id="word-length-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="time-select-multi" class="block text-sm font-medium text-gray-400">Süre</label>
-                        <select id="time-select-multi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="45" selected>45 sn (Seri)</option>
-                            <option value="43200">12 saat (Gevşek)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="match-length-select" class="block text-sm font-medium text-gray-400">Tur</label>
-                        <select id="match-length-select" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="1">1</option>
-                            <option value="5" selected>5</option>
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="20">20</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-center">
-                    <input id="hard-mode-checkbox-multi" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <label for="hard-mode-checkbox-multi" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
-                </div>
-                <button id="create-game-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyun Kur</button>
-            </div>
-            <hr class="my-4 border-gray-600">
-            <div>
-                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl (ID ile)</h2>
-                <input type="text" id="game-id-input" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-gray-400">
-                <button id="join-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyuna Katıl</button>
-            </div>
-        </div>
-
-        <div id="br-setup-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex-col justify-center">
-            <button id="back-to-mode-br-btn" class="back-button-hitbox absolute top-4 left-4">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-            </button>
-            <h1 class="text-3xl font-bold text-center mb-6">Battle Royale (4 Kişilik)</h1>
-            <p class="text-sm text-gray-400 mb-4">Eş zamanlı tahmin. İlk çözen kazanır, 6 tahminde bulamazsan elenirsin.</p>
-            <div class="mb-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="word-length-select-br" class="block text-sm font-medium text-gray-400">Harf Sayısı</label>
-                        <select id="word-length-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="time-select-br" class="block text-sm font-medium text-gray-400">Tahmin Süresi</label>
-                        <select id="time-select-br" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-white">
-                            <option value="30">30sn</option>
-                            <option value="45" selected>45sn</option>
-                            <option value="60">60sn</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-center">
-                    <input id="hard-mode-checkbox-br" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <label for="hard-mode-checkbox-br" class="ml-2 block text-sm text-gray-300">Zor Mod</label>
-                </div>
-                <button id="create-br-game-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyun Kur (BR)</button>
-            </div>
-            <hr class="my-4 border-gray-600">
-            <div>
-                <h2 class="text-2xl font-semibold mb-3">Oyuna Katıl (BR ID ile)</h2>
-                <input type="text" id="game-id-input-br" placeholder="Oyun ID'sini girin" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 mb-3 text-center uppercase text-white placeholder-gray-400">
-                <button id="join-br-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Oyuna Katıl (BR)</button>
-            </div>
-            <p id="br-waiting-for-players" class="text-gray-400 mt-4 hidden">Diğer oyuncular bekleniyor (1/4)</p>
-        </div>
-
-
-        <div id="profile-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h2 class="text-3xl font-bold mb-4">Profil & İstatistikler</h2>
-            <div class="bg-gray-700 p-3 rounded-lg mb-4 text-left">
-                <p class="text-sm"><strong class="text-gray-400">Kullanıcı Adı:</strong> <span id="profile-username"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Ad Soyad:</strong> <span id="profile-fullname"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">E-posta:</strong> <span id="profile-email"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Yaş:</strong> <span id="profile-age"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Şehir:</strong> <span id="profile-city"></span></p>
-            </div>
-            <hr class="border-gray-600 my-4">
-            <div class="grid grid-cols-4 gap-2 text-center mb-4">
-                <div> <p id="stats-played" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Oynanan</p> </div>
-                <div> <p id="stats-win-percentage" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Kazanma %</p> </div>
-                <div> <p id="stats-current-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Seri</p> </div>
-                <div> <p id="stats-max-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">En İyi Seri</p> </div>
-            </div>
-            <h3 class="text-xl font-bold mb-2">Tahmin Dağılımı</h3>
-            <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
-            <button id="close-profile-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kapat</button>
-        </div>
-
-        <div id="how-to-play-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center text-left">
-             <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
-             <p>İçerik buraya gelecek...</p>
-             <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
-        </div>
-
-        <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
-             <div id="multiplayer-score-board" class="w-full bg-gray-800 p-2 rounded-lg shadow flex flex-wrap justify-center gap-2 flex-shrink-0 mb-2"></div>
-             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0 hidden" id="sequential-game-info">
-                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
-                 <div class="text-center w-1/5">
-                     <p id="round-counter" class="text-xs text-gray-400"></p>
-                     <p id="turn-display" class="font-bold text-md"></p>
-                     <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
-                 </div>
-                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
-             </div>
-             <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
-                 <div class="flex items-center gap-2">
-                     <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
-                     <button id="copy-game-id-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-0 px-2 rounded text-xs">Kopyala</button>
-                     <button id="share-game-btn" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-0 px-2 rounded text-xs flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg><span>Paylaş</span></button>
-                 </div>
-                 <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
-             </div>
-             <div class="w-full flex-grow flex flex-col justify-start overflow-y-auto min-h-0 py-2">
-                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
-             </div>
-             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
-             <div id="keyboard" class="w-full flex-shrink-0"></div>
-        </div>
-
-        <div id="scoreboard-screen" class="hidden flex-1 flex flex-col justify-center">
-            <div class="text-center bg-gray-800 p-4 rounded-lg shadow-lg">
-                <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
-                <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
+// 5. Çoklu Oyuncu Turunu/Süresini Sonlandırma
+exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
+    corsHandler(request, response, async () => {
+        if (request.method !== 'POST') {
+            return response.status(405).send({ error: 'Method Not Allowed' });
+        }
+        const { gameId, userId } = request.body;
+        if (!gameId || !userId) {
+            return response.status(400).send({ error: 'Eksik parametreler: gameId ve userId gereklidir.' });
+        }
+        const gameRef = admin.firestore().collection('games').doc(gameId);
+        try {
+            await admin.firestore().runTransaction(async (transaction) => {
+                const gameDoc = await transaction.get(gameRef);
+                if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
+                const gameData = gameDoc.data();
+                if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
+                if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
                 
-                <div id="daily-stats-container" class="hidden">
-                    </div>
-
-                <div class="mb-4" id="default-word-display-container">
-                    <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
-                    <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
-                </div>
+                const isBR = gameData.gameType.includes('br');
+                const updates = {};
                 
-                <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-                
-                <div class="flex gap-2" id="default-round-buttons">
-                    <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Oyun</button>
-                    <button id="share-results-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonucu Paylaş</button>
-                    <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
-                </div>
-            </div>
-        </div>
-        
-    </div>
-    
-    <div id="toast" class="toast"></div>
+                // =======================================================
+                // --- BATTLE ROYALE (BR) TUR BİTİRME MANTIĞI ---
+                // =======================================================
+                if (isBR) {
+                    const playerState = gameData.players[userId];
+                    
+                    if (playerState.isEliminated || playerState.isWinner) {
+                        // Zaten elenmiş veya kazanmışsa süre dolsa bile bir şey yapma
+                        return;
+                    }
+                    
+                    // Oyuncuyu ele
+                    updates[`players.${userId}.isEliminated`] = true;
+                    
+                    // Oyun Bitti mi Kontrolü: Kimler kaldı?
+                    const allPlayers = Object.values(gameData.players);
+                    const activePlayers = allPlayers.filter(p => p.userId !== userId && !p.isEliminated && !p.isWinner);
+                    
+                    if (activePlayers.length === 1) {
+                        // Kalan son kişiyi kazanan yap
+                        const lastPlayer = activePlayers[0];
+                        updates.status = 'finished';
+                        updates.roundWinner = lastPlayer.userId;
+                        updates[`players.${lastPlayer.userId}.isWinner`] = true;
+                        updates[`players.${lastPlayer.userId}.score`] = (lastPlayer.score || 0) + 1000;
+                        
+                    } else if (activePlayers.length === 0) {
+                        // Kimse kalmadıysa
+                        updates.status = 'finished';
+                        updates.roundWinner = null; 
+                    }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-    <script type="module" src="js/main.js?v=2.0.7"></script>
-</body>
-</html>
+                } 
+                // =======================================================
+                // --- SIRALI MULTIPLAYER TUR BİTİRME MANTIĞI ---
+                // =======================================================
+                else if (gameData.currentPlayerId === userId) {
+                    const playerState = gameData.players[userId];
+                    const wordLength = gameData.wordLength;
+                    
+                    const failedWord = "".padEnd(wordLength, ' ');
+                    const failedColors = Array(wordLength).fill('failed');
+                    const newGuess = { word: failedWord, colors: failedColors };
+                    const playerGuesses = [...(playerState.guesses || []), newGuess];
+                    updates[`players.${userId}.guesses`] = playerGuesses;
+                    
+                    const playerIds = Object.keys(gameData.players);
+                    const myIndex = playerIds.indexOf(userId);
+                    const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+                    updates.currentPlayerId = playerIds[nextPlayerIndex];
+                    updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp();
+                    
+                    const allGuessed = Object.values(gameData.players).every(p => (p.guesses || []).length >= GUESS_COUNT);
+                    if (allGuessed) {
+                        updates.status = 'finished';
+                        updates.roundWinner = null;
+                    }
+                } else {
+                    throw new Error("Sadece süresi dolan oyuncunun turu sonlandırılabilir.");
+                }
+                
+                transaction.update(gameRef, updates);
+            });
+            return response.status(200).send({ success: true, message: "Tur/Oyun başarıyla sonlandırıldı." });
+        } catch (error) {
+            console.error(`Oyun ${gameId} için tur sonlandırılırken hata:`, error);
+            return response.status(500).send({ error: error.message || "Tur/Oyun sonlandırılırken bir hata oluştu." });
+        }
+    });
+});

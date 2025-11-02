@@ -10,6 +10,21 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg' viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        .back-button-hitbox {
+            padding: 8px !important;
+            margin-left: -8px !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        /* Ayrıl/Ana Menü tuşlarının tıklama alanını sağlamlaştırıyoruz */
+        #leave-game-button, #main-menu-btn {
+            cursor: pointer;
+        }
+    </style>
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -121,7 +136,7 @@
                      <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                  </button>
                  <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Arkadaşlar</h1>
-            </header>
+             </header>
             <div class="flex border-b border-gray-600 mb-4">
                 <button id="show-friends-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Arkadaşlarım</button>
                 <button id="show-requests-tab-btn" class="flex-1 py-2 text-center text-gray-400">İstekler <span id="friend-request-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span></button>
@@ -282,30 +297,33 @@
              <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
 
-        <div id="scoreboard-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            
-            <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
-            <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
-            
-            <div id="daily-stats-container" class="hidden">
-                </div>
+        <div id="scoreboard-screen" class="hidden flex-1 flex flex-col justify-center">
+            <div class="text-center bg-gray-800 p-4 rounded-lg shadow-lg">
+                <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
+                <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
+                
+                <div id="daily-stats-container" class="hidden">
+                    </div>
 
-            <div class="mb-4" id="default-word-display-container">
-                <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
-                <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
-            </div>
-            
-            <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-            
-            <div class="flex gap-2" id="default-round-buttons">
-                <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Oyun</button>
-                <button id="share-results-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonucu Paylaş</button>
-                <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
+                <div class="mb-4" id="default-word-display-container">
+                    <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
+                    <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
+                </div>
+                
+                <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
+                
+                <div class="flex gap-2" id="default-round-buttons">
+                    <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Oyun</button>
+                    <button id="share-results-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonucu Paylaş</button>
+                    <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
+                </div>
             </div>
         </div>
-
+        
     </div>
+    
     <div id="toast" class="toast"></div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
