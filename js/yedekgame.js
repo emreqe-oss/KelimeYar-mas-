@@ -1,4 +1,4 @@
-// js/game.js - YENİ VE TAM KOD (CPU SKORLAMA VE YUMUŞATILMIŞ ZEKAYA SAHİPTİR)
+// js/game.js - YENİ VE TAM KOD (CPU ZEKASI ve UI TUTARLILIĞI DÜZELTİLMİŞTİR)
 
 // Firebase v9'dan gerekli modülleri içe aktar
 import { db, getNewSecretWord, checkWordValidity, submitMultiplayerGuess, failMultiplayerTurn } from './firebase.js';
@@ -340,7 +340,7 @@ export async function createGame(options = {}) {
     const gameData = {
         gameId, wordLength: selectedLength, secretWord, timeLimit,
         creatorId: currentUserId, isHardMode: false, matchLength,
-        players: { [currentUserId]: { username, guesses: [], score: 0 } },
+        currentRound: 1, players: { [currentUserId]: { username, guesses: [], score: 0 } },
         
         playerIds: playerIdsList, 
         
@@ -580,6 +580,7 @@ function checkHardMode(guessWord, playerGuesses) {
         for (let i = 0; i < guess.word.length; i++) {
             if (guess.colors[i] === 'correct') {
                 correctLetters[i] = guess.word[i];
+                presentLetters.add(guess.word[i]); // Yeşil harf aynı zamanda mevcut (sarı) harftir
             } else if (guess.colors[i] === 'present') {
                 presentLetters.add(guess.word[i]);
             }
@@ -591,7 +592,10 @@ function checkHardMode(guessWord, playerGuesses) {
             return false;
         }
     }
+    // Doğru konumda olmayan mevcut harfleri kontrol et
     for (const letter of presentLetters) {
+        // Eğer harf kelimede yoksa ve bu harf yeşil/sarı olarak bulunduysa (bu zaten yukarıda kontrol edilmiş olmalı)
+        // Burada sadece, bulunan harfin yeni tahminde de var olup olmadığını kontrol ediyoruz.
         if (!guessWord.includes(letter)) {
             showToast(`Zor Mod: Kelime "${letter}" harfini içermeli!`, true);
             return false;
@@ -604,7 +608,7 @@ function checkHardMode(guessWord, playerGuesses) {
 function calculateRoundScore(guessesCount, didWin) {
     if (!didWin || guessesCount < 1 || guessesCount > GUESS_COUNT) return 0;
     
-    // Kural: 1. Tahmin: 1000, 2. Tahmin: 800, ..., 6. Tahmin: 100
+    // 1. Tahmin: 1000, 2. Tahmin: 800, ..., 6. Tahmin: 100
     const scoreMap = {
         1: 1000,
         2: 800,
@@ -737,27 +741,23 @@ async function submitGuess() {
     } else {
         if (localGameData.players[currentUserId].guesses.length >= GUESS_COUNT) {
             localGameData.status = 'finished';
-            // vsCPU modunda kaybettiyse, roundWinner 'cpu' olmalı.
-            if (gameMode === 'vsCPU') { 
-                localGameData.roundWinner = 'cpu'; 
-            } else {
-                localGameData.roundWinner = null;
-            }
+            localGameData.roundWinner = null;
         } else if (gameMode === 'vsCPU') {
             localGameData.currentPlayerId = 'cpu';
         }
     }
-    
-    // YENİ KOD: vsCPU Skorlama Mantığı Ekleme (submitGuess içinde)
-    const didWin = localGameData.roundWinner === currentUserId;
-    const guessCount = didWin ? localGameData.players[currentUserId].guesses.length : 0;
+    
+    // SKORLAMA DÜZELTMESİ (vsCPU için puan toplama)
+    const didWin = localGameData.roundWinner === currentUserId;
+    const guessCount = didWin ? localGameData.players[currentUserId].guesses.length : 0;
     
     if (gameMode === 'vsCPU' && localGameData.status === 'finished' && didWin) {
+        // vsCPU modunda ve kazandıysa tur skorunu hesapla ve topla
         const roundScore = calculateRoundScore(guessCount, true);
+        // ÖNEMLİ: Oyuncunun toplam skorunu güncelle
         localGameData.players[currentUserId].score += roundScore; 
     }
     
-    // Orijinal Kodun Devamı
     if (localGameData.status === 'finished') {
         await updateStats(didWin, guessCount);
         
@@ -787,6 +787,7 @@ async function submitGuess() {
             setTimeout(() => showScoreboard(localGameData), wordLength * 300);
         } else if (gameMode === 'vsCPU' && localGameData.currentPlayerId === 'cpu') {
             // CPU'nun oynaması için renderGameState'in içinde gerekli tetikleme zaten var.
+            // Burada tekrar çağırırsak çift oynar. renderGameState'in CPU'yu tetiklemesi yeterlidir.
         }
     });
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
@@ -935,7 +936,7 @@ function calculateColors(guess, secret) {
     return colors;
 }
 
-// *** DÜZELTME 3: Daha zeki CPU mantığı ve yumuşatma eklendi ***
+// *** DÜZELTME 3: Daha zeki CPU mantığı için findBestCpuGuess yeniden yazıldı ***
 function findBestCpuGuess() {
     const localGameData = state.getLocalGameData();
     // Oyuncunun ve CPU'nun yaptığı tüm tahminleri tek bir listede topluyoruz.
@@ -969,6 +970,8 @@ function findBestCpuGuess() {
                 positionMisplaced[letter].add(i);
             } else if (color === 'absent') {
                 // Eğer harf daha önce sarı veya yeşil bulunmadıysa, tamamen yok say.
+                // Eğer gri işaretlendiği halde aynı harf başka bir pozisyonda sarı/yeşil ise, 
+                // bu griyi yoksaymamız gerekir.
                 let isKnownPresent = false;
                 for (let k = 0; k < g.word.length; k++) {
                     if ((g.colors[k] === 'correct' || g.colors[k] === 'present') && g.word[k] === letter) {
@@ -1014,51 +1017,17 @@ function findBestCpuGuess() {
     
     // Daha önce tahmin edilen kelimeleri ele
     const guessedWords = new Set(allGuesses.map(g => g.word));
-    let finalWords = possibleWords.filter(w => !guessedWords.has(w));
-    
-    // YENİ YUMUŞATMA MANTIĞI BURADAN BAŞLIYOR:
-    
-    // Kazanma kelimesini (Gizli Kelime) finalWords listesinden ayıralım.
-    const secretWord = localGameData.secretWord;
-    const winningWordIndex = finalWords.indexOf(secretWord);
-    
-    // Eğer kazanan kelime listedeyse, onu diğerlerinden ayıralım.
-    let winningWord = null;
-    let otherPossibleWords = [...finalWords];
-
-    if (winningWordIndex !== -1) {
-        winningWord = secretWord;
-        otherPossibleWords.splice(winningWordIndex, 1);
-    }
-    
-    const currentGuesses = localGameData.players['cpu']?.guesses.length || 0;
-    
-    if (winningWord && currentGuesses < 4 && Math.random() < 0.6) { 
-        // 4. tahminden önceyse ve %60 ihtimalle: Hemen kazanmayı engelle
-        
-        // Eğer 2'den fazla alternatif kelime varsa, kasıtlı olarak onlardan birini seç
-        if (otherPossibleWords.length > 2) { 
-            const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
-            return otherPossibleWords[randomIndex];
-        }
-        
-        // Alternatifler azsa veya yoksa (CPU sıkışmışsa), bu sefer akıllı oynamasına izin ver.
-        // Ama genellikle oyunu uzatmayı deneriz. Bu durumda, rastgele bir tahmin yapalım.
-        // Not: Kazanma kelimesi bu listede yer almamalıdır!
-        const randomGuessList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w) && w !== secretWord);
-        if (randomGuessList.length > 0) {
-            return randomGuessList[Math.floor(Math.random() * randomGuessList.length)];
-        }
-    }
-
-    // Eğer yumuşatma mantığı devreye girmediyse veya kazanma anıysa, en iyi tahmini seç.
-    if (finalWords.length > 0) {
-        // Yumuşatma yoksa, kalan kelimeler içinden rastgele birini seç (En iyi tahmin, finalWords'un rastgele bir üyesi)
-        const randomIndex = Math.floor(Math.random() * finalWords.length);
-        return finalWords[randomIndex];
-    } else {
-        // Acil durum (CPU'nun asla kelime bulamama durumunu önler)
+    const finalWords = possibleWords.filter(w => !guessedWords.has(w));
+    
+    // Mümkün olan kelimeler arasından rastgele birini seç
+    if (finalWords.length > 0) {
+        // CPU'yu biraz daha akıllı göstermek için, kalan kelime sayısı az ise 
+        // ilk bulunanı seçmek yerine, rastgele birini seçeriz.
+        return finalWords[Math.floor(Math.random() * finalWords.length)];
+    } else {
+        // Acil durum: Filtreleme çok katı olduysa, sadece tahmin edilmeyen rastgele bir kelime seç
         const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
+        // CPU'nun asla kelime bulamama durumunu önler
         return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : localGameData.secretWord;
     }
 }
@@ -1108,18 +1077,20 @@ async function cpuTurn() {
     } else {
         localGameData.currentPlayerId = state.getUserId();
     }
+    
+    const cpuGuessCount = localGameData.players['cpu'].guesses.length;
     
-    // YENİ KOD: CPU Skorlama Mantığı Ekleme (cpuTurn içinde)
     if (localGameData.status === 'finished' && localGameData.roundWinner === 'cpu') {
-        const cpuGuessCount = localGameData.players['cpu'].guesses.length;
+        // CPU kazandıysa, CPU'nun skorunu hesapla ve topla
         const roundScore = calculateRoundScore(cpuGuessCount, true);
+        // ÖNEMLİ: CPU'nun toplam skorunu güncelle
         localGameData.players['cpu'].score += roundScore;
     }
-    
+    
     await renderGameState(localGameData, true);
     
     if (localGameData.status === 'finished') {
-        await updateStats(false, 0); // CPU kazandığı için oyuncu kaybetmiştir.
+        await updateStats(localGameData.roundWinner === state.getUserId(), localGameData.roundWinner === state.getUserId() ? localGameData.players[state.getUserId()].guesses.length : 0);
         setTimeout(() => showScoreboard(localGameData), wordLength * 300);
     }
     
@@ -1335,45 +1306,44 @@ export async function showScoreboard(gameData) {
         dailyStatsContainer.classList.remove('hidden');
         
         if (dailyStats) {
-            // GÖRSEL DÜZELTME: Kartları ortalamak için w-full max-w-sm mx-auto eklendi
-            dailyStatsContainer.innerHTML = `
-                <div class="w-full max-w-sm mx-auto">
-                    <div class="grid grid-cols-2 gap-4 text-center mb-6 mt-4">
-                        <div class="bg-gray-700 p-4 rounded-lg">
-                            <p class="text-4xl font-extrabold text-white">${dailyStats.userScore}</p>
-                            <p class="text-sm text-gray-400">Kazandığın Puan</p>
-                        </div>
-                        <div class="bg-gray-700 p-4 rounded-lg">
-                            <p class="text-4xl font-extrabold text-white">${dailyStats.avgScore}</p>
-                            <p class="text-sm text-gray-400">Ortalama Puan</p>
-                        </div>
-                        <div class="bg-gray-700 p-4 rounded-lg">
-                            <p class="text-4xl font-extrabold text-white">${dailyStats.userGuessCount}</p>
-                            <p class="text-sm text-gray-400">Deneme Sayın</p>
-                        </div>
-                        <div class="bg-gray-700 p-4 rounded-lg">
-                            <p class="text-4xl font-extrabold text-white">${dailyStats.avgGuesses}</p>
-                            <p class="text-sm text-gray-400">Ort. Deneme Sayısı</p>
-                        </div>
-                    </div>
-                    
-                    <h4 class="text-xl font-bold mb-2">Günlük Pozisyonun</h4>
-                    <p class="text-3xl font-extrabold text-yellow-500 mb-2">
-                        ${dailyStats.userPosition > 0 
-                            ? dailyStats.userPosition + '. sıradayız!' 
-                            : dailyStats.userScore > 0 
-                                ? 'Sıralama Hesaplanıyor...' 
-                                : 'Sıralamaya girmek için kazanmalısın.'
-                        }
-                    </p>
-                    <p class="text-sm text-gray-400">Toplam ${dailyStats.totalPlayers} kişi arasında.</p>
-                    
-                    <div class="mt-6 mb-4">
-                        <p>Doğru Kelime: <strong class="text-green-400 text-xl">${gameData.secretWord}</strong></p>
-                        <p id="word-meaning-display-daily" class="text-sm text-gray-400 mt-2 italic">Anlam yükleniyor...</p>
-                    </div>
+            dailyStatsContainer.innerHTML = `
+                <div class="w-full mx-auto"> 
+                    <div class="grid grid-cols-2 gap-4 text-center mb-6 mt-4">
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <p class="text-4xl font-extrabold text-white">${dailyStats.userScore}</p>
+                            <p class="text-sm text-gray-400">Kazandığın Puan</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <p class="text-4xl font-extrabold text-white">${dailyStats.avgScore}</p>
+                            <p class="text-sm text-gray-400">Ortalama Puan</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <p class="text-4xl font-extrabold text-white">${dailyStats.userGuessCount}</p>
+                            <p class="text-sm text-gray-400">Deneme Sayın</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <p class="text-4xl font-extrabold text-white">${dailyStats.avgGuesses}</p>
+                            <p class="text-sm text-gray-400">Ort. Deneme Sayısı</p>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-xl font-bold mb-2">Günlük Pozisyonun</h4>
+                    <p class="text-3xl font-extrabold text-yellow-500 mb-2">
+                        ${dailyStats.userPosition > 0 
+                            ? dailyStats.userPosition + '. sıradayız!' 
+                            : dailyStats.userScore > 0 
+                                ? 'Sıralama Hesaplanıyor...' 
+                                : 'Sıralamaya girmek için kazanmalısın.'
+                        }
+                    </p>
+                    <p class="text-sm text-gray-400">Toplam ${dailyStats.totalPlayers} kişi arasında.</p>
+                    
+                    <div class="mt-6 mb-4">
+                        <p>Doğru Kelime: <strong class="text-green-400 text-xl">${gameData.secretWord}</strong></p>
+                        <p id="word-meaning-display-daily" class="text-sm text-gray-400 mt-2 italic">Anlam yükleniyor...</p>
+                    </div>
                 </div>
-            `;
+            `;
             
             // KELİME ANLAMINI YÜKLE
             const meaningDisplayEl = document.getElementById('word-meaning-display-daily'); // ID'si daily-stats-container içindeki p etiketi
@@ -1412,8 +1382,19 @@ export async function showScoreboard(gameData) {
     finalScores.style.display = showScores ? 'block' : 'none';
     matchWinnerDisplay.style.display = showScores ? 'block' : 'none';
 
+    if (gameData.roundWinner && gameData.players[gameData.roundWinner]) {
+        const winnerName = gameData.players[gameData.roundWinner].username || 'Bilgisayar';
+        roundWinnerDisplay.textContent = (gameData.roundWinner === currentUserId) ? "Tebrikler, Turu Kazandın!" : `Turu ${winnerName} Kazandı!`;
+        playSound(gameData.roundWinner === currentUserId ? 'win' : 'lose');
+    } else {
+        roundWinnerDisplay.textContent = `Kaybettin! Doğru kelime: ${gameData.secretWord}`;
+        playSound('lose');
+    }
+    correctWordDisplay.textContent = gameData.secretWord;
+    meaningDisplay.textContent = 'Anlam yükleniyor...';
+    const meaning = await fetchWordMeaning(gameData.secretWord);
+    meaningDisplay.textContent = meaning;
     if (showScores) {
-        // vsCPU skoru gösterilirken de total puan gösterimi
         finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">Toplam Puan</h3>`;
         const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data,
             id
@@ -1425,22 +1406,6 @@ export async function showScoreboard(gameData) {
                 finalScores.appendChild(scoreEl);
         });
     }
-    
-    // Orijinal kodun devamı
-    if (gameData.roundWinner && gameData.players[gameData.roundWinner]) {
-        const winnerName = gameData.players[gameData.roundWinner].username || 'Bilgisayar';
-        roundWinnerDisplay.textContent = (gameData.roundWinner === currentUserId) ? "Tebrikler, Turu Kazandın!" : `Turu ${winnerName} Kazandı!`;
-        playSound(gameData.roundWinner === currentUserId ? 'win' : 'lose');
-    } else {
-        roundWinnerDisplay.textContent = `Kaybettin! Doğru kelime: ${gameData.secretWord}`;
-        playSound('lose');
-    }
-    // Diğer kodlar aynı kalır...
-    correctWordDisplay.textContent = gameData.secretWord;
-    meaningDisplay.textContent = 'Anlam yükleniyor...';
-    const meaning = await fetchWordMeaning(gameData.secretWord);
-    meaningDisplay.textContent = meaning;
-    
     matchWinnerDisplay.textContent = '';
     newRoundBtn.classList.remove('hidden');
     if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
