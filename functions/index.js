@@ -1,4 +1,4 @@
-// functions/index.js - TEMİZLENMİŞ, BR MANTIĞI VE DÜZELTMELER İLE TAM KOD
+// functions/index.js - BR MANTIK KONTROLLERİ YAPILMIŞ SON KOD
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -19,7 +19,6 @@ admin.initializeApp();
 // Kelime listelerini yerel olarak içeri aktarıyoruz.
 const kelimeler = require("./kelimeler.json");
 const cevaplar = require("./cevaplar.json");
-// kelimeAnlamlari geçici olarak devre dışı bırakıldı (JSON hatası nedeniyle)
 // const kelimeAnlamlari = require("./kelime_anlamlari.json"); 
 
 const SCORE_POINTS = [1000, 800, 600, 400, 200, 100];
@@ -88,17 +87,7 @@ exports.checkWordValidity = functions.https.onRequest((request, response) => {
 // 3. Kelime Anlamı Çekme (Şimdilik Kapalı/Bakımda)
 exports.getWordMeaning = functions.https.onRequest((request, response) => {
     corsHandler(request, response, () => {
-        // Geçici olarak bu fonksiyonu devre dışı bırakıyoruz (JSON hatası nedeniyle)
         return response.status(200).send({ success: false, meaning: "Anlam çekme özelliği şu an bakımda." });
-        
-        /* Orijinal mantık (kelimeAnlamlari değişkeni aktifken):
-        try {
-            //...
-            const meaning = kelimeAnlamlari[upperWord];
-            //...
-        } catch (error) {
-            //...
-        } */
     });
 });
 
@@ -154,7 +143,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                 if (isBR) {
                     
                     if (isWinner) {
-                        updates.status = 'finished';
+                        updates.status = 'finished'; // Kazanma durumunda tur hemen biter
                         updates.roundWinner = userId;
                         updates[`players.${userId}.isWinner`] = true;
 
@@ -162,7 +151,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                         updates[`players.${userId}.score`] = (playerState.score || 0) + scoreToAdd + 500; 
                         
                     } else if (playerGuesses.length >= GUESS_COUNT) {
-                        updates[`players.${userId}.isEliminated`] = true;
+                        updates[`players.${userId}.isEliminated`] = true; // 6 hak bitti, elendi
                     }
                     
                     const allPlayers = Object.values(gameData.players);
@@ -176,16 +165,30 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                     const activePlayers = currentStatusPlayers.filter(p => !p.isWinner && !p.isEliminated);
                     const allFinished = currentStatusPlayers.every(p => p.isWinner || p.isEliminated);
 
-                    // Kural 1: Bir kazanan varsa hemen bitir (hızlı BR)
-                    if (winners.length >= 1) {
+                    // Tur Bitiş Koşulları:
+                    // Kural 1: Biri kazandıysa tur hemen biter.
+                    // Kural 2: Kalan aktif kişi 1 veya 0 ise tur biter.
+                    if (winners.length >= 1 || activePlayers.length <= 1) { 
                         updates.status = 'finished';
-                        updates.roundWinner = winners[0].userId; 
-                    } 
-                    // Kural 2: Sadece bir aktif kişi kaldıysa VEYA herkes bitirdiyse (eleme/haksızlık)
-                    else if (activePlayers.length <= 1 || allFinished) {
-                        updates.status = 'finished';
-                        updates.roundWinner = activePlayers[0]?.userId || null; 
-                        if(activePlayers[0]) updates[`players.${activePlayers[0].userId}.isWinner`] = true; 
+                        
+                        // KAZANANI BELİRLEME MANTIĞI:
+                        if (winners.length >= 1) {
+                            updates.roundWinner = winners[0].userId; // İlk kazananı al
+                        } else if (activePlayers.length === 1) {
+                            const lastPlayer = activePlayers[0];
+                            // Kalan son kişi EN AZ 1 TAHMİN yapmışsa kazansın
+                            if ((lastPlayer.guesses || []).length > 0) { 
+                                updates.roundWinner = lastPlayer.userId;
+                                updates[`players.${lastPlayer.userId}.isWinner`] = true;
+                                updates[`players.${lastPlayer.userId}.score`] = (lastPlayer.score || 0) + 1000;
+                            } else {
+                                updates.roundWinner = null; // Tahmin yapmadı, berabere.
+                            }
+                        } else {
+                            updates.roundWinner = null; // Kimse kazanamadı (Berabere)
+                        }
+                    } else {
+                        // KURAL: 6 hakkını dolduran elenir, diğerleri SÜRE dolana kadar devam eder.
                     }
 
                 } 
@@ -255,37 +258,18 @@ exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
                 const updates = {};
                 
                 // =======================================================
-                // --- BATTLE ROYALE (BR) TUR BİTİRME MANTIĞI ---
+                // --- BATTLE ROYALE (BR) TUR BİTİRME MANTIĞI (SÜRE BİTİMİ) ---
                 // =======================================================
                 if (isBR) {
                     const playerState = gameData.players[userId];
                     
                     if (playerState.isEliminated || playerState.isWinner) {
-                        // Zaten elenmiş veya kazanmışsa süre dolsa bile bir şey yapma
                         return;
                     }
                     
-                    // Oyuncuyu ele
-                    updates[`players.${userId}.isEliminated`] = true;
-                    
-                    // Oyun Bitti mi Kontrolü: Kimler kaldı?
-                    const allPlayers = Object.values(gameData.players);
-                    const activePlayers = allPlayers.filter(p => p.userId !== userId && !p.isEliminated && !p.isWinner);
-                    
-                    if (activePlayers.length === 1) {
-                        // Kalan son kişiyi kazanan yap
-                        const lastPlayer = activePlayers[0];
-                        updates.status = 'finished';
-                        updates.roundWinner = lastPlayer.userId;
-                        updates[`players.${lastPlayer.userId}.isWinner`] = true;
-                        updates[`players.${lastPlayer.userId}.score`] = (lastPlayer.score || 0) + 1000;
-                        
-                    } else if (activePlayers.length === 0) {
-                        // Kimse kalmadıysa
-                        updates.status = 'finished';
-                        updates.roundWinner = null; 
-                    }
-
+                    // Süre dolduğunda tur bitmeli ve berabere sayılmalı
+                    updates.status = 'finished';
+                    updates.roundWinner = null; // Süre doldu, kimse kazanamadı.
                 } 
                 // =======================================================
                 // --- SIRALI MULTIPLAYER TUR BİTİRME MANTIĞI ---
