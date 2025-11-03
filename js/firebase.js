@@ -1,4 +1,4 @@
-// js/firebase.js - YENİ VE DOĞRU KOD (getWordMeaning export edildi)
+// js/firebase.js - YENİ VE DOĞRU KOD (startNextBRRound eklendi)
 
 // Gerekli Firebase fonksiyonlarını doğrudan paketten içe aktarıyoruz
 import { initializeApp } from "firebase/app";
@@ -120,7 +120,6 @@ export const failMultiplayerTurn = async (gameId, userId) => {
 
 /**
  * Sunucudan kelime anlamını çeker (Yerel JSON'dan okur).
- * HATA DÜZELTİLDİ: "export" anahtar kelimesi eklendi.
  */
 export const getWordMeaning = async (wordToSearch) => {
     try {
@@ -141,5 +140,28 @@ export const getWordMeaning = async (wordToSearch) => {
         console.error("getWordMeaning 'fetch' hatası:", error);
         // Hata durumunda game.js'in anlayacağı bir nesne döndürülür.
         return { success: false, meaning: "Anlam yüklenirken bir sorun oluştu. (Sunucuya ulaşılamadı)" };
+    }
+};
+
+/**
+ * Sunucuya BR Turu bittiğinde sonraki turu başlatma/maçı bitirme isteği gönderir. (YENİ)
+ */
+export const startNextBRRound = async (gameId, userId) => {
+    try {
+        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/startNextBRRound";
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId, userId })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Sonraki tur başlatma sunucuda işlenemedi.');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("startNextBRRound 'fetch' hatası:", error);
+        showToast(error.message || "Sonraki tura geçilirken kritik bir hata oluştu.", true);
+        return { success: false };
     }
 };
