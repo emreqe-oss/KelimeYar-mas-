@@ -324,7 +324,7 @@ exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
     });
 });
 
-// 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme (YENİ FONKSİYON)
+// 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme (GÜNCELLENMİŞ FONKSİYON)
 exports.startNextBRRound = functions.https.onRequest((request, response) => {
     corsHandler(request, response, async () => {
         if (request.method !== 'POST') {
@@ -358,27 +358,37 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                     }
                 });
 
-                // Eleme sonrası kalan oyuncular
+                // Eleme sonrası kalan oyuncular (Yeni turda oynayacaklar)
                 const finalActivePlayers = allPlayers.filter(p => !gameData.players[p.id].isEliminated);
                 
                 const updates = {};
                 updates.players = gameData.players; // Elenme durumu güncellendi
                 
                 // 2. Maç Bitişi Kontrolü
-                if (finalActivePlayers.length <= 1) {
-                    // Tek bir oyuncu kaldıysa (veya kimse kalmadıysa) MAÇ BİTER
+                // Tek bir oyuncu kaldıysa, o maçın galibidir ve MAÇ BİTER.
+                if (finalActivePlayers.length === 1) {
                     updates.status = 'finished'; 
-                    updates.matchWinnerId = finalActivePlayers.length === 1 ? finalActivePlayers[0].id : null;
+                    updates.matchWinnerId = finalActivePlayers[0].id;
                     updates.roundWinner = updates.matchWinnerId; 
-                    
-                    // Maçı kazananın skoru otomatik olarak en yüksek olacaktır.
                     
                     transaction.update(gameRef, updates);
                     return;
 
+                } 
+                
+                // Kimse kalmadıysa MAÇ BİTER (Berabere Bitiş)
+                if (finalActivePlayers.length === 0) { 
+                    updates.status = 'finished'; 
+                    updates.matchWinnerId = null; 
+                    updates.roundWinner = null; 
+                    
+                    transaction.update(gameRef, updates);
+                    return;
                 }
                 
-                // 3. Yeni Tur Başlatma (Match devam ediyorsa)
+                // BURAYA ULAŞILDI İSE: finalActivePlayers.length > 1 (Berabere durumunda yeni tura geçmeliyiz)
+
+                // 3. Yeni Tur Başlatma
                 const newWordLength = gameData.wordLength; 
                 const newSecretWord = await getNewSecretWordFromLocal(newWordLength); 
                 
@@ -390,8 +400,9 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                 updates.currentRound = (gameData.currentRound || 0) + 1;
                 updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp();
                 updates.roundWinner = null;
+                updates.matchWinnerId = null; // Maç devam ettiği için sıfırla
 
-                // Sadece elenmeyen oyuncuların tahmin haklarını ve çözücü bayrağını sıfırla
+                // Elenmeyen oyuncuların tahmin haklarını ve çözücü bayrağını sıfırla
                 finalActivePlayers.forEach(p => {
                     updates.players[p.id].guesses = [];
                     updates.players[p.id].hasSolved = false; 
@@ -401,7 +412,7 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                 transaction.update(gameRef, updates);
             });
             
-            return response.status(200).send({ success: true, message: "Sonraki tura geçildi veya maç bitti." });
+            return response.status(200).send({ success: true, message: "Sonraki tura geçildi." });
             
         } catch (error) {
             console.error(`Oyun ${gameId} için tur geçişi/bitişi işlenirken hata:`, error);

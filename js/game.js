@@ -1193,12 +1193,14 @@ export async function startNewRound() {
     if (isBattleRoyale(gameMode) && localGameData.status === 'finished') {
         const finalActivePlayers = Object.values(localGameData.players).filter(p => !p.isEliminated);
         
-        // Eğer maçın tek bir galibi varsa (matchWinnerId sunucuda belirlenir) veya kimse kalmadıysa
-        if (localGameData.matchWinnerId || finalActivePlayers.length <= 1) { 
-            // MAÇ BİTTİ (Kullanıcıyı ana menüye yönlendir)
+        // MAÇ BİTİŞ KONTROLÜ
+        // Eğer maçın bir galibi belirlenmişse (matchWinnerId), VEYA kimse kalmamışsa MAÇ BİTER.
+        if (localGameData.matchWinnerId || finalActivePlayers.length === 0) { 
             leaveGame();
             return;
         }
+        
+        // Buraya gelindiğinde: finalActivePlayers.length > 1 (Berabere durumu, yeni tur başlatılmalı)
         
         // Yeni Turu Başlatmak için Sunucuyu çağır
         showToast("Yeni tur başlatılıyor...", false);
@@ -1206,7 +1208,6 @@ export async function startNewRound() {
         
         if (result.success) {
             // Sunucu durumu güncelledi, dinleyici (listener) UI'ı güncelleyecek.
-            // Sadece Skor Tablosunu kapatıp oyun ekranına dönmeliyiz.
             showScreen('game-screen');
             return;
         } else {
@@ -1300,18 +1301,23 @@ export async function showScoreboard(gameData) {
         const isMatchEnd = gameData.matchWinnerId || finalActivePlayers.length <= 1;
 
         let winnerMessage;
+        let matchWinnerName = "";
+        
+        if (gameData.matchWinnerId) {
+             matchWinnerName = gameData.players[gameData.matchWinnerId].username || "Sen";
+        }
+        
         if (isMatchEnd) {
             if (gameData.matchWinnerId) {
-                const winnerName = gameData.players[gameData.matchWinnerId].username || "Sen";
-                winnerMessage = gameData.matchWinnerId === currentUserId ? "👑 TEBRİKLER, MAÇI KAZANDIN!" : `👑 MAÇI ${winnerName} KAZANDI!`;
+                winnerMessage = gameData.matchWinnerId === currentUserId ? "👑 TEBRİKLER, MAÇI KAZANDIN!" : `👑 MAÇI ${matchWinnerName} KAZANDI!`;
             } else {
-                winnerMessage = "Maç Berabere Bitti!";
+                winnerMessage = "Maç Berabere Bitti! 🤝";
             }
         } else if (gameData.roundWinner) {
             const winnerName = gameData.players[gameData.roundWinner].username || "Sen";
             winnerMessage = gameData.roundWinner === currentUserId ? "✅ TURU KAZANDIN!" : `✅ TURU ${winnerName} KAZANDI!`;
         } else {
-            winnerMessage = solvedPlayers.length > 0 ? "⏳ Eşleşme Devam Ediyor..." : "❌ KİMSE ÇÖZEMEDİ!";
+            winnerMessage = solvedPlayers.length > 0 ? "⏳ Eşleşme Devam Ediyor..." : "❌ KİMSE ÇÖZEMEDİ! BERABERE.";
         }
         
         roundWinnerDisplay.textContent = winnerMessage;
@@ -1319,7 +1325,7 @@ export async function showScoreboard(gameData) {
         // Maç bitişi kontrolü
         if (isMatchEnd) {
              matchWinnerDisplay.style.display = 'block';
-             matchWinnerDisplay.textContent = gameData.matchWinnerId ? `ŞAMPİYON: ${gameData.players[gameData.matchWinnerId].username}` : 'OYUN SONU: BERABERE';
+             matchWinnerDisplay.textContent = gameData.matchWinnerId ? `OYUN SONU: ${matchWinnerName.toLocaleUpperCase('tr-TR')}` : 'OYUN SONU: BERABERE';
              newRoundBtn.textContent = 'Ana Menü';
              newRoundBtn.onclick = leaveGame;
         } else {
