@@ -19,7 +19,7 @@ import {
 
 // Diğer modülleri ve kelime listelerini içe aktar
 import * as state from './state.js';
-import { showToast, playSound, shakeCurrentRow, getStatsFromProfile } from './utils.js';
+import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement } from './utils.js';
 import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, 
     // ESKİ
     turnDisplay, timerDisplay, gameIdDisplay, roundCounter, 
@@ -235,6 +235,7 @@ export async function renderGameState(gameData, animateLastRow = false) {
 
     updateTurnDisplay(gameData);
 
+    // --- DÜZELTİLMİŞ RENDERER (SORU İŞARETİ EKLEMELİ) ---
     const playerGuesses = gameData.players[currentUserId]?.guesses || [];
     for (let i = 0; i < GUESS_COUNT; i++) {
         for (let j = 0; j < wordLength; j++) {
@@ -242,9 +243,19 @@ export async function renderGameState(gameData, animateLastRow = false) {
             if (!tile) continue;
             const front = tile.querySelector('.front');
             const back = tile.querySelector('.back');
+
+            // --- Temizlik Başlangıcı ---
+            // Önceki render'dan kalan eski ikonları temizle
+            const oldIcon = back.querySelector('.meaning-icon');
+            if (oldIcon) {
+                oldIcon.remove();
+            }
+            // --- Temizlik Sonu ---
+
             tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake');
             front.textContent = '';
             back.textContent = '';
+
             if (playerGuesses[i]) {
                 const guess = playerGuesses[i];
                 front.textContent = guess.word[j];
@@ -260,9 +271,58 @@ export async function renderGameState(gameData, animateLastRow = false) {
                     tile.classList.add('flip');
                 }
             }
+        } // <-- İç (j) döngüsünün bittiği yer
+
+        // --- YENİ KOD BAŞLANGICI ---
+        // Bu satırın (i) bir tahmini varsa ve tahmin 'failed' değilse
+        if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
+            const guessWord = playerGuesses[i].word;
+            // O satırın son karesini bul
+            const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
+            if (lastTileInRow) {
+                const backFace = lastTileInRow.querySelector('.back');
+                
+                // (?) İkonunu oluştur
+                const meaningIcon = createElement('button', {
+                    className: 'meaning-icon', // CSS ile stil vermek isterseniz
+                    innerHTML: '?',
+                    onclick: (e) => {
+                        e.stopPropagation(); // Arka plandaki tıklamaları engelle
+                        handleMeaningIconClick(guessWord);
+                    }
+                });
+                
+                // ...
+                // İkonu stilize et (Inline CSS)
+                Object.assign(meaningIcon.style, {
+                    position: 'absolute',
+                    right: '2px',                 // 1. Daha köşeye (4px -> 2px)
+                    top: '2px',                   // 1. Daha köşeye (4px -> 2px)
+                    width: '22px',                // 3. Harfin arkasında kaybolmasın diye azıcık büyüttük
+                    height: '22px',               // 3. Harfin arkasında kaybolmasın diye azıcık büyüttük
+                    backgroundColor: '#ef4444', // 2. Arkaplanı Kırmızı yaptık (Tailwind'in red-500 rengi)
+                    color: 'white',               // '?' yazısı beyaz kalsın (kırmızı üstünde)
+                    borderRadius: '50%',
+                    border: '1px solid white',    // Kenarlık beyaz kalsın
+                    fontSize: '15px',             // '?' yazısını da azıcık büyüttük
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    zIndex: '10',
+                    padding: '0',
+                    lineHeight: '21px'            // Dikeyde ortalamak için (22px yüksekliğe göre ayarlandı)
+                });
+                
+                // İkonu karenin 'back' yüzüne ekle
+                if(backFace) {
+                    backFace.appendChild(meaningIcon);
+                }
+            }
         }
-    }
+        // --- YENİ KOD SONU ---
+
+    } // <-- Dış (i) döngüsünün bittiği yer
     updateKeyboard(gameData);
+// ...
     
     if (gameData.status === 'playing') {
         if (isBR && !playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) startBRTimer();
@@ -297,6 +357,17 @@ export async function fetchWordMeaning(word) {
         console.error("Anlam alınırken bir hata oluştu:", error);
         return "Anlam yüklenirken bir sorun oluştu. (Yerel dosya okunamadı)";
     }
+}
+
+// YENİ FONKSİYON: Kelime anlamı ikonuna tıklandığında çalışır
+async function handleMeaningIconClick(word) {
+    if (!word || word.trim() === '') return;
+    
+    // 1. Yerel dosyadan (offline) anlamı çek
+    const meaning = await fetchWordMeaning(word);
+    
+    // 2. Anlamı bir "baloncuk" (alert kutusu) içinde göster
+    alert(`${word.toLocaleUpperCase('tr-TR')}:\n\n${meaning}`);
 }
 
 export function listenToGameUpdates(gameId) {
