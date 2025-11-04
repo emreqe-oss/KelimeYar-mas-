@@ -29,6 +29,29 @@ import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, di
 } from './ui.js';
 import { default as allWordList } from '../functions/kelimeler.json'; 
 
+// js/game.js dosyanızın en üstüne (import'ların altına) ekleyin:
+
+// Anlamları bir kez yükleyip hafızada tutmak için:
+let localMeanings = null;
+
+async function getLocalMeanings() {
+    if (localMeanings) {
+        return localMeanings; // Zaten yüklendiyse, hafızadakini döndür
+    }
+    try {
+        // 1. Adımda 'public' klasörüne kopyaladığınız dosyayı yüklüyoruz
+        const response = await fetch('/kelime_anlamlari.json'); 
+        if (!response.ok) {
+            throw new Error('Yerel anlam dosyası (kelime_anlamlari.json) bulunamadı.');
+        }
+        localMeanings = await response.json();
+        console.log("Kelime anlamları başarıyla yerel dosyadan yüklendi.");
+        return localMeanings;
+    } catch (error) {
+        console.error("Yerel anlamlar yüklenemedi:", error);
+        return null; // Hata olursa null döndür
+    }
+}
 
 // Sabitler ve yardımcı fonksiyonlar
 const GUESS_COUNT = 6;
@@ -252,13 +275,27 @@ export async function renderGameState(gameData, animateLastRow = false) {
     }
 }
 
+// ESKİ fetchWordMeaning FONKSİYONUNU SİLİN VE BUNU YAPIŞTIRIN:
+
 export async function fetchWordMeaning(word) {
     try {
-        const result = await getWordMeaning(word); 
-        return result.meaning || "Anlamı bulunamadı.";
+        // 1. Yerel anlamlar dosyasını yükle (veya hafızadan al)
+        const meanings = await getLocalMeanings();
+        
+        // 2. Anlamı dosyadan ara (kelimeyi büyük harfe çevirerek arayalım, garanti olsun)
+        const upperCaseWord = word.toLocaleUpperCase('tr-TR');
+        if (meanings && meanings[upperCaseWord]) {
+            // Eğer dosyada bu kelime varsa, anlamını döndür
+            return meanings[upperCaseWord];
+        }
+        
+        // 3. Dosyada yoksa "bulunamadı" de
+        return "Anlamı bulunamadı.";
+
     } catch (error) {
-        console.error("Anlam alınırken Cloud Function hatası:", error);
-        return "Anlam yüklenirken bir sorun oluştu. (Şu an bakımda)";
+        // Artık Cloud Function hatası almayacağız, bu sadece dosya yükleme hatası olur
+        console.error("Anlam alınırken bir hata oluştu:", error);
+        return "Anlam yüklenirken bir sorun oluştu. (Yerel dosya okunamadı)";
     }
 }
 
