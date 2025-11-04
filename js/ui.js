@@ -1,4 +1,4 @@
-// js/ui.js - (GÜNCELLENDİ)
+// js/ui.js - GÜNCEL VE TAM KOD (TÜM DÜZELTMELER DAHİL)
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
@@ -7,25 +7,41 @@ import { joinGame } from './game.js';
 // Değişkenler
 export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
 
+// === BAŞLANGIÇ: YENİ BR ELEMENTLERİ ===
+export let brRoundCounter, brTimerDisplay, brTurnDisplay;
+const brPlayerSlots = [];
+// === BİTİŞ: YENİ BR ELEMENTLERİ ===
+
 export function initUI() {
-    guessGrid = document.getElementById('guess-grid');
-    keyboardContainer = document.getElementById('keyboard');
-    turnDisplay = document.getElementById('turn-display');
-    timerDisplay = document.getElementById('timer-display');
-    gameIdDisplay = document.getElementById('game-id-display');
-    startGameBtn = document.getElementById('start-game-btn');
-    roundCounter = document.getElementById('round-counter');
-    shareGameBtn = document.getElementById('share-game-btn');
-    userDisplay = document.getElementById('user-display');
-    invitationModal = document.getElementById('invitation-modal');
-    friendsTab = document.getElementById('friends-tab');
-    requestsTab = document.getElementById('requests-tab');
-    addFriendTab = document.getElementById('add-friend-tab');
-    showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
-    showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
-    showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
-    friendRequestCount = document.getElementById('friend-request-count');
-    multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
+    guessGrid = document.getElementById('guess-grid');
+    keyboardContainer = document.getElementById('keyboard');
+    turnDisplay = document.getElementById('turn-display');
+    timerDisplay = document.getElementById('timer-display');
+    gameIdDisplay = document.getElementById('game-id-display');
+    startGameBtn = document.getElementById('start-game-btn');
+    roundCounter = document.getElementById('round-counter');
+    shareGameBtn = document.getElementById('share-game-btn');
+    userDisplay = document.getElementById('user-display');
+    invitationModal = document.getElementById('invitation-modal');
+    friendsTab = document.getElementById('friends-tab');
+    requestsTab = document.getElementById('requests-tab');
+    addFriendTab = document.getElementById('add-friend-tab');
+    showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
+    showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
+    showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
+    friendRequestCount = document.getElementById('friend-request-count');
+    multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
+
+    // === BAŞLANGIÇ: YENİ BR ELEMENTLERİNİ EKLE ===
+    brRoundCounter = document.getElementById('br-round-counter');
+    brTimerDisplay = document.getElementById('br-timer-display');
+    brTurnDisplay = document.getElementById('br-turn-display');
+    // 4 oyuncu slotunu diziye ekle
+    brPlayerSlots.push(document.getElementById('br-player-slot-0'));
+    brPlayerSlots.push(document.getElementById('br-player-slot-1'));
+    brPlayerSlots.push(document.getElementById('br-player-slot-2'));
+    brPlayerSlots.push(document.getElementById('br-player-slot-3'));
+    // === BİTİŞ: YENİ BR ELEMENTLERİNİ EKLE ===
 }
 
 export function showScreen(screenId) {
@@ -146,6 +162,7 @@ export function displayStats(profileData) {
     }
 }
 
+// === BAŞLANGIÇ: updateMultiplayerScoreBoard GÜNCELLEMESİ ===
 export function updateMultiplayerScoreBoard(gameData) {
     if (!multiplayerScoreBoard) return;
     
@@ -154,6 +171,7 @@ export function updateMultiplayerScoreBoard(gameData) {
     
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     if (sequentialGameInfo) {
+        // BR ise sıralı oyun info'sunu gizle, değilse göster
         sequentialGameInfo.classList.toggle('hidden', isBR || !gameData.gameType || gameData.gameType === 'daily');
     }
     
@@ -161,47 +179,71 @@ export function updateMultiplayerScoreBoard(gameData) {
     multiplayerScoreBoard.classList.toggle('hidden', !isBR);
 
     if (isBR) {
-        multiplayerScoreBoard.innerHTML = '';
+        // Oyuncuları ID'ye göre sırala ki herkes aynı sırayı görsün
+        const players = Object.entries(gameData.players)
+            .map(([id, data]) => ({ id, ...data }))
+            .sort((a, b) => a.id.localeCompare(b.id));
 
-        // --- GÜNCELLEME: Puanlamaya göre değil, isme göre sırala (veya sıralama) ---
-        const sortedPlayers = Object.entries(gameData.players).sort((a, b) => {
-            return (a[1].username || '').localeCompare(b[1].username || '');
-        });
+        // 4 slotu da güncelle
+        for (let i = 0; i < 4; i++) {
+            const slot = brPlayerSlots[i];
+            const player = players[i]; // Sıralanmış listeden oyuncuyu al
 
-        sortedPlayers.forEach(([id, data]) => {
-            const isMe = id === currentUserId;
-            const isEliminated = data.isEliminated;
-            const isWinner = data.isWinner; // Bu 'hasSolved' ile aynı anlama geliyor (tur içinde)
-            const hasFailed = data.hasFailed; // Yeni bayrak
+            if (slot) {
+                const nameEl = slot.querySelector('p:first-child');
+                const statusEl = slot.querySelector('p:last-child');
 
-            let playerStatus = '';
-            // --- GÜNCELLEME: Durum mantığı değişti ---
-            if(isWinner) { // hasSolved
-                playerStatus = '<span class="text-green-400 font-bold">ÇÖZDÜ!</span>';
-            } else if (isEliminated) {
-                playerStatus = '<span class="text-red-400 font-bold">ELENDİ</span>';
-            } else if (hasFailed) {
-                playerStatus = '<span class="text-yellow-400 font-bold">HAKKI BİTTİ</span>';
-            } else if (gameData.status === 'playing') {
-                playerStatus = `<span class="text-xs text-gray-400">${(data.guesses || []).length}/${gameData.GUESS_COUNT}</span>`;
+                if (player) {
+                    // Oyuncu varsa bilgileri doldur
+                    const isMe = player.id === currentUserId;
+                    const isEliminated = player.isEliminated;
+                    const hasSolved = player.hasSolved;
+                    const hasFailed = player.hasFailed;
+
+                    let playerStatus = '';
+                    let statusColor = 'text-gray-400';
+                    let bgColor = isMe ? 'bg-indigo-600' : 'bg-gray-600';
+                    let nameColor = isMe ? 'text-white' : 'text-gray-200';
+
+                    if (hasSolved) {
+                        playerStatus = 'ÇÖZDÜ!';
+                        statusColor = 'text-green-400 font-bold';
+                    } else if (isEliminated) {
+                        playerStatus = 'ELENDİ';
+                        statusColor = 'text-red-400 font-bold';
+                        bgColor = 'bg-gray-700 opacity-60'; // Eleneni soluklaştır
+                        nameColor = 'text-gray-500';
+                    } else if (hasFailed) {
+                        playerStatus = 'HAKKI BİTTİ';
+                        statusColor = 'text-yellow-400 font-bold';
+                        bgColor = isMe ? 'bg-indigo-800' : 'bg-gray-700';
+                    } else if (gameData.status === 'playing') {
+                        playerStatus = `${(player.guesses || []).length}/${gameData.GUESS_COUNT}`;
+                        statusColor = isMe ? 'text-indigo-200' : 'text-gray-400';
+                    } else if (gameData.status === 'waiting') {
+                         playerStatus = 'Bekliyor...';
+                         statusColor = 'text-gray-400';
+                    }
+
+                    slot.className = `${bgColor} p-2 rounded-lg shadow`; // Arka planı güncelle
+                    nameEl.textContent = `${player.username} ${isMe ? '(Sen)' : ''}`;
+                    nameEl.className = `font-bold text-sm truncate ${nameColor}`;
+                    statusEl.textContent = playerStatus;
+                    statusEl.className = `text-xs ${statusColor}`;
+
+                } else {
+                    // Oyuncu yoksa "Boş" olarak ayarla (istediğiniz çizgi)
+                    slot.className = 'bg-gray-700 p-2 rounded-lg shadow';
+                    nameEl.textContent = '---';
+                    nameEl.className = 'font-bold text-sm truncate text-gray-500';
+                    statusEl.textContent = 'Boş';
+                    statusEl.className = 'text-xs text-gray-500';
+                }
             }
-            // --- GÜNCELLEME SONU ---
-
-            const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : (hasFailed ? 'bg-gray-700' : 'bg-gray-600'));
-            
-            const playerDiv = createElement('div', {
-                className: `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`,
-                style: { minWidth: '100px' },
-                innerHTML: `
-                    <p class="font-bold text-sm truncate ${isMe ? 'text-white' : 'text-gray-200'}">${data.username} ${isMe ? '(Sen)' : ''}</p>
-                    <p class="text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'}">${playerStatus}</p>
-                `
-            });
-            multiplayerScoreBoard.appendChild(playerDiv);
-        });
+        }
     }
 
-    // Sıralı Multiplayer/vsCPU için Skor Güncellemesi (Puanlama burada kalıyor)
+    // Sıralı Multiplayer/vsCPU için Skor Güncellemesi (Bu kısım aynı kalıyor)
     const p1ScoreEl = document.getElementById('player1-score');
     const p2ScoreEl = document.getElementById('player2-score');
     
@@ -223,6 +265,8 @@ export function updateMultiplayerScoreBoard(gameData) {
          }
     }
 }
+// === BİTİŞ: updateMultiplayerScoreBoard GÜNCELLEMESİ ===
+
 
 export function switchFriendTab(tabName) {
     const tabs = { friends: document.getElementById('friends-tab'), requests: document.getElementById('requests-tab'), add: document.getElementById('add-friend-tab') };
@@ -294,11 +338,11 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
 
             const gameDiv = createElement('div', {
                 className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
-                onclick: () => joinGame(game.id), // joinGame BR'yi de desteklemeli (zaten destekliyor)
+                onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)), // Doğru join fonksiyonunu çağır
                 innerHTML: `
                     <div class="flex justify-between items-center">
                         <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
-                        <p class="text-sm ${game.currentPlayerId === state.getUserId() || game.gameType === 'multiplayer-br' ? 'text-green-400 font-bold' : 'text-gray-400'}">${statusText}</p>
+                        <p class="text-sm ${game.currentPlayerId === state.getUserId() || (game.gameType === 'multiplayer-br' && game.status === 'playing') ? 'text-green-400 font-bold' : 'text-gray-400'}">${statusText}</p>
                     </div>
                 `
             });
@@ -323,7 +367,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
              } else {
                  const isWinner = game.roundWinner === state.getUserId(); // Sıralı oyunlarda roundWinner'a bakılır
                  resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
-                 borderColor = isWinner ? 'border-green-500' : 'border-red-500';
+                 borderColor = isWinner ? 'border-green-500' : (game.roundWinner === null ? 'border-yellow-500' : 'border-red-500');
              }
 
              const gameDiv = createElement('div', {
@@ -347,9 +391,9 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
             const inviteDiv = createElement('div', {
                 className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
-                onclick: () => joinGame(invite.id),
+                onclick: () => (invite.gameType === 'multiplayer-br' ? joinBRGame(invite.id) : joinGame(invite.id)),
                 innerHTML: `
-                    <p><strong>${creatorUsername}</strong> seni bir oyuna davet ediyor!</p>
+                    <p><strong>${creatorUsername}</strong> seni bir ${invite.gameType === 'multiplayer-br' ? 'Battle Royale' : 'oyuna'} davet ediyor!</p>
                     <p class="text-xs text-gray-400">Katılmak için tıkla.</p>
                 `
             });

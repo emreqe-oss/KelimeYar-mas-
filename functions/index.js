@@ -1,4 +1,4 @@
-// functions/index.js - YARIŞ DURUMU DÜZELTİLMİŞ KOD
+// functions/index.js - GÜNCEL VE TAM KOD (TÜM DÜZELTMELER DAHİL)
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -155,7 +155,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                         updates[`players.${userId}.isWinner`] = true; // (Client için)
                         
                     } else if (playerGuesses.length >= GUESS_COUNT) {
-                        updates[`players.${userId}.hasFailed`] = true; // (Eklendi)
+                        updates[`players.${userId}.hasFailed`] = true; 
                     }
                     
                     const currentPlayers = Object.entries(gameData.players).map(([id, p]) => {
@@ -293,7 +293,7 @@ exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
     });
 });
 
-// 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme (GÜNCELLENDİ)
+// 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme
 exports.startNextBRRound = functions.https.onRequest((request, response) => {
     corsHandler(request, response, async () => {
         if (request.method !== 'POST') {
@@ -315,15 +315,11 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                 const gameData = gameDoc.data();
                 if (gameData.gameType !== 'multiplayer-br') throw new Error("Bu bir Battle Royale oyunu değil.");
                 
-                // --- BAŞLANGIÇ: YARIŞ DURUMU DÜZELTMESİ ---
-                // Hata fırlatmak yerine, eğer durum 'finished' değilse (yani 'playing' ise),
-                // bu başka birinin bizden önce davrandığı anlamına gelir.
-                // İşlemi sessizce durdur.
+                // Yarış durumu düzeltmesi
                 if (gameData.status !== 'finished') {
                     console.log(`Race condition on ${gameId}. Status is ${gameData.status}. Aborting.`);
-                    return; // Transaction'dan güvenle çık.
+                    return; 
                 }
-                // --- BİTİŞ: YARIŞ DURUMU DÜZELTMESİ ---
 
                 const allPlayers = Object.entries(gameData.players).map(([id, data]) => ({ id, ...data }));
                 
@@ -358,14 +354,13 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                 updates.players = gameData.players; 
                 
                 // 5. Maç Bitişi Kontrolü
-                
                 if (finalActivePlayers.length === 1) {
                     updates.status = 'finished'; 
                     updates.matchWinnerId = finalActivePlayers[0].id;
                     updates.roundWinner = updates.matchWinnerId; 
                     
                     transaction.update(gameRef, updates);
-                    return; // Transaction'ı bitir
+                    return; 
                 } 
                 
                 if (finalActivePlayers.length === 0) { 
@@ -374,7 +369,7 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                     updates.roundWinner = null; 
                     
                     transaction.update(gameRef, updates);
-                    return; // Transaction'ı bitir
+                    return; 
                 }
                 
                 // 6. Yeni Tur Başlatma (Oyun devam ediyor)
@@ -404,7 +399,6 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                 transaction.update(gameRef, updates);
             });
             
-            // Transaction bittikten sonra, her durumda (hata almadıkça) başarı gönder
             return response.status(200).send({ success: true, message: "Tur isteği işlendi." });
             
         } catch (error) {

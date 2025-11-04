@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr"> 
 <head>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='10'%20rx='32'%20fill='%23b45309'/%3E%3Crect%20width='180'%20height='180'%20x='6'%20y='6'%20rx='32'%20fill='%23f59e0b'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dy='.1em'%20dominant-baseline='central'%20text-anchor='middle'%20font-size='110'%20font-family='Inter,%20sans-serif'%20font-weight='bold'%20fill='%23ffffff'%3EK%3C/text%3E%3C/svg%3E">
     <meta charset="UTF-8">
@@ -19,18 +19,18 @@
             display: flex;
             align-items: center;
         }
-        /* Ayrıl/Ana Menü tuşlarının tıklama alanını sağlamlaştırıyoruz */
         #leave-game-button, #main-menu-btn {
             cursor: pointer;
         }
+        /* Bir önceki adımdaki stil bloğu kaldırıldı */
     </style>
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-gray-200">
-    <div id="app" class="w-full max-w-md mx-auto flex flex-col h-full p-2">
-        
-        <div id="main-menu-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
+<body class="bg-gray-900 text-gray-200 overflow-hidden">
+    
+    <div id="app" class="w-full max-w-md mx-auto flex flex-col h-dvh p-2">
+    <div id="main-menu-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
             <header class="flex justify-between items-center bg-gray-800 p-3 rounded-lg shadow">
                 <div class="flex items-center gap-3">
                     <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full border-2 border-gray-600">
@@ -56,7 +56,7 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <button id="friends-btn" class="bg-blue-600 hover:bg-blue-700 rounded-lg py-6 text-xl font-bold transition">Arkadaşlar</button>
-                <button id="stats-btn" class="bg-gray-600 hover:bg-gray-500 rounded-lg py-6 text-xl font-bold transition">İstatistik</button>
+                <button id="stats-btn-main" class="bg-gray-600 hover:bg-gray-500 rounded-lg py-6 text-xl font-bold transition">İstatistik</button>
             </div>
             
             <div class="flex-grow"></div>
@@ -271,29 +271,62 @@
         </div>
 
         <div id="game-screen" class="hidden flex-1 flex flex-col items-center">
-             <div id="multiplayer-score-board" class="w-full bg-gray-800 p-2 rounded-lg shadow flex flex-wrap justify-center gap-2 flex-shrink-0 mb-2"></div>
-             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0" id="sequential-game-info">
-                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
-                 <div class="text-center w-1/5">
-                     <p id="round-counter" class="text-xs text-gray-400"></p>
-                     <p id="turn-display" class="font-bold text-md"></p>
-                     <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
-                 </div>
-                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
-             </div>
-             <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
+            
+            <div id="multiplayer-score-board" class="hidden w-full bg-gray-800 p-2 rounded-lg shadow flex-shrink-0 mb-2">
+                <div class="grid grid-cols-5 gap-2 w-full items-center">
+                    
+                    <div class="col-span-2 flex flex-col gap-2">
+                        <div id="br-player-slot-0" class="bg-gray-700 p-2 rounded-lg shadow">
+                            <p class="font-bold text-sm truncate text-gray-500">---</p>
+                            <p class="text-xs text-gray-500">Boş</p>
+                        </div>
+                        <div id="br-player-slot-1" class="bg-gray-700 p-2 rounded-lg shadow">
+                            <p class="font-bold text-sm truncate text-gray-500">---</p>
+                            <p class="text-xs text-gray-500">Boş</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 flex flex-col items-center justify-center">
+                         <p id="br-round-counter" class="text-xs text-gray-400">Tur 1</p>
+                         <p id="br-timer-display" class="font-bold text-4xl font-mono text-amber-400">60</p>
+                         <p id="br-turn-display" class="font-bold text-sm text-center">Tahmin Yap!</p>
+                    </div>
+                    
+                    <div class="col-span-2 flex flex-col gap-2">
+                        <div id="br-player-slot-2" class="bg-gray-700 p-2 rounded-lg shadow">
+                            <p class="font-bold text-sm truncate text-gray-500">---</p>
+                            <p class="text-xs text-gray-500">Boş</p>
+                        </div>
+                        <div id="br-player-slot-3" class="bg-gray-700 p-2 rounded-lg shadow">
+                            <p class="font-bold text-sm truncate text-gray-500">---</p>
+                            <p class="text-xs text-gray-500">Boş</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0" id="sequential-game-info">
+                <div id="player1-score" class="text-left w-2/5 truncate"></div>
+                <div class="text-center w-1/5">
+                    <p id="round-counter" class="text-xs text-gray-400"></p>
+                    <p id="turn-display" class="font-bold text-md"></p>
+                    <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
+                </div>
+                <div id="player2-score" class="text-right w-2/5 truncate"></div>
+            </div>
+            
+            <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
                  <div class="flex items-center gap-2">
                      <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
                      <button id="copy-game-id-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-0 px-2 rounded text-xs">Kopyala</button>
                      <button id="share-game-btn" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-0 px-2 rounded text-xs flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg><span>Paylaş</span></button>
                  </div>
                  <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
-             </div>
-             <div class="w-full flex-grow flex flex-col justify-start overflow-y-auto min-h-0 py-2">
-                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
-             </div>
-             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
-             <div id="keyboard" class="w-full flex-shrink-0"></div>
+            </div>
+            <div class="w-full flex-grow flex flex-col justify-start overflow-y-auto min-h-0 py-2">
+                <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
+            </div>
+            <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
+            <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
 
         <div id="scoreboard-screen" class="hidden flex-1 flex flex-col justify-center">
@@ -302,7 +335,7 @@
                 <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
                 
                 <div id="daily-stats-container" class="hidden">
-                    </div>
+                </div>
 
                 <div class="mb-4" id="default-word-display-container">
                     <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
@@ -324,10 +357,11 @@
     <div id="toast" class="toast"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-    <script type="module" src="js/main.js?v=2.0.7"></script>
-</body>
+    
+    <script type="module" src="js/main.js?v=2.1.0"></script> </body>
 </html>
