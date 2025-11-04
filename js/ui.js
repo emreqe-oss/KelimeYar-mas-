@@ -90,14 +90,26 @@ export function createKeyboard(handleKeyPress) {
         ['⌫', 'ENTER']
     ];
     keyRows.forEach((row, rowIndex) => {
-        const rowDiv = createElement('div', { className: `flex justify-center gap-1 my-1 w-full ${rowIndex === 3 ? 'gap-2' : ''}` });
+        // SATIRLAR İÇİN NOT: w-full ve justify-center birlikte çalışarak
+        // sabit genişlikteki tuş gruplarını satır içinde ortalayacaktır. Bu doğrudur.
+        const rowDiv = createElement('div', { className: `flex justify-center gap-1 mt-1 w-full ${rowIndex === 3 ? 'gap-2' : ''}` });
+        
         row.forEach(key => {
             const isSpecialKey = key === '⌫' || key === 'ENTER';
+            
+            // --- HATA BURADAYDI - DÜZELTME ---
+            // 1. Harf tuşlarına sabit genişlik ('w-10' -> 40px) veriyoruz.
+            // 2. Özel tuşlara ('ENTER', '⌫') satırı doldurması için 'flex-1' veriyoruz.
+            const keySizeClass = isSpecialKey ? 'flex-1' : 'w-10'; // w-10 = 2.5rem = 40px
+            // --- DÜZELTME SONU ---
+
             const keyButton = createElement('button', {
-                className: `keyboard-key rounded font-semibold uppercase bg-gray-500 ${isSpecialKey ? 'bg-gray-600' : ''}`,
+                // 3. 'keySizeClass' değişkenini className'e ekliyoruz.
+                className: `keyboard-key rounded font-semibold uppercase bg-gray-500 ${isSpecialKey ? 'bg-gray-600' : ''} ${keySizeClass}`,
                 dataset: { key: key },
                 onclick: () => handleKeyPress(key),
-                style: { flex: isSpecialKey ? '6' : '1' }
+                // 4. SATIR: style: { flex: ... } satırını SİLİYORUZ.
+                // Artık flex/width kontrolünü Tailwind sınıfları (className) ile yapıyoruz.
             });
 
             if (key === '⌫') {

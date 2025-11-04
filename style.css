@@ -1,9 +1,35 @@
-html, body { 
-    height: 100vh; 
-    height: -webkit-fill-available;
-    overflow: hidden; 
+/* style.css - NİHAİ DÜZENLEME (MANUEL HESAPLAMA) */
+
+/* *** DÜZELTME 1: "Ekrana Sığdır" çözümü *** */
+html {
+    height: 100vh; /* Ekran yüksekliğini 100vh olarak ayarla */
 }
-body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: flex; flex-direction: column; transition: background-color 0.3s, color 0.3s; }
+body { 
+    font-family: 'Inter', sans-serif; 
+    touch-action: manipulation; 
+    transition: background-color 0.3s, color 0.3s;
+    height: 100vh; /* Body'nin de 100vh olmasını garantile */
+    overflow: hidden; /* Sayfanın kendisinin kaymasını engelle */
+}
+/* *** DÜZELTME 2: #app div'inin tam yüksekliği almasını sağla *** */
+#app {
+    height: 100%;
+}
+/* *** DÜZELTME 3: OYUN EKRANI YÜKSEKLİK HESAPLAMASI *** */
+/* Klavye yüksekliği yaklaşık 205px'tir (4 satır * 48px yükseklik + 3 * 4px boşluk).
+  Oyun ekranına diyoruz ki: Toplam yüksekliğin ne olursa olsun,
+  klavyenin (flex-shrink-0) ve skor tablosunun (flex-shrink-0) kapladığı
+  alan dışındaki TÜM ALANI SEN AL (flex: 1).
+  Ayrıca kelime kutularının (flex-grow) kaydırılabilir olmasını
+  sağlamak için min-height: 0 ekliyoruz.
+*/
+#game-screen {
+    flex: 1 1 0%;
+    min-height: 0;
+}
+/* *** Düzeltmelerin sonu *** */
+
+
 .tile { 
     width: 100%; 
     padding-bottom: 100%; 
@@ -58,7 +84,7 @@ body { font-family: 'Inter', sans-serif; touch-action: manipulation; display: fl
 .tile.absent, .tile.static.absent { background-color: #374151; border-color: #374151; color: white; }
 .tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
 
-.keyboard-key { transition: background-color 0.2s; height: 48px; font-size: 1rem; padding: 0; display: flex; align-items: center; justify-content: center; }
+.keyboard-key { transition: background-color 0.2s; height: 40px; font-size: 1rem; padding: 0; display: flex; align-items: center; justify-content: center; }
 .keyboard-key.correct { background-color: #10b981 !important; color: white; }
 .keyboard-key.present { background-color: #f59e0b !important; color: white; }
 .keyboard-key.absent { background-color: #374151 !important; color: white; }
@@ -97,7 +123,7 @@ body.theme-light .tile.correct, body.theme-light .tile.present, body.theme-light
     width: 56px;
     height: 56px;
     padding: 0;
-    margin-left: -12px; /* Geri tuşunu sol kenara yaslamak için */
+    margin-left: -12px;
     border-radius: 9999px; 
     transition: background-color 0.2s;
 }

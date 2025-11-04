@@ -66,11 +66,11 @@ export function initializeGameUI(gameData) {
         guessGrid.innerHTML = ''; 
 
         if (wordLength === 4) {
-            guessGrid.style.maxWidth = '220px';
+            guessGrid.style.maxWidth = '150px';
         } else if (wordLength === 5) {
-            guessGrid.style.maxWidth = '280px';
+            guessGrid.style.maxWidth = '190px';
         } else { // 6 harfli
-            guessGrid.style.maxWidth = '320px';
+            guessGrid.style.maxWidth = '230px';
         }
     }
     createGrid(wordLength, GUESS_COUNT);
