@@ -34,7 +34,8 @@ body {
     width: 100%; 
     padding-bottom: 100%; 
     position: relative; 
-    border: 2px solid #4b5563; 
+    /* Kenarlık rengini #4b5563 (gray-600) yerine #6b7280 (gray-500) yaptık. */
+    border: 2px solid #ffffff; /* <-- DÜZELTİLDİ */
     display: flex;
     justify-content: center; 
     align-items: center;
@@ -93,6 +94,21 @@ body {
 .pulsate { animation: pulsate-bck 1s ease-in-out infinite both; }
 @keyframes pulsate-bck { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- KARANLIK TEMA ARKA PLANI (YENİ) --- */
+body:not(.theme-light) {
+    /* !!! DİKKAT: 'public' klasörüne koyduğunuz 
+      siyah ağırlıklı resminizin adını buraya yazın.
+    */
+    background-image: url('/arkaplan-koyu.jpeg'); /* <-- DOSYA ADINI DEĞİŞTİRİN */
+    
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* Resim yüklenemezse diye fallback rengi (bg-gray-900) */
+    background-color: #111827; 
+}
 
 /* --- AÇIK TEMA GÜNCELLEMELERİ --- */
 body.theme-light { 
