@@ -1,4 +1,4 @@
-// js/ui.js
+// js/ui.js - (GÜNCELLENDİ)
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
@@ -147,17 +147,11 @@ export function displayStats(profileData) {
 }
 
 export function updateMultiplayerScoreBoard(gameData) {
-    // Bu fonksiyonu ikiye bölüyoruz: updateScoreBoardContent ve sequentialGameInfoContent
-    // updateMultiplayerScoreBoard sadece BR stilini güncelleyecek
-    // sequentialGameInfoContent ise sıralı oyun skorlarını güncelleyecek
-    
     if (!multiplayerScoreBoard) return;
     
     const isBR = state.getGameMode() === 'multiplayer-br';
     const currentUserId = state.getUserId();
-    const players = Object.entries(gameData.players);
-
-    // sequentialGameInfo'yu kontrol et
+    
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     if (sequentialGameInfo) {
         sequentialGameInfo.classList.toggle('hidden', isBR || !gameData.gameType || gameData.gameType === 'daily');
@@ -169,21 +163,31 @@ export function updateMultiplayerScoreBoard(gameData) {
     if (isBR) {
         multiplayerScoreBoard.innerHTML = '';
 
-        players.forEach(([id, data]) => {
+        // --- GÜNCELLEME: Puanlamaya göre değil, isme göre sırala (veya sıralama) ---
+        const sortedPlayers = Object.entries(gameData.players).sort((a, b) => {
+            return (a[1].username || '').localeCompare(b[1].username || '');
+        });
+
+        sortedPlayers.forEach(([id, data]) => {
             const isMe = id === currentUserId;
             const isEliminated = data.isEliminated;
-            const isWinner = data.isWinner;
+            const isWinner = data.isWinner; // Bu 'hasSolved' ile aynı anlama geliyor (tur içinde)
+            const hasFailed = data.hasFailed; // Yeni bayrak
 
             let playerStatus = '';
-            if(isWinner) {
-                playerStatus = '<span class="text-green-400 font-bold">KAZANDI!</span>';
+            // --- GÜNCELLEME: Durum mantığı değişti ---
+            if(isWinner) { // hasSolved
+                playerStatus = '<span class="text-green-400 font-bold">ÇÖZDÜ!</span>';
             } else if (isEliminated) {
                 playerStatus = '<span class="text-red-400 font-bold">ELENDİ</span>';
+            } else if (hasFailed) {
+                playerStatus = '<span class="text-yellow-400 font-bold">HAKKI BİTTİ</span>';
             } else if (gameData.status === 'playing') {
-                playerStatus = `<span class="text-xs text-gray-400">${data.guesses.length}/${gameData.GUESS_COUNT}</span>`;
+                playerStatus = `<span class="text-xs text-gray-400">${(data.guesses || []).length}/${gameData.GUESS_COUNT}</span>`;
             }
+            // --- GÜNCELLEME SONU ---
 
-            const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : 'bg-gray-600');
+            const bgColor = isMe ? 'bg-indigo-600' : (isEliminated ? 'bg-gray-700' : (hasFailed ? 'bg-gray-700' : 'bg-gray-600'));
             
             const playerDiv = createElement('div', {
                 className: `${bgColor} p-2 rounded-lg shadow w-full sm:w-1/2 flex-grow`,
@@ -197,7 +201,7 @@ export function updateMultiplayerScoreBoard(gameData) {
         });
     }
 
-    // Sıralı Multiplayer/vsCPU için Skor Güncellemesi (sequential-game-info barı)
+    // Sıralı Multiplayer/vsCPU için Skor Güncellemesi (Puanlama burada kalıyor)
     const p1ScoreEl = document.getElementById('player1-score');
     const p2ScoreEl = document.getElementById('player2-score');
     
@@ -283,13 +287,18 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             let statusText = game.status === 'waiting' ? 'Rakip bekleniyor...' : `Sıra: ${game.players[game.currentPlayerId]?.username || '...'}`;
             if (game.currentPlayerId === state.getUserId()) statusText = "Sıra sende!";
 
+            // BR Oyunlarını da burada göster
+            if (game.gameType === 'multiplayer-br') {
+                 statusText = game.status === 'waiting' ? `Lobi (${game.playerIds.length}/${game.maxPlayers || 4})` : `Oynanıyor (Tur ${game.currentRound})`;
+            }
+
             const gameDiv = createElement('div', {
                 className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
-                onclick: () => joinGame(game.id),
+                onclick: () => joinGame(game.id), // joinGame BR'yi de desteklemeli (zaten destekliyor)
                 innerHTML: `
                     <div class="flex justify-between items-center">
-                        <p class="font-bold">${opponentUsername}</p>
-                        <p class="text-sm ${game.currentPlayerId === state.getUserId() ? 'text-green-400 font-bold' : 'text-gray-400'}">${statusText}</p>
+                        <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
+                        <p class="text-sm ${game.currentPlayerId === state.getUserId() || game.gameType === 'multiplayer-br' ? 'text-green-400 font-bold' : 'text-gray-400'}">${statusText}</p>
                     </div>
                 `
             });
@@ -304,15 +313,25 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
         finishedGames.forEach(game => {
              const opponentId = game.playerIds.find(id => id !== state.getUserId());
              const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Bilinmiyor';
-             const isWinner = game.roundWinner === state.getUserId();
-             const resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
+             let resultText = 'Bitti';
+             let borderColor = 'border-gray-500';
+
+             if (game.gameType === 'multiplayer-br') {
+                 const isWinner = game.matchWinnerId === state.getUserId();
+                 resultText = isWinner ? 'Kazandın' : (game.matchWinnerId === null ? 'Berabere' : 'Kaybettin');
+                 borderColor = isWinner ? 'border-green-500' : (game.matchWinnerId === null ? 'border-yellow-500' : 'border-red-500');
+             } else {
+                 const isWinner = game.roundWinner === state.getUserId(); // Sıralı oyunlarda roundWinner'a bakılır
+                 resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
+                 borderColor = isWinner ? 'border-green-500' : 'border-red-500';
+             }
 
              const gameDiv = createElement('div', {
-                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${isWinner ? 'border-green-500' : 'border-red-500'}`,
+                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor}`,
                 innerHTML: `
                     <div class="flex justify-between items-center">
-                        <p class="font-bold">${opponentUsername}</p>
-                        <p class="text-sm font-bold ${isWinner ? 'text-green-400' : 'text-red-400'}">${resultText}</p>
+                        <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
+                        <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
                     </div>
                 `
             });

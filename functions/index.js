@@ -1,27 +1,26 @@
-// functions/index.js - BR MANTIK KONTROLLERİ YAPILMIŞ SON KOD
+// functions/index.js - YARIŞ DURUMU DÜZELTİLMİŞ KOD
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const cors = require("cors");
 
-// CORS Yapılandırması: İzin verilen adresler
+// CORS Yapılandırması
 const corsHandler = cors({
     origin: [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://kelime-yar-mas.vercel.app" 
+        "https://kelime-yar-mas.vercel.app"
     ],
-    methods: ["GET", "POST", "OPTIONS"], 
+    methods: ["GET", "POST", "OPTIONS"],
 });
 
 admin.initializeApp();
 
-// Kelime listelerini yerel olarak içeri aktarıyoruz.
 const kelimeler = require("./kelimeler.json");
 const cevaplar = require("./cevaplar.json");
 // const kelimeAnlamlari = require("./kelime_anlamlari.json"); 
 
-const SCORE_POINTS = [1000, 800, 600, 400, 200, 100];
+// const SCORE_POINTS = [1000, 800, 600, 400, 200, 100]; // BR için kaldırıldı
 const GUESS_COUNT = 6;
 
 function calculateColors(guess, secret, wordLength) {
@@ -47,7 +46,6 @@ function calculateColors(guess, secret, wordLength) {
     return colors;
 }
 
-// Yardımcı Fonksiyon: Cloud Function'dan kelime çekmek için (index.js içinde tanımlı)
 async function getNewSecretWordFromLocal(wordLength) {
     try {
         const wordList = cevaplar[String(wordLength)];
@@ -97,7 +95,7 @@ exports.checkWordValidity = functions.https.onRequest((request, response) => {
     });
 });
 
-// 3. Kelime Anlamı Çekme (Şimdilik Kapalı/Bakımda)
+// 3. Kelime Anlamı Çekme
 exports.getWordMeaning = functions.https.onRequest((request, response) => {
     corsHandler(request, response, () => {
         return response.status(200).send({ success: false, meaning: "Anlam çekme özelliği şu an bakımda." });
@@ -133,7 +131,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                 const playerState = gameData.players[userId];
                 const currentRow = playerState.guesses ? playerState.guesses.length : 0;
                 
-                if (playerState.isEliminated || playerState.hasSolved || currentRow >= GUESS_COUNT) {
+                if (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || currentRow >= GUESS_COUNT) {
                     throw new Error("Tahmin hakkınız kalmamış veya elenmiş/çözmüşsünüz.");
                 }
 
@@ -150,62 +148,41 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                 const updates = { [`players.${userId}.guesses`]: playerGuesses };
                 let isWinner = (word === secretWord);
                 
-                // =======================================================
-                // --- BATTLE ROYALE (BR) MANTIĞI (GÜNCELLENMİŞ) ---
-                // =======================================================
                 if (isBR) {
                     
                     if (isWinner) {
-                        // Yeni Mantık: Kelimeyi bilen oyuncu bir sonraki kelimeye geçmeye hak kazanır.
-                        updates[`players.${userId}.hasSolved`] = true; // Yeni durum: Kelimeyi çözdü
-                        updates[`players.${userId}.isWinner`] = true; // Turu kazanan olarak işaretle (Client için)
-
-                        // Kazandığı tur için skor eklenir
-                        const scoreToAdd = (SCORE_POINTS[playerGuesses.length - 1] || 0) + 500;
-                        updates[`players.${userId}.score`] = (playerState.score || 0) + scoreToAdd; 
+                        updates[`players.${userId}.hasSolved`] = true;
+                        updates[`players.${userId}.isWinner`] = true; // (Client için)
                         
                     } else if (playerGuesses.length >= GUESS_COUNT) {
-                        // 6 hakkı bitti, ELENİR.
-                        updates[`players.${userId}.isEliminated`] = true;
+                        updates[`players.${userId}.hasFailed`] = true; // (Eklendi)
                     }
                     
                     const currentPlayers = Object.entries(gameData.players).map(([id, p]) => {
                         let tempP = {...p, id};
                         if (id === userId) {
                             tempP.guesses = playerGuesses;
-                            tempP.isEliminated = updates[`players.${userId}.isEliminated`] || p.isEliminated;
+                            tempP.isEliminated = p.isEliminated; 
                             tempP.hasSolved = updates[`players.${userId}.hasSolved`] || p.hasSolved;
                             tempP.isWinner = updates[`players.${userId}.isWinner`] || p.isWinner;
+                            tempP.hasFailed = updates[`players.${userId}.hasFailed`] || p.hasFailed; 
                         }
                         return tempP;
                     });
     
-                    const activePlayers = currentPlayers.filter(p => !p.isEliminated && !p.hasSolved);
+                    const activePlayers = currentPlayers.filter(p => !p.isEliminated && !p.hasSolved && !p.hasFailed);
                     
-                    // Tur Bitiş Kontrolü (Sadece tüm aktif oyuncular ya çözdü ya da elendiyse biter)
                     if (activePlayers.length === 0) { 
                         updates.status = 'finished';
-
                         const solvedPlayers = currentPlayers.filter(p => p.hasSolved);
                         
                         if (solvedPlayers.length > 0) {
-                            // En yüksek puanlı çözeni tur kazananı yap (Bu, client'ta Skor Tablosunu tetikler)
-                            const sortedWinners = solvedPlayers.sort((a, b) => (b.score || 0) - (a.score || 0));
-                            updates.roundWinner = sortedWinners[0].id; 
-                            
+                            updates.roundWinner = solvedPlayers[0].id; 
                         } else {
-                            // Kimse çözemedi, tur berabere biter.
                             updates.roundWinner = null; 
                         }
-
                     } 
-                    // ÖNEMLİ: Eğer aktif oyuncu kaldıysa (activePlayers.length > 0), 
-                    // oyunun durumu 'playing' kalmalı ve süre bitimi beklenmelidir.
-
                 } 
-                // =======================================================
-                // --- SIRALI MULTIPLAYER MANTIĞI (AYNI) ---
-                // =======================================================
                 else { 
                     const playerIds = Object.keys(gameData.players);
                     const myIndex = playerIds.indexOf(userId);
@@ -216,8 +193,6 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                     if (isWinner) {
                         updates.status = 'finished';
                         updates.roundWinner = userId;
-                        const scoreToAdd = SCORE_POINTS[playerGuesses.length - 1] || 0;
-                        updates[`players.${userId}.score`] = (playerState.score || 0) + scoreToAdd;
                     } else {
                         const allPlayers = Object.values(gameData.players);
                         allPlayers[myIndex].guesses = playerGuesses; 
@@ -261,34 +236,28 @@ exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
             await admin.firestore().runTransaction(async (transaction) => {
                 const gameDoc = await transaction.get(gameRef);
                 if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
+                
                 const gameData = gameDoc.data();
+                
+                if (gameData.status === 'finished') return; 
                 if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
                 if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
                 
                 const isBR = gameData.gameType.includes('br');
                 const updates = {};
                 
-                // =======================================================
-                // --- BATTLE ROYALE (BR) TUR BİTİRME MANTIĞI (SÜRE BİTİMİ) (GÜNCELLENMİŞ) ---
-                // =======================================================
                 if (isBR) {
                     
-                    // Süre dolduğunda, turu bitirip elenme kararını tetikleriz.
                     updates.status = 'finished';
-                    updates.roundWinner = null; // Süre bittiğinde turu kimse kazanmaz
+                    updates.roundWinner = null; 
                     
-                    // Turu çözmüş biri var mı kontrol et (Skor tablosu için)
                     const solvedPlayers = Object.entries(gameData.players).filter(([id, p]) => p.hasSolved);
                     
                     if (solvedPlayers.length > 0) {
-                        const sortedWinners = solvedPlayers.map(([id, p]) => ({ id, ...p })).sort((a, b) => (b.score || 0) - (a.score || 0));
-                        updates.roundWinner = sortedWinners[0].id; 
+                        updates.roundWinner = solvedPlayers[0][0];
                     } 
                     
                 } 
-                // =======================================================
-                // --- SIRALI MULTIPLAYER TUR BİTİRME MANTIĞI (AYNI) ---
-                // =======================================================
                 else if (gameData.currentPlayerId === userId) {
                     const playerState = gameData.players[userId];
                     const wordLength = gameData.wordLength;
@@ -324,7 +293,7 @@ exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
     });
 });
 
-// 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme (GÜNCELLENMİŞ FONKSİYON)
+// 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme (GÜNCELLENDİ)
 exports.startNextBRRound = functions.https.onRequest((request, response) => {
     corsHandler(request, response, async () => {
         if (request.method !== 'POST') {
@@ -345,74 +314,98 @@ exports.startNextBRRound = functions.https.onRequest((request, response) => {
                 
                 const gameData = gameDoc.data();
                 if (gameData.gameType !== 'multiplayer-br') throw new Error("Bu bir Battle Royale oyunu değil.");
-                if (gameData.status !== 'finished') throw new Error("Tur henüz bitmedi, bir sonraki tur başlatılamaz.");
+                
+                // --- BAŞLANGIÇ: YARIŞ DURUMU DÜZELTMESİ ---
+                // Hata fırlatmak yerine, eğer durum 'finished' değilse (yani 'playing' ise),
+                // bu başka birinin bizden önce davrandığı anlamına gelir.
+                // İşlemi sessizce durdur.
+                if (gameData.status !== 'finished') {
+                    console.log(`Race condition on ${gameId}. Status is ${gameData.status}. Aborting.`);
+                    return; // Transaction'dan güvenle çık.
+                }
+                // --- BİTİŞ: YARIŞ DURUMU DÜZELTMESİ ---
 
                 const allPlayers = Object.entries(gameData.players).map(([id, data]) => ({ id, ...data }));
                 
-                // 1. Eleme İşlemi (hasSolved olmayanlar elenir)
-                let remainingPlayers = allPlayers.filter(p => !p.isEliminated);
+                // 1. Kalan oyuncuları bul
+                const remainingPlayers = allPlayers.filter(p => !p.isEliminated);
+                const remainingPlayerCount = remainingPlayers.length;
                 
+                // 2. Elenecek oyuncuları bul (çözemeyenler)
+                let playersToEliminate = [];
                 remainingPlayers.forEach(p => {
-                    if (!p.hasSolved && !p.isEliminated) {
-                        gameData.players[p.id].isEliminated = true;
+                    if (!p.hasSolved) {
+                        playersToEliminate.push(p.id);
                     }
                 });
 
-                // Eleme sonrası kalan oyuncular (Yeni turda oynayacaklar)
+                // 3. Beraberlik kontrolü
+                const isRoundDraw = (remainingPlayerCount > 1 && playersToEliminate.length === remainingPlayerCount);
+
+                if (!isRoundDraw) {
+                    // Normal eleme
+                    playersToEliminate.forEach(pid => {
+                        if (gameData.players[pid]) {
+                            gameData.players[pid].isEliminated = true;
+                        }
+                    });
+                }
+                
+                // 4. Son durumu hesapla
                 const finalActivePlayers = allPlayers.filter(p => !gameData.players[p.id].isEliminated);
                 
                 const updates = {};
-                updates.players = gameData.players; // Elenme durumu güncellendi
+                updates.players = gameData.players; 
                 
-                // 2. Maç Bitişi Kontrolü
-                // Tek bir oyuncu kaldıysa, o maçın galibidir ve MAÇ BİTER.
+                // 5. Maç Bitişi Kontrolü
+                
                 if (finalActivePlayers.length === 1) {
                     updates.status = 'finished'; 
                     updates.matchWinnerId = finalActivePlayers[0].id;
                     updates.roundWinner = updates.matchWinnerId; 
                     
                     transaction.update(gameRef, updates);
-                    return;
-
+                    return; // Transaction'ı bitir
                 } 
                 
-                // Kimse kalmadıysa MAÇ BİTER (Berabere Bitiş)
                 if (finalActivePlayers.length === 0) { 
                     updates.status = 'finished'; 
-                    updates.matchWinnerId = null; 
+                    updates.matchWinnerId = null; // Berabere
                     updates.roundWinner = null; 
                     
                     transaction.update(gameRef, updates);
-                    return;
+                    return; // Transaction'ı bitir
                 }
                 
-                // BURAYA ULAŞILDI İSE: finalActivePlayers.length > 1 (Berabere durumunda yeni tura geçmeliyiz)
-
-                // 3. Yeni Tur Başlatma
+                // 6. Yeni Tur Başlatma (Oyun devam ediyor)
                 const newWordLength = gameData.wordLength; 
                 const newSecretWord = await getNewSecretWordFromLocal(newWordLength); 
                 
                 if (!newSecretWord) throw new Error("Yeni kelime alınamadı.");
                 
-                updates.status = 'playing'; // Tekrar oynuyor durumuna geri dön
+                updates.status = 'playing';
                 updates.wordLength = newWordLength;
                 updates.secretWord = newSecretWord;
                 updates.currentRound = (gameData.currentRound || 0) + 1;
                 updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp();
                 updates.roundWinner = null;
-                updates.matchWinnerId = null; // Maç devam ettiği için sıfırla
+                updates.matchWinnerId = admin.firestore.FieldValue.delete(); 
 
-                // Elenmeyen oyuncuların tahmin haklarını ve çözücü bayrağını sıfırla
-                finalActivePlayers.forEach(p => {
-                    updates.players[p.id].guesses = [];
-                    updates.players[p.id].hasSolved = false; 
-                    updates.players[p.id].isWinner = false; 
+                // 7. Bayrakları Sıfırla
+                Object.keys(updates.players).forEach(pid => {
+                    if (!updates.players[pid].isEliminated) {
+                        updates.players[pid].guesses = [];
+                    }
+                    updates.players[pid].hasSolved = false;
+                    updates.players[pid].isWinner = false; 
+                    updates.players[pid].hasFailed = false;
                 });
                 
                 transaction.update(gameRef, updates);
             });
             
-            return response.status(200).send({ success: true, message: "Sonraki tura geçildi." });
+            // Transaction bittikten sonra, her durumda (hata almadıkça) başarı gönder
+            return response.status(200).send({ success: true, message: "Tur isteği işlendi." });
             
         } catch (error) {
             console.error(`Oyun ${gameId} için tur geçişi/bitişi işlenirken hata:`, error);
