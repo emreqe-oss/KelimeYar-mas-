@@ -1,47 +1,144 @@
-// js/ui.js - GÜNCEL VE TAM KOD (TÜM DÜZELTMELER DAHİL)
+// js/ui.js - SON HALİ (dailyWordBtn import hatası düzeltildi)
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
-import { joinGame } from './game.js';
+// joinBRGame import'u eklendi
+import { joinGame, joinBRGame } from './game.js'; 
 
 // Değişkenler
-export let guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, startGameBtn, roundCounter, shareGameBtn, userDisplay, invitationModal, friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, friendRequestCount, multiplayerScoreBoard;
+// TÜM DEĞİŞKENLERİ TEK BİR BLOKTA TOPLAYIP EXPORT EDİYORUZ
+export let 
+    // Game Screen
+    guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, 
+    startGameBtn, roundCounter, shareGameBtn, multiplayerScoreBoard,
+    
+    // BR Scoreboard
+    brRoundCounter, brTimerDisplay, brTurnDisplay,
+    
+    // Jokers
+    jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
+    
+    // Auth
+    loginBtn, registerBtn, logoutBtn, goToRegisterBtn, backToLoginBtn,
+    
+    // Main Menu
+    newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
+    howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
+    closeProfileBtn,
+    
+    // Navigation
+    backToMainMenuBtn, backToMainMenuFromGamesBtn, backToMainFromFriendsBtn,
+    backToModeMultiBtn, backToModeBrBtn, leaveGameButton,
+    
+    // Game Setup
+    randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
+    dailyWordBtn, // <-- EKSİK BUTON EKLENDİ
+    createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn,
+    
+    // Friends Tabs
+    friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, 
+    showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn, friendRequestCount,
+    
+    // My Games Tabs
+    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
+    
+    // Game Over
+    newRoundBtn, mainMenuBtn, shareResultsBtn,
+    
+    // Misc
+    userDisplay, invitationModal, copyGameIdBtn;
 
-// === BAŞLANGIÇ: YENİ BR ELEMENTLERİ ===
-export let brRoundCounter, brTimerDisplay, brTurnDisplay;
-const brPlayerSlots = [];
-// === BİTİŞ: YENİ BR ELEMENTLERİ ===
+const brPlayerSlots = []; // Bu export edilmiyor, UI içinde kullanılıyor
 
 export function initUI() {
-    guessGrid = document.getElementById('guess-grid');
-    keyboardContainer = document.getElementById('keyboard');
-    turnDisplay = document.getElementById('turn-display');
-    timerDisplay = document.getElementById('timer-display');
-    gameIdDisplay = document.getElementById('game-id-display');
-    startGameBtn = document.getElementById('start-game-btn');
-    roundCounter = document.getElementById('round-counter');
-    shareGameBtn = document.getElementById('share-game-btn');
-    userDisplay = document.getElementById('user-display');
-    invitationModal = document.getElementById('invitation-modal');
-    friendsTab = document.getElementById('friends-tab');
-    requestsTab = document.getElementById('requests-tab');
-    addFriendTab = document.getElementById('add-friend-tab');
-    showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
-    showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
-    showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
-    friendRequestCount = document.getElementById('friend-request-count');
-    multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
+    // Game Screen
+    guessGrid = document.getElementById('guess-grid');
+    keyboardContainer = document.getElementById('keyboard');
+    turnDisplay = document.getElementById('turn-display');
+    timerDisplay = document.getElementById('timer-display');
+    gameIdDisplay = document.getElementById('game-id-display');
+    startGameBtn = document.getElementById('start-game-btn');
+    roundCounter = document.getElementById('round-counter');
+    shareGameBtn = document.getElementById('share-game-btn');
+    multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
 
-    // === BAŞLANGIÇ: YENİ BR ELEMENTLERİNİ EKLE ===
+    // BR Scoreboard
     brRoundCounter = document.getElementById('br-round-counter');
     brTimerDisplay = document.getElementById('br-timer-display');
     brTurnDisplay = document.getElementById('br-turn-display');
-    // 4 oyuncu slotunu diziye ekle
     brPlayerSlots.push(document.getElementById('br-player-slot-0'));
     brPlayerSlots.push(document.getElementById('br-player-slot-1'));
     brPlayerSlots.push(document.getElementById('br-player-slot-2'));
     brPlayerSlots.push(document.getElementById('br-player-slot-3'));
-    // === BİTİŞ: YENİ BR ELEMENTLERİNİ EKLE ===
+
+    // Jokers
+    jokerPresentBtn = document.getElementById('joker-present');
+    jokerCorrectBtn = document.getElementById('joker-correct');
+    jokerRemoveBtn = document.getElementById('joker-remove');
+
+    // Auth
+    loginBtn = document.getElementById('login-btn');
+    registerBtn = document.getElementById('register-btn');
+    logoutBtn = document.getElementById('logout-btn');
+    goToRegisterBtn = document.getElementById('go-to-register-btn');
+    backToLoginBtn = document.getElementById('back-to-login-btn');
+
+    // Main Menu
+    newGameBtn = document.getElementById('new-game-btn');
+    myGamesBtn = document.getElementById('my-games-btn');
+    friendsBtn = document.getElementById('friends-btn');
+    statsBtn = document.getElementById('stats-btn');
+    statsBtnMain = document.getElementById('stats-btn-main');
+    howToPlayBtn = document.getElementById('how-to-play-btn');
+    closeHowToPlayBtn = document.getElementById('close-how-to-play-btn');
+    themeLightBtn = document.getElementById('theme-light-btn');
+    themeDarkBtn = document.getElementById('theme-dark-btn');
+    closeProfileBtn = document.getElementById('close-profile-btn');
+
+    // Navigation
+    backToMainMenuBtn = document.getElementById('back-to-main-menu-btn');
+    backToMainMenuFromGamesBtn = document.getElementById('back-to-main-menu-from-games-btn');
+    backToMainFromFriendsBtn = document.getElementById('back-to-main-from-friends-btn');
+    backToModeMultiBtn = document.getElementById('back-to-mode-multi-btn');
+    backToModeBrBtn = document.getElementById('back-to-mode-br-btn');
+    leaveGameButton = document.getElementById('leave-game-button');
+
+    // Game Setup
+    randomGameBtn = document.getElementById('random-game-btn');
+    seriesGameBtn = document.getElementById('series-game-btn');
+    withFriendsBtn = document.getElementById('with-friends-btn');
+    vsCpuBtn = document.getElementById('vs-cpu-btn');
+    multiplayerBrBtn = document.getElementById('multiplayer-br-btn');
+    dailyWordBtn = document.getElementById('daily-word-btn'); // <-- EKSİK SEÇİM EKLENDİ
+    createGameBtn = document.getElementById('create-game-btn');
+    joinGameBtn = document.getElementById('join-game-btn');
+    createBRGameBtn = document.getElementById('create-br-game-btn');
+    joinBRGameBtn = document.getElementById('join-br-game-btn');
+
+    // Friends Tabs
+    friendsTab = document.getElementById('friends-tab');
+    requestsTab = document.getElementById('requests-tab');
+    addFriendTab = document.getElementById('add-friend-tab');
+    showFriendsTabBtn = document.getElementById('show-friends-tab-btn');
+    showRequestsTabBtn = document.getElementById('show-requests-tab-btn');
+    showAddFriendTabBtn = document.getElementById('show-add-friend-tab-btn');
+    searchFriendBtn = document.getElementById('search-friend-btn');
+    friendRequestCount = document.getElementById('friend-request-count');
+
+    // My Games Tabs
+    showActiveGamesTabBtn = document.getElementById('show-active-games-tab-btn');
+    showFinishedGamesTabBtn = document.getElementById('show-finished-games-tab-btn');
+    showInvitesTabBtn = document.getElementById('show-invites-tab-btn');
+
+    // Game Over
+    newRoundBtn = document.getElementById('new-round-btn');
+    mainMenuBtn = document.getElementById('main-menu-btn');
+    shareResultsBtn = document.getElementById('share-results-btn');
+
+    // Misc
+    userDisplay = document.getElementById('user-display');
+    invitationModal = document.getElementById('invitation-modal');
+    copyGameIdBtn = document.getElementById('copy-game-id-btn');
 }
 
 export function showScreen(screenId) {
@@ -90,26 +187,16 @@ export function createKeyboard(handleKeyPress) {
         ['⌫', 'ENTER']
     ];
     keyRows.forEach((row, rowIndex) => {
-        // SATIRLAR İÇİN NOT: w-full ve justify-center birlikte çalışarak
-        // sabit genişlikteki tuş gruplarını satır içinde ortalayacaktır. Bu doğrudur.
         const rowDiv = createElement('div', { className: `flex justify-center gap-1 mt-1 w-full ${rowIndex === 3 ? 'gap-2' : ''}` });
         
         row.forEach(key => {
             const isSpecialKey = key === '⌫' || key === 'ENTER';
-            
-            // --- HATA BURADAYDI - DÜZELTME ---
-            // 1. Harf tuşlarına sabit genişlik ('w-10' -> 40px) veriyoruz.
-            // 2. Özel tuşlara ('ENTER', '⌫') satırı doldurması için 'flex-1' veriyoruz.
-            const keySizeClass = isSpecialKey ? 'flex-1' : 'w-10'; // w-10 = 2.5rem = 40px
-            // --- DÜZELTME SONU ---
+            const keySizeClass = isSpecialKey ? 'flex-1' : 'w-10'; 
 
             const keyButton = createElement('button', {
-                // 3. 'keySizeClass' değişkenini className'e ekliyoruz.
                 className: `keyboard-key rounded font-semibold uppercase bg-gray-500 ${isSpecialKey ? 'bg-gray-600' : ''} ${keySizeClass}`,
                 dataset: { key: key },
                 onclick: () => handleKeyPress(key),
-                // 4. SATIR: style: { flex: ... } satırını SİLİYORUZ.
-                // Artık flex/width kontrolünü Tailwind sınıfları (className) ile yapıyoruz.
             });
 
             if (key === '⌫') {
@@ -126,25 +213,55 @@ export function createKeyboard(handleKeyPress) {
 }
 
 
+// js/ui.js -> updateKeyboard (NİHAİ DÜZELTİLMİŞ HAL)
+
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
     const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
-    const keyStates = {};
+    
+    // 1. Tahminlere göre renk durumunu hesapla
+    const keyStates = {}; // Bu, tahminlere dayalı renk haritasıdır
     allGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
             const color = colors[i];
-            if (keyStates[letter] === 'correct') continue;
-            if (keyStates[letter] === 'present' && color !== 'correct') continue;
+            // 'correct' (yeşil) her zaman önceliklidir
+            if (keyStates[letter] === 'correct') continue; 
+            // 'present' (sarı) ise ve yeni renk 'correct' değilse, 'present' kalsın
+            if (keyStates[letter] === 'present' && color !== 'correct') continue; 
             keyStates[letter] = color;
         }
     });
+
+    // 2. Klavyeyi DİKKATLİCE güncelle
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
-        const state = keyStates[keyId];
-        btn.classList.remove('correct', 'present', 'absent');
-        if (state) btn.classList.add(state);
+
+        // Tahminlerden gelen rengi al
+        const guessColor = keyStates[keyId]; 
+
+        // === BAŞLANGIÇ: DÜZELTİLMİŞ MANTIK ===
+        // Körü körüne `classList.remove` yapmıyoruz.
+        
+        // Eğer tahminlerde 'correct' (yeşil) bulunduysa:
+        if (guessColor === 'correct') {
+            btn.classList.remove('present', 'absent'); // Varsa sarı veya griyi kaldır
+            btn.classList.add('correct');
+        } 
+        // Eğer tahminlerde 'present' (sarı) bulunduysa VE tuş zaten 'correct' (yeşil) DEĞİLSE:
+        else if (guessColor === 'present' && !btn.classList.contains('correct')) {
+            btn.classList.remove('absent'); // Varsa griyi kaldır
+            btn.classList.add('present');
+        } 
+        // Eğer tahminlerde 'absent' (gri) bulunduysa VE tuş zaten 'correct' veya 'present' DEĞİLSE:
+        else if (guessColor === 'absent' && !btn.classList.contains('correct') && !btn.classList.contains('present')) {
+            btn.classList.add('absent');
+        }
+        // Eğer tahminlerden hiçbir renk gelmediyse (guessColor tanımsızsa):
+        // HİÇBİR ŞEY YAPMA. 
+        // Bu, joker tarafından manuel olarak eklenen 'present' veya 'correct' renginin silinmesini engeller.
+        // === BİTİŞ: DÜZELTİLMİŞ MANTIK ===
     });
 }
 
@@ -174,7 +291,6 @@ export function displayStats(profileData) {
     }
 }
 
-// === BAŞLANGIÇ: updateMultiplayerScoreBoard GÜNCELLEMESİ ===
 export function updateMultiplayerScoreBoard(gameData) {
     if (!multiplayerScoreBoard) return;
     
@@ -183,30 +299,25 @@ export function updateMultiplayerScoreBoard(gameData) {
     
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     if (sequentialGameInfo) {
-        // BR ise sıralı oyun info'sunu gizle, değilse göster
         sequentialGameInfo.classList.toggle('hidden', isBR || !gameData.gameType || gameData.gameType === 'daily');
     }
     
-    // Sadece BR modunda göster
     multiplayerScoreBoard.classList.toggle('hidden', !isBR);
 
     if (isBR) {
-        // Oyuncuları ID'ye göre sırala ki herkes aynı sırayı görsün
         const players = Object.entries(gameData.players)
             .map(([id, data]) => ({ id, ...data }))
             .sort((a, b) => a.id.localeCompare(b.id));
 
-        // 4 slotu da güncelle
         for (let i = 0; i < 4; i++) {
             const slot = brPlayerSlots[i];
-            const player = players[i]; // Sıralanmış listeden oyuncuyu al
+            const player = players[i]; 
 
             if (slot) {
                 const nameEl = slot.querySelector('p:first-child');
                 const statusEl = slot.querySelector('p:last-child');
 
                 if (player) {
-                    // Oyuncu varsa bilgileri doldur
                     const isMe = player.id === currentUserId;
                     const isEliminated = player.isEliminated;
                     const hasSolved = player.hasSolved;
@@ -223,7 +334,7 @@ export function updateMultiplayerScoreBoard(gameData) {
                     } else if (isEliminated) {
                         playerStatus = 'ELENDİ';
                         statusColor = 'text-red-400 font-bold';
-                        bgColor = 'bg-gray-700 opacity-60'; // Eleneni soluklaştır
+                        bgColor = 'bg-gray-700 opacity-60'; 
                         nameColor = 'text-gray-500';
                     } else if (hasFailed) {
                         playerStatus = 'HAKKI BİTTİ';
@@ -237,14 +348,13 @@ export function updateMultiplayerScoreBoard(gameData) {
                          statusColor = 'text-gray-400';
                     }
 
-                    slot.className = `${bgColor} p-2 rounded-lg shadow`; // Arka planı güncelle
+                    slot.className = `${bgColor} p-2 rounded-lg shadow`; 
                     nameEl.textContent = `${player.username} ${isMe ? '(Sen)' : ''}`;
                     nameEl.className = `font-bold text-sm truncate ${nameColor}`;
                     statusEl.textContent = playerStatus;
                     statusEl.className = `text-xs ${statusColor}`;
 
                 } else {
-                    // Oyuncu yoksa "Boş" olarak ayarla (istediğiniz çizgi)
                     slot.className = 'bg-gray-700 p-2 rounded-lg shadow';
                     nameEl.textContent = '---';
                     nameEl.className = 'font-bold text-sm truncate text-gray-500';
@@ -255,7 +365,6 @@ export function updateMultiplayerScoreBoard(gameData) {
         }
     }
 
-    // Sıralı Multiplayer/vsCPU için Skor Güncellemesi (Bu kısım aynı kalıyor)
     const p1ScoreEl = document.getElementById('player1-score');
     const p2ScoreEl = document.getElementById('player2-score');
     
@@ -277,8 +386,6 @@ export function updateMultiplayerScoreBoard(gameData) {
          }
     }
 }
-// === BİTİŞ: updateMultiplayerScoreBoard GÜNCELLEMESİ ===
-
 
 export function switchFriendTab(tabName) {
     const tabs = { friends: document.getElementById('friends-tab'), requests: document.getElementById('requests-tab'), add: document.getElementById('add-friend-tab') };
@@ -343,14 +450,13 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             let statusText = game.status === 'waiting' ? 'Rakip bekleniyor...' : `Sıra: ${game.players[game.currentPlayerId]?.username || '...'}`;
             if (game.currentPlayerId === state.getUserId()) statusText = "Sıra sende!";
 
-            // BR Oyunlarını da burada göster
             if (game.gameType === 'multiplayer-br') {
-                 statusText = game.status === 'waiting' ? `Lobi (${game.playerIds.length}/${game.maxPlayers || 4})` : `Oynanıyor (Tur ${game.currentRound})`;
+                statusText = game.status === 'waiting' ? `Lobi (${game.playerIds.length}/${game.maxPlayers || 4})` : `Oynanıyor (Tur ${game.currentRound})`;
             }
 
             const gameDiv = createElement('div', {
                 className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
-                onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)), // Doğru join fonksiyonunu çağır
+                onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)),
                 innerHTML: `
                     <div class="flex justify-between items-center">
                         <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
@@ -377,21 +483,21 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                  resultText = isWinner ? 'Kazandın' : (game.matchWinnerId === null ? 'Berabere' : 'Kaybettin');
                  borderColor = isWinner ? 'border-green-500' : (game.matchWinnerId === null ? 'border-yellow-500' : 'border-red-500');
              } else {
-                 const isWinner = game.roundWinner === state.getUserId(); // Sıralı oyunlarda roundWinner'a bakılır
+                 const isWinner = game.roundWinner === state.getUserId();
                  resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
                  borderColor = isWinner ? 'border-green-500' : (game.roundWinner === null ? 'border-yellow-500' : 'border-red-500');
              }
 
              const gameDiv = createElement('div', {
-                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor}`,
-                innerHTML: `
-                    <div class="flex justify-between items-center">
-                        <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
-                        <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
-                    </div>
-                `
-            });
-            finishedTab.appendChild(gameDiv);
+                 className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor}`,
+                 innerHTML: `
+                     <div class="flex justify-between items-center">
+                         <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
+                         <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
+                     </div>
+                 `
+             });
+             finishedTab.appendChild(gameDiv);
         });
     } else {
         finishedTab.innerHTML = createPlaceholder('Henüz biten oyununuz yok.');
@@ -414,4 +520,24 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     } else {
         invitesTab.innerHTML = createPlaceholder('Yeni davetiniz yok.');
     }
+}
+
+export function updateJokerUI(jokersUsed, isMyTurn, gameStatus) {
+    const jokers = [jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn];
+    const jokerKeys = ['present', 'correct', 'remove'];
+
+    const canUseJokers = isMyTurn && gameStatus === 'playing';
+
+    jokers.forEach((btn, index) => {
+        if (!btn) return;
+        
+        const key = jokerKeys[index];
+        const isUsed = (jokersUsed && jokersUsed[key]) ? true : false;
+
+        if (isUsed || !canUseJokers) {
+            btn.disabled = true;
+        } else {
+            btn.disabled = false;
+        }
+    });
 }

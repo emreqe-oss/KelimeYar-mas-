@@ -1,171 +1,286 @@
-// js/main.js - Hata Ayıklama Kayıtları ile SON KOD
+// js/main.js - SON HALİ (dailyWordBtn import hatası düzeltildi)
 
-import { doc, getDoc } from "firebase/firestore"; 
-import { db, auth } from './firebase.js';
-import * as state from './state.js';
+import { 
+    setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
+    getFriendsUnsubscribe, setFriendsUnsubscribe,
+    getMyGamesUnsubscribe, setMyGamesUnsubscribe
+} from './state.js';
+
+import { db, auth } from './firebase.js'; 
+import { onAuthStateChanged } from "firebase/auth"; 
+import { getDoc, doc } from "firebase/firestore"; 
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
-import * as game from './game.js';
-import * as friends from './friends.js';
-import * as ui from './ui.js';
+import { 
+    searchUsers,
+    listenToFriendships,
+    listenToMyGames 
+} from './friends.js';
+
+import { 
+    initUI, 
+    showScreen, 
+    displayStats, 
+    switchFriendTab, 
+    switchMyGamesTab,
+    loginBtn, registerBtn, logoutBtn, goToRegisterBtn, backToLoginBtn,
+    newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
+    howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
+    backToMainMenuBtn, backToMainMenuFromGamesBtn, backToMainFromFriendsBtn,
+    randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
+    // === BAŞLANGIÇ: DÜZELTİLMİŞ IMPORT ===
+    dailyWordBtn, // Eksik olan buton buraya eklendi
+    // === BİTİŞ: DÜZELTİLMİŞ IMPORT ===
+    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
+    showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
+    closeProfileBtn,
+    createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn, 
+    backToModeMultiBtn, backToModeBrBtn,
+    leaveGameButton, startGameBtn, copyGameIdBtn, shareGameBtn,
+    newRoundBtn, mainMenuBtn, shareResultsBtn,
+    jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn
+} from './ui.js';
+import { 
+    startNewGame, 
+    findOrCreateRandomGame, 
+    joinGame, 
+    createBRGame, 
+    joinBRGame, 
+    leaveGame, 
+    handleKeyPress, 
+    startGame, 
+    listenToGameUpdates, 
+    createGame,
+    usePresentJoker, 
+    useCorrectJoker, 
+    useRemoveJoker 
+} from './game.js';
 import { showToast } from './utils.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+// Uygulamayı başlatan ana fonksiyon
+function initApp() {
+    initUI();
+    addEventListeners();
+    initAuthListener();
+    initTheme();
+}
 
-    ui.initUI();
-
-    const appContainer = document.getElementById('app');
-    if (appContainer) {
-        appContainer.addEventListener('click', (event) => {
-            // Tıklanan elemanı veya en yakın butonu bul
-            const button = event.target.closest('button'); 
-            if (!button) return;
-
-            const buttonId = button.id;
+// Kullanıcı giriş/çıkış durumunu dinleyen fonksiyon
+function initAuthListener() {
+    onAuthStateChanged(auth, async (user) => { 
+        const authLoading = document.getElementById('auth-loading');
+        if (user) {
+            authLoading.classList.add('hidden');
+            setUserId(user.uid);
             
-            // HATA AYIKLAMA: Hangi butonun tıklandığını konsola yaz
-            console.log(`LOG: Buton tıklandı: ${buttonId}`); 
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
             
-            switch (buttonId) {
-                // Ana Ekran Navigasyonu
-                case 'new-game-btn': ui.showScreen('new-game-screen'); break;
-                case 'my-games-btn': ui.showScreen('my-games-screen'); break;
-                case 'kelimelig-btn': showToast('KelimeLİG yakında!', false); break;
-                case 'daily-word-btn': game.startNewGame({ mode: 'daily' }); break;
-                case 'friends-btn': ui.showScreen('friends-screen'); break;
-                case 'stats-btn':
-                case 'stats-scroll-btn': ui.showScreen('profile-screen'); break;
-                case 'settings-btn': showToast('Ayarlar menüsü yakında!', false); break;
+            if (userSnap.exists()) {
+                const profileData = userSnap.data();
+                setCurrentUserProfile(profileData);
+                
+                document.getElementById('main-menu-username').textContent = profileData.username || 'Kullanıcı';
+                const stats = profileData.stats || { played: 0, wins: 0, currentStreak: 0 };
+                const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+                document.getElementById('main-menu-stats').textContent = `Başarı: %${winRate} | Seri: ${stats.currentStreak}`;
+                
+                const friendsUnsub = listenToFriendships();
+                const gamesUnsub = listenToMyGames();
+                setFriendsUnsubscribe(friendsUnsub);
+                setMyGamesUnsubscribe(gamesUnsub);
 
-                // Yeni Oyun Ekranı Navigasyonu
-                case 'random-game-btn':
-                    game.findOrCreateRandomGame({ timeLimit: 12 * 60 * 60, matchLength: 5, gameType: 'gevsek' });
-                    break;
-                case 'series-game-btn':
-                    game.findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'seri' });
-                    break;
-                case 'with-friends-btn':
-                    ui.showScreen('friends-screen');
-                    showToast('Kime meydan okumak istersin?');
-                    break;
-                    
-                // ÇOKLU OYUNCU (BR) YÖNLENDİRMESİ
-                case 'multiplayer-br-btn': 
-                    ui.showScreen('br-setup-screen'); 
-                    break;
-                
-                case 'vs-cpu-btn': game.startNewGame({ mode: 'vsCPU' }); break;
-                
-                // BR Kurulum Ekranı Butonları
-                case 'create-br-game-btn':
-                    console.log("LOG: create-br-game-btn tıklandı, game.createBRGame çağrılıyor."); // HATA AYIKLAMA
-                    game.createBRGame({
-                        wordLength: parseInt(document.getElementById('word-length-select-br').value),
-                        timeLimit: parseInt(document.getElementById('time-select-br').value),
-                        isHardMode: document.getElementById('hard-mode-checkbox-br').checked,
-                    });
-                    break;
-                case 'join-br-game-btn':
-                    const gameIdInputBR = document.getElementById('game-id-input-br');
-                    if (gameIdInputBR) game.joinBRGame(gameIdInputBR.value.toUpperCase());
-                    break;
-                case 'back-to-mode-br-btn': 
-                    ui.showScreen('new-game-screen');
-                    break;
-                case 'back-to-mode-multi-btn': 
-                    ui.showScreen('new-game-screen'); 
-                    break;
-                
-                // Geri ve Ayrıl Butonları
-                case 'back-to-main-menu-btn': ui.showScreen('main-menu-screen'); break;
-                case 'back-to-main-menu-from-games-btn': ui.showScreen('main-menu-screen'); break;
-                case 'close-profile-btn': ui.showScreen('main-menu-screen'); break;
-                case 'back-to-main-from-friends-btn': ui.showScreen('main-menu-screen'); break;
-                
-                case 'leave-game-button': 
-                    console.log("LOG: leave-game-button tıklandı. game.leaveGame çağrılıyor."); // HATA AYIKLAMA
-                    game.leaveGame(); 
-                    break; 
-                case 'main-menu-btn': 
-                    console.log("LOG: main-menu-btn tıklandı. game.leaveGame çağrılıyor."); // HATA AYIKLAMA
-                    game.leaveGame(); 
-                    break; 
-
-                // Oyunlarım Ekranı Tabları
-                case 'show-active-games-tab-btn': ui.switchMyGamesTab('active'); break;
-                case 'show-finished-games-tab-btn': ui.switchMyGamesTab('finished'); break;
-                case 'show-invites-tab-btn': ui.switchMyGamesTab('invites'); break;
-
-                // Genel Butonlar
-                case 'how-to-play-btn': ui.showScreen('how-to-play-screen'); break;
-                case 'close-how-to-play-btn': ui.showScreen('main-menu-screen'); break;
-                case 'theme-light-btn': document.body.classList.add('theme-light'); break;
-                case 'theme-dark-btn': document.body.classList.remove('theme-light'); break;
-
-                // Auth Butonları
-                case 'login-btn': handleLogin(); break;
-                case 'register-btn': handleRegister(); break;
-                case 'go-to-register-btn': ui.showScreen('register-screen'); break;
-                case 'back-to-login-btn': ui.showScreen('login-screen'); break;
-                case 'logout-btn': handleLogout(); break;
-                
-                // Arkadaşlık Ekranı Butonları
-                case 'show-friends-tab-btn': ui.switchFriendTab('friends'); break;
-                case 'show-requests-tab-btn': ui.switchFriendTab('requests'); break;
-                case 'show-add-friend-tab-btn': ui.switchFriendTab('add'); break;
-                case 'search-friend-btn': friends.searchUsers(); break;
-                
-                // Oyun İçi Kontroller
-                case 'new-round-btn': game.startNewRound(); break;
-                case 'copy-game-id-btn':
-                    if (ui.gameIdDisplay) {
-                        const gameId = ui.gameIdDisplay.textContent;
-                        navigator.clipboard.writeText(gameId).then(() => { showToast('Oyun ID kopyalandı!'); });
-                    }
-                    break;
-                case 'start-game-btn': game.startGame(); break;
-                case 'share-results-btn': game.shareResultsAsEmoji(); break;
+            } else {
+                console.warn("Kullanıcı profili bulunamadı.");
+                setCurrentUserProfile({ email: user.email });
             }
-        });
-    }
+            
+            const activeGameId = localStorage.getItem('activeGameId');
+            if (activeGameId) {
+                try {
+                    const gameDoc = await getDoc(doc(db, "games", activeGameId));
+                    if (gameDoc.exists() && gameDoc.data().status !== 'finished') {
+                        showToast("Yarım kalan oyununa devam ediyorsun!");
+                        if (gameDoc.data().gameType === 'multiplayer-br') {
+                            await joinBRGame(activeGameId);
+                        } else {
+                            await joinGame(activeGameId);
+                        }
+                    } else {
+                        localStorage.removeItem('activeGameId');
+                        showScreen('main-menu-screen');
+                    }
+                } catch (error) {
+                    console.error("Yarım kalan oyuna girerken hata:", error);
+                    localStorage.removeItem('activeGameId');
+                    showScreen('main-menu-screen');
+                }
+            } else {
+                showScreen('main-menu-screen');
+            }
+            
+        } else {
+            authLoading.classList.add('hidden');
+            setUserId(null);
+            setCurrentUserProfile(null);
 
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return;
-        game.handleKeyPress(e.key);
+            if (getFriendsUnsubscribe()) getFriendsUnsubscribe()();
+            if (getMyGamesUnsubscribe()) getMyGamesUnsubscribe()();
+            setFriendsUnsubscribe(null);
+            setMyGamesUnsubscribe(null);
+
+            showScreen('login-screen');
+        }
+    });
+}
+
+// Tüm butonlara tıklama olaylarını (event listener) ekleyen fonksiyon
+function addEventListeners() {
+    // Auth Ekranları
+    loginBtn.addEventListener('click', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+    registerBtn.addEventListener('click', handleRegister);
+    goToRegisterBtn.addEventListener('click', () => showScreen('register-screen'));
+    backToLoginBtn.addEventListener('click', () => showScreen('login-screen'));
+
+    // Ana Menü
+    newGameBtn.addEventListener('click', () => showScreen('new-game-screen'));
+    myGamesBtn.addEventListener('click', () => showScreen('my-games-screen'));
+    friendsBtn.addEventListener('click', () => showScreen('friends-screen'));
+    statsBtn.addEventListener('click', () => {
+        displayStats(getCurrentUserProfile());
+        showScreen('profile-screen');
+    });
+    statsBtnMain.addEventListener('click', () => {
+        displayStats(getCurrentUserProfile());
+        showScreen('profile-screen');
+    });
+    howToPlayBtn.addEventListener('click', () => showScreen('how-to-play-screen'));
+    closeHowToPlayBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+    closeProfileBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+
+    // Tema Butonları
+    themeLightBtn.addEventListener('click', () => switchTheme('light'));
+    themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
+
+    // Geri Butonları
+    backToMainMenuBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+    backToMainMenuFromGamesBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+    backToMainFromFriendsBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+
+    // Oyun Modu Seçim
+    vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
+    dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' })); // Bu satır artık çalışmalı
+    randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 43200, matchLength: 5, gameType: 'random_loose' }));
+    seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
+
+    // Online Oyun Kurma / Katılma
+    withFriendsBtn.addEventListener('click', () => showScreen('multiplayer-setup-screen'));
+    multiplayerBrBtn.addEventListener('click', () => showScreen('br-setup-screen'));
+    backToModeMultiBtn.addEventListener('click', () => showScreen('new-game-screen'));
+    backToModeBrBtn.addEventListener('click', () => showScreen('new-game-screen'));
+
+    // Online Multiplayer
+    createGameBtn.addEventListener('click', () => {
+        createGame({ 
+            timeLimit: parseInt(document.getElementById('time-select-multi').value, 10),
+            matchLength: parseInt(document.getElementById('match-length-select').value, 10),
+            isHardMode: document.getElementById('hard-mode-checkbox-multi').checked,
+            gameType: 'friend' 
+        });
+    });
+    joinGameBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-input').value.toUpperCase();
+        if (gameId) joinGame(gameId);
     });
 
-    function initializeApp() {
-        auth.onAuthStateChanged(async user => {
-            if (user && !user.isAnonymous) {
-                state.setUserId(user.uid);
-                
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userDocRef);
+    // Battle Royale
+    createBRGameBtn.addEventListener('click', () => createBRGame());
+    joinBRGameBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-input-br').value.toUpperCase();
+        if (gameId) joinBRGame(gameId);
+    });
 
-                if (userDoc.exists()) {
-                    state.setCurrentUserProfile(userDoc.data());
-                    const usernameDisplay = document.getElementById('main-menu-username');
-                    if (usernameDisplay) {
-                        usernameDisplay.textContent = state.getCurrentUserProfile().username;
-                    }
-                }
-                
-                state.setFriendsUnsubscribe(friends.listenToFriendships());
-                state.setMyGamesUnsubscribe(friends.listenToMyGames());
-                
-                ui.showScreen('main-menu-screen');
-            } else {
-                state.setUserId(null);
-                state.setCurrentUserProfile(null);
-                
-                const friendsUnsubscribe = state.getFriendsUnsubscribe();
-                if (friendsUnsubscribe) friendsUnsubscribe();
-                const myGamesUnsubscribe = state.getMyGamesUnsubscribe();
-                if (myGamesUnsubscribe) myGamesUnsubscribe();
+    // Oyunlarım Sekmeleri
+    showActiveGamesTabBtn.addEventListener('click', () => switchMyGamesTab('active'));
+    showFinishedGamesTabBtn.addEventListener('click', () => switchMyGamesTab('finished'));
+    showInvitesTabBtn.addEventListener('click', () => switchMyGamesTab('invites'));
 
-                ui.showScreen('login-screen'); 
-            }
-        });
+    // Arkadaşlar Sekmeleri
+    showFriendsTabBtn.addEventListener('click', () => switchFriendTab('friends'));
+    showRequestsTabBtn.addEventListener('click', () => switchFriendTab('requests'));
+    showAddFriendTabBtn.addEventListener('click', () => switchFriendTab('add'));
+    searchFriendBtn.addEventListener('click', searchUsers);
+    
+    // Oyun İçi Butonlar
+    leaveGameButton.addEventListener('click', leaveGame);
+    startGameBtn.addEventListener('click', startGame);
+
+    // Skor Ekranı Butonları
+    newRoundBtn.addEventListener('click', () => {
+        console.log("Yeni Tur butonu main.js'den tıklandı.");
+    });
+    mainMenuBtn.addEventListener('click', leaveGame);
+    
+    // Kopyala & Paylaş
+    copyGameIdBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-display').textContent;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(gameId).then(() => {
+                showToast("Oyun ID kopyalandı!");
+            });
+        }
+    });
+
+    shareGameBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-display').textContent;
+        const text = `Kelime Yarışması'na gel! Oyun ID: ${gameId}`;
+        if (navigator.share) {
+            navigator.share({
+                title: 'Kelime Yarışması',
+                text: text,
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Davet linki kopyalandı!");
+            });
+        }
+    });
+
+    // JOKER BUTONLARI BAĞLANTILARI
+    if (jokerPresentBtn) jokerPresentBtn.addEventListener('click', usePresentJoker);
+    if (jokerCorrectBtn) jokerCorrectBtn.addEventListener('click', useCorrectJoker);
+    if (jokerRemoveBtn) jokerRemoveBtn.addEventListener('click', useRemoveJoker);
+
+    // Fiziksel Klavye Dinleyicisi
+    window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'INPUT') return;
+        if (document.getElementById('game-screen').classList.contains('hidden')) return;
+
+        if (e.key === 'Enter') {
+            handleKeyPress('ENTER');
+        } else if (e.key === 'Backspace') {
+            handleKeyPress('⌫');
+        } else if (e.key.length === 1 && e.key.match(/[a-zçğıöşü]/i)) {
+            handleKeyPress(e.key);
+        }
+    });
+}
+
+// Tema Yönetimi
+function switchTheme(theme) {
+    if (theme === 'light') {
+        document.body.classList.add('theme-light');
+        localStorage.setItem('theme', 'light');
+    } else {
+        document.body.classList.remove('theme-light');
+        localStorage.setItem('theme', 'dark');
     }
+}
 
-    initializeApp();
-});
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    switchTheme(savedTheme);
+}
+
+// Uygulamayı başlat
+initApp();
