@@ -470,6 +470,8 @@ export async function findOrCreateRandomGame(config) {
     }
 }
 
+// js/game.js içindeki createGame fonksiyonunu bununla değiştirin
+
 export async function createGame(options = {}) {
     const { invitedFriendId = null, timeLimit = 45, matchLength = 5, gameType = 'friend' } = options;
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
@@ -490,6 +492,11 @@ export async function createGame(options = {}) {
     const gameData = {
         gameId, wordLength: selectedLength, secretWord, timeLimit,
         creatorId: currentUserId, isHardMode: false, matchLength,
+        
+        // === BAŞLANGIÇ: EKSİK OLAN SATIR ===
+        currentRound: 1, // Bu satır eksikti ve hataya neden oluyordu
+        // === BİTİŞ: EKSİK OLAN SATIR ===
+        
         players: { [currentUserId]: { username, guesses: [], score: 0 } },
         
         playerIds: playerIdsList, 
@@ -500,7 +507,7 @@ export async function createGame(options = {}) {
         createdAt: serverTimestamp(),
         turnStartTime: serverTimestamp(),
         GUESS_COUNT: GUESS_COUNT, gameType,
-        jokersUsed: { present: false, correct: false, remove: false }, // Jokerler eklendi
+        jokersUsed: { present: false, correct: false, remove: false },
     };
 
     if (invitedFriendId) { 

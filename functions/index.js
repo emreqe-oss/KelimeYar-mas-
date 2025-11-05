@@ -18,6 +18,7 @@ admin.initializeApp();
 
 const kelimeler = require("./kelimeler.json");
 const cevaplar = require("./cevaplar.json");
+const SCORE_POINTS = [1000, 800, 600, 400, 200, 100]; // 1. tahminde 1000, 6. tahminde 100
 // const kelimeAnlamlari = require("./kelime_anlamlari.json"); 
 
 // const SCORE_POINTS = [1000, 800, 600, 400, 200, 100]; // BR için kaldırıldı
@@ -103,6 +104,9 @@ exports.getWordMeaning = functions.https.onRequest((request, response) => {
 });
 
 // 4. Çoklu Oyuncu Tahmini Gönderme
+// functions/index.js içindeki fonksiyonun tamamını bununla değiştirin
+
+// 4. Çoklu Oyuncu Tahmini Gönderme (PUANLAMA EKLENDİ)
 exports.submitMultiplayerGuess = functions.https.onRequest((request, response) => {
     corsHandler(request, response, async () => {
         if (request.method !== 'POST') {
@@ -149,15 +153,15 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                 let isWinner = (word === secretWord);
                 
                 if (isBR) {
-                    
+                    // ... (Mevcut BR Puanlama/Durum Mantığı - Değişiklik Yok)
                     if (isWinner) {
                         updates[`players.${userId}.hasSolved`] = true;
-                        updates[`players.${userId}.isWinner`] = true; // (Client için)
-                        
+                        updates[`players.${userId}.isWinner`] = true;
                     } else if (playerGuesses.length >= GUESS_COUNT) {
                         updates[`players.${userId}.hasFailed`] = true; 
                     }
                     
+                    // ... (Mevcut BR Kalan Oyuncu Kontrolü - Değişiklik Yok)
                     const currentPlayers = Object.entries(gameData.players).map(([id, p]) => {
                         let tempP = {...p, id};
                         if (id === userId) {
@@ -169,7 +173,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                         }
                         return tempP;
                     });
-    
+        
                     const activePlayers = currentPlayers.filter(p => !p.isEliminated && !p.hasSolved && !p.hasFailed);
                     
                     if (activePlayers.length === 0) { 
@@ -184,6 +188,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                     } 
                 } 
                 else { 
+                    // === BAŞLANGIÇ: SERİ OYUN (SEQUENTIAL) MANTIĞI ===
                     const playerIds = Object.keys(gameData.players);
                     const myIndex = playerIds.indexOf(userId);
                     const nextPlayerIndex = (myIndex + 1) % playerIds.length;
@@ -193,6 +198,15 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                     if (isWinner) {
                         updates.status = 'finished';
                         updates.roundWinner = userId;
+                        
+                        // --- YENİ EKLENEN PUANLAMA MANTIĞI ---
+                        const guessesCount = playerGuesses.length; // (Örn: 1. tahminde 1)
+                        // 'SCORE_POINTS' dizisinden puanı al (diziler 0'dan başlar)
+                        const roundScore = SCORE_POINTS[guessesCount - 1] || 0; 
+                        const currentScore = playerState.score || 0; // Mevcut puanı al
+                        updates[`players.${userId}.score`] = currentScore + roundScore; // Yeni puanı güncelle
+                        // --- PUANLAMA MANTIĞI SONU ---
+
                     } else {
                         const allPlayers = Object.values(gameData.players);
                         allPlayers[myIndex].guesses = playerGuesses; 
@@ -202,6 +216,7 @@ exports.submitMultiplayerGuess = functions.https.onRequest((request, response) =
                             updates.roundWinner = null;
                         }
                     }
+                    // === BİTİŞ: SERİ OYUN (SEQUENTIAL) MANTIĞI ===
                 }
                 
                 transaction.update(gameRef, updates);
