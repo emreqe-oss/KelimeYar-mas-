@@ -13,7 +13,7 @@ import {
 
 // Firestore modüllerini içe aktar
 import {
-    collection, query, where, limit, getDocs, getDoc, doc, setDoc, updateDoc,
+    collection, deleteDoc, query, where, limit, getDocs, getDoc, doc, setDoc, updateDoc,
     runTransaction, onSnapshot, serverTimestamp, arrayUnion, orderBy, deleteField
 } from "firebase/firestore";
 
@@ -2054,3 +2054,41 @@ export async function useRemoveJoker() {
 
     await updateJokerState('remove');
 }
+
+// === BAŞLANGIÇ: friends.js DOSYASINDAN TAŞINAN FONKSİYONLAR ===
+
+/**
+ * Bir oyun davetini kabul eder.
+ * (friends.js'den taşındı, 'export' eklendi ve 'invitationModal' kaldırıldı)
+ */
+export async function acceptInvite(gameId) {
+    try {
+        // 1. Oyuna normal bir şekilde katıl
+        await joinGame(gameId); 
+        
+        // 2. Oyunun durumunu 'davet'ten 'bekleme'ye al
+        await updateDoc(doc(db, 'games', gameId), {
+            invitedPlayerId: deleteField(), // Davet edilen ID'yi sil
+            status: 'waiting' // Kurucunun oyuna dönmesini bekle
+        });
+    } catch (error) {
+        console.error('Davet kabul edilemedi:', error);
+        showToast('Oyuna katılırken bir hata oluştu.', true);
+    }
+}
+
+/**
+ * Bir oyun davetini reddeder (siler).
+ * (friends.js'den taşındı, 'export' eklendi ve 'invitationModal' kaldırıldı)
+ */
+export async function rejectInvite(gameId) {
+    try {
+        // Davet oyununu veritabanından tamamen sil
+        await deleteDoc(doc(db, 'games', gameId));
+        showToast('Davet reddedildi.');
+    } catch (error) {
+        console.error('Davet reddedilemedi:', error);
+    }
+}
+
+// === BİTİŞ: TAŞINAN FONKSİYONLAR ===

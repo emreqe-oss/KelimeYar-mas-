@@ -1,9 +1,12 @@
-// js/main.js - SON HALİ (dailyWordBtn import hatası düzeltildi)
+// js/main.js - SON HALİ (Arkadaş Davet Akışı Düzeltildi)
 
 import { 
+    // === BAŞLANGIÇ: YENİ STATE IMPORTLARI ===
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
     getFriendsUnsubscribe, setFriendsUnsubscribe,
-    getMyGamesUnsubscribe, setMyGamesUnsubscribe
+    getMyGamesUnsubscribe, setMyGamesUnsubscribe,
+    getChallengedFriendId, setChallengedFriendId // Arkadaş ID'sini okumak/yazmak için eklendi
+    // === BİTİŞ: YENİ STATE IMPORTLARI ===
 } from './state.js';
 
 import { db, auth } from './firebase.js'; 
@@ -20,16 +23,14 @@ import {
     initUI, 
     showScreen, 
     displayStats, 
-    switchFriendTab, 
+    switchFriendTab, // <-- 'withFriendsBtn' için bu gerekli
     switchMyGamesTab,
     loginBtn, registerBtn, logoutBtn, goToRegisterBtn, backToLoginBtn,
     newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
     howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
     backToMainMenuBtn, backToMainMenuFromGamesBtn, backToMainFromFriendsBtn,
     randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
-    // === BAŞLANGIÇ: DÜZELTİLMİŞ IMPORT ===
-    dailyWordBtn, // Eksik olan buton buraya eklendi
-    // === BİTİŞ: DÜZELTİLMİŞ IMPORT ===
+    dailyWordBtn,
     showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
     showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
     closeProfileBtn,
@@ -169,25 +170,52 @@ function addEventListeners() {
 
     // Oyun Modu Seçim
     vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
-    dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' })); // Bu satır artık çalışmalı
+    dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
     randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 43200, matchLength: 5, gameType: 'random_loose' }));
     seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
 
     // Online Oyun Kurma / Katılma
-    withFriendsBtn.addEventListener('click', () => showScreen('multiplayer-setup-screen'));
+    
+    // === BAŞLANGIÇ: DÜZELTME 1 (Arkadaşınla Oyna Butonu) ===
+    // Bu buton artık doğrudan oyun kurmaya değil, arkadaş seçme ekranına (friends-screen) yönlendiriyor.
+    withFriendsBtn.addEventListener('click', () => {
+        showScreen('friends-screen');
+        switchFriendTab('friends'); // Arkadaşlarım sekmesini otomatik aç
+    });
+    // === BİTİŞ: DÜZELTME 1 ===
+    
     multiplayerBrBtn.addEventListener('click', () => showScreen('br-setup-screen'));
     backToModeMultiBtn.addEventListener('click', () => showScreen('new-game-screen'));
     backToModeBrBtn.addEventListener('click', () => showScreen('new-game-screen'));
 
     // Online Multiplayer
+    
+    // === BAŞLANGIÇ: DÜZELTME 2 (Oyun Kur Butonu) ===
+    // Bu buton artık 'state' üzerinden hangi arkadaşa davet atacağını biliyor.
     createGameBtn.addEventListener('click', () => {
+        // State'den (friends.js'de 'Davet Et'e basınca set edilmiş olan) arkadaşın ID'sini al
+        const friendId = getChallengedFriendId(); 
+        
+        if (!friendId) {
+            // Eğer bir arkadaş seçilmeden bu ekrana gelinmişse (hata durumu)
+            showToast("Lütfen önce 'Arkadaşlar' listesinden birini seçip 'Davet Et'e basın.", true);
+            showScreen('friends-screen'); // Kullanıcıyı arkadaş seçmeye geri yolla
+            return;
+        }
+
         createGame({ 
+            invitedFriendId: friendId, // <-- EN ÖNEMLİ DEĞİŞİKLİK
             timeLimit: parseInt(document.getElementById('time-select-multi').value, 10),
             matchLength: parseInt(document.getElementById('match-length-select').value, 10),
             isHardMode: document.getElementById('hard-mode-checkbox-multi').checked,
-            gameType: 'friend' 
+            gameType: 'friend'
         });
+
+        // Oyunu kurduktan sonra state'i temizle ki bir sonraki oyunda sorun çıkmasın
+        setChallengedFriendId(null); 
     });
+    // === BİTİŞ: DÜZELTME 2 ===
+    
     joinGameBtn.addEventListener('click', () => {
         const gameId = document.getElementById('game-id-input').value.toUpperCase();
         if (gameId) joinGame(gameId);

@@ -3,7 +3,7 @@
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
 // joinBRGame import'u eklendi
-import { joinGame, joinBRGame } from './game.js'; 
+import { joinGame, joinBRGame, acceptInvite, rejectInvite } from './game.js'; 
 
 // Değişkenler
 // TÜM DEĞİŞKENLERİ TEK BİR BLOKTA TOPLAYIP EXPORT EDİYORUZ
@@ -40,7 +40,7 @@ export let
     showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn, friendRequestCount,
     
     // My Games Tabs
-    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
+    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn, gameInviteCount,
     
     // Game Over
     newRoundBtn, mainMenuBtn, shareResultsBtn,
@@ -129,7 +129,8 @@ export function initUI() {
     showActiveGamesTabBtn = document.getElementById('show-active-games-tab-btn');
     showFinishedGamesTabBtn = document.getElementById('show-finished-games-tab-btn');
     showInvitesTabBtn = document.getElementById('show-invites-tab-btn');
-
+    gameInviteCount = document.getElementById('game-invite-count'); // <-- BU SATIRI EKLEYİN
+   
     // Game Over
     newRoundBtn = document.getElementById('new-round-btn');
     mainMenuBtn = document.getElementById('main-menu-btn');
@@ -507,14 +508,52 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     if (invites.length > 0) {
         invites.forEach(invite => {
             const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
+            
+            // 1. Ana kapsayıcı div (artık tıklanabilir değil)
             const inviteDiv = createElement('div', {
-                className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
-                onclick: () => (invite.gameType === 'multiplayer-br' ? joinBRGame(invite.id) : joinGame(invite.id)),
-                innerHTML: `
-                    <p><strong>${creatorUsername}</strong> seni bir ${invite.gameType === 'multiplayer-br' ? 'Battle Royale' : 'oyuna'} davet ediyor!</p>
-                    <p class="text-xs text-gray-400">Katılmak için tıkla.</p>
-                `
+                className: 'bg-gray-700 p-3 rounded-lg mb-2',
+                innerHTML: `<p><strong>${creatorUsername}</strong> seni bir ${invite.gameType === 'multiplayer-br' ? 'Battle Royale' : 'oyuna'} davet ediyor!</p>`
             });
+
+            // 2. Butonları taşıyacak div
+            const buttonWrapper = createElement('div', {
+                className: 'flex gap-2 mt-2 justify-end' // Butonları sağa yaslar
+            });
+
+            // 3. İptal (Reddet) Butonu
+            const rejectBtn = createElement('button', {
+                className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-xs',
+                textContent: 'İptal',
+                onclick: (e) => {
+                    e.stopPropagation(); // Üstteki dive tıklamayı engelle
+                    rejectInvite(invite.id); // Taşıdığımız rejectInvite fonksiyonunu çağır
+                }
+            });
+
+            // 4. Katıl Butonu
+            const joinBtn = createElement('button', {
+                className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-xs',
+                textContent: 'Katıl',
+                onclick: (e) => {
+                    e.stopPropagation();
+                    // Davet tipine göre doğru katılma fonksiyonunu çağır
+                    if (invite.gameType === 'multiplayer-br') {
+                        joinBRGame(invite.id);
+                    } else {
+                        // Sıralı oyunlarda 'acceptInvite' (joinGame + status update) çağrılır
+                        acceptInvite(invite.id); 
+                    }
+                }
+            });
+
+            // Butonları sarmalayıcıya ekle
+            buttonWrapper.appendChild(rejectBtn);
+            buttonWrapper.appendChild(joinBtn);
+            
+            // Sarmalayıcıyı ana davet div'ine ekle
+            inviteDiv.appendChild(buttonWrapper);
+            
+            // Ana div'i sekme listesine ekle
             invitesTab.appendChild(inviteDiv);
         });
     } else {

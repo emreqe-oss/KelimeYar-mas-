@@ -94,10 +94,14 @@
                  <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Oyunlarım</h1>
              </header>
              <div class="flex border-b border-gray-600 mb-4">
-                 <button id="show-active-games-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Aktif</button>
-                 <button id="show-finished-games-tab-btn" class="flex-1 py-2 text-center text-gray-400">Biten</button>
-                 <button id="show-invites-tab-btn" class="flex-1 py-2 text-center text-gray-400">Davetler</button>
-             </div>
+        <button id="show-active-games-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Aktif</button>
+        <button id="show-finished-games-tab-btn" class="flex-1 py-2 text-center text-gray-400">Biten</button>
+        
+        <button id="show-invites-tab-btn" class="flex-1 py-2 text-center text-gray-400">
+            Davetler
+            <span id="game-invite-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span>
+        </button>
+        </div>
              <div id="active-games-tab" class="flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Aktif oyununuz bulunmuyor.</p></div>
              <div id="finished-games-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Henüz biten oyununuz yok.</p></div>
              <div id="invites-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Yeni davetiniz yok.</p></div>

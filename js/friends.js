@@ -19,7 +19,7 @@ import {
 import { db } from './firebase.js';
 import * as state from './state.js';
 import { showToast, createElement } from './utils.js';
-import { showScreen, displayStats, renderMyGamesLists } from './ui.js';
+import { showScreen, displayStats, renderMyGamesLists, gameInviteCount } from './ui.js';
 import { joinGame } from './game.js';
 
 // Elementler (Bu kısımda değişiklik yok)
@@ -236,6 +236,7 @@ export function listenToMyGames() {
     );
     
     // YENİ YÖNTEM: 'onSnapshot' fonksiyonu sorguyu ilk parametre olarak alır
+    // ...
     return onSnapshot(q, async (snapshot) => {
         const activeGames = [];
         const finishedGames = [];
@@ -250,37 +251,23 @@ export function listenToMyGames() {
                 activeGames.push(game);
             }
         });
+
+        // === BAŞLANGIÇ: YENİ KOD (Baloncuk Güncelleme) ===
+        const inviteCount = invites.length;
+        if (gameInviteCount) { // Elementin var olup olmadığını kontrol et
+            if (inviteCount > 0) {
+                gameInviteCount.textContent = inviteCount;
+                gameInviteCount.classList.remove('hidden');
+            } else {
+                gameInviteCount.classList.add('hidden');
+            }
+        }
+        // === BİTİŞ: YENİ KOD ===
+
         renderMyGamesLists(activeGames, finishedGames, invites);
     }, error => console.error("Oyunlar dinlenirken hata:", error));
 }
-
-
-async function acceptInvite(gameId) {
-    invitationModal.classList.add('hidden');
-    try {
-        await joinGame(gameId); // Bu fonksiyonun da güncellenmesi gerekebilir!
-        
-        // YENİ YÖNTEM: 'doc' ve 'updateDoc' kullanıyoruz
-        await updateDoc(doc(db, 'games', gameId), {
-            invitedPlayerId: deleteField(), // YENİ YÖNTEM
-            status: 'waiting'
-        });
-    } catch (error) {
-        console.error('Davet kabul edilemedi:', error);
-        showToast('Oyuna katılırken bir hata oluştu.', true);
-    }
-}
-
-async function rejectInvite(gameId) {
-    invitationModal.classList.add('hidden');
-    try {
-        // YENİ YÖNTEM: 'doc' ve 'deleteDoc' kullanıyoruz
-        await deleteDoc(doc(db, 'games', gameId));
-        showToast('Davet reddedildi.');
-    } catch (error) {
-        console.error('Davet reddedilemedi:', error);
-    }
-}
+// ...
 
 async function showFriendProfile(friendId) {
     try {

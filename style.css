@@ -153,3 +153,112 @@ body.theme-light .back-button-hitbox:hover {
 /* --- KAYDIRMA ÇUBUĞUNU GİZLEME --- */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* =================================== */
+/* === JOKER (YARDIM) BUTON STİLLERİ === */
+/* =================================== */
+
+/*
+ * 1. Konteyner: Butonları yatayda ortalar ve aralarına boşluk verir.
+ */
+.joker-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px; /* Butonlar arası boşluk */
+    padding: 8px 0; /* Üstten ve alttan boşluk */
+}
+
+/*
+ * 2. Genel Buton Stili (Yuvarlak Halka)
+ */
+.joker-button {
+    position: relative;     /* Rozetin konumlanması için gerekli */
+    width: 52px;            /* Genişlik (Halka boyutu) */
+    height: 52px;           /* Yükseklik (Halka boyutu) */
+    border-radius: 50%;     /* Butonu yuvarlak yapar */
+    border: 2px solid #6b7280; /* Dış halkanın rengi (gri) */
+    
+    /* İçindeki ikonu (SVG) ortalamak için */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Butonun üzerine gelince hafif büyüme efekti */
+.joker-button:hover:not(:disabled) {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* Kullanılmış (devre dışı) butonların görünümü */
+.joker-button:disabled {
+    background-color: #374151; /* Koyu gri (Tailwind gray-700) */
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #4b5563;
+}
+
+/* Butonların içindeki SVG ikonlarının boyutu ve rengi */
+.joker-button svg {
+    width: 28px;
+    height: 28px;
+    color: #ffffff; /* İkon rengi beyaz */
+}
+
+/*
+ * 3. Özel Renkler (İsteğiniz doğrultusunda)
+ */
+
+/* * YEŞİL HARF VEREN (Doğru Konum İpucu)
+ * Arka Plan: Yeşil (Tailwind green-600)
+ */
+#joker-correct {
+    background-color: #16a34a;
+    border-color: #22c55e; /* Halka rengi (green-500) */
+}
+
+/* * SARI HARF VEREN (Yanlış Konum İpucu)
+ * Arka Plan: Sarı (Tailwind yellow-500)
+ */
+#joker-present {
+    background-color: #eab308;
+    border-color: #fde047; /* Halka rengi (yellow-300) */
+}
+
+/* * KLAVYE TEMİZLEYİCİ (Harf Eleme)
+ * Arka Plan: Gri (Tailwind gray-600)
+ */
+#joker-remove {
+    background-color: #4b5563;
+    border-color: #9ca3af; /* Halka rengi (gray-400) */
+}
+
+/* * 4. Rozet (x1 yazısı) Stili
+ * (Bu muhtemelen sizde zaten vardı, ancak konumunu halkaya göre ayarladık)
+ */
+.joker-badge {
+    position: absolute;
+    top: -4px;   /* Halkanın biraz üstüne */
+    right: -4px; /* Halkanın biraz sağına */
+    background-color: #ef4444; /* Kırmızı */
+    color: white;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    z-index: 10;
+}
+
+/* Kullanılmış butonun rozetini gizle */
+.joker-button:disabled .joker-badge {
+    display: none;
+}
