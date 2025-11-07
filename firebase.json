@@ -3,6 +3,26 @@
     "rules": "firestore.rules"
   },
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "runtime": "nodejs18",
+    "ignore": [
+      "node_modules",
+      ".git",
+      ".eslintrc.js",
+      "*.log",
+      "tdk_guncel.json",
+      "tdk_anlamlar.json",
+      "find_missing.js",
+      "scrape_meanings.js",
+      "check_meanings.js"
+    ]
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
   }
 }

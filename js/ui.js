@@ -1,12 +1,10 @@
-// js/ui.js - SON HALİ (dailyWordBtn import hatası düzeltildi)
+// js/ui.js - TAM DOSYA (TÜM GÜNCELLEMELER DAHİL)
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
-// joinBRGame import'u eklendi
-import { joinGame, joinBRGame, acceptInvite, rejectInvite } from './game.js'; 
+import { joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame } from './game.js';
 
 // Değişkenler
-// TÜM DEĞİŞKENLERİ TEK BİR BLOKTA TOPLAYIP EXPORT EDİYORUZ
 export let 
     // Game Screen
     guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, 
@@ -32,7 +30,7 @@ export let
     
     // Game Setup
     randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
-    dailyWordBtn, // <-- EKSİK BUTON EKLENDİ
+    dailyWordBtn, 
     createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn,
     
     // Friends Tabs
@@ -40,7 +38,8 @@ export let
     showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn, friendRequestCount,
     
     // My Games Tabs
-    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn, gameInviteCount,
+    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
+    gameInviteCount,
     
     // Game Over
     newRoundBtn, mainMenuBtn, shareResultsBtn,
@@ -48,7 +47,7 @@ export let
     // Misc
     userDisplay, invitationModal, copyGameIdBtn;
 
-const brPlayerSlots = []; // Bu export edilmiyor, UI içinde kullanılıyor
+const brPlayerSlots = []; 
 
 export function initUI() {
     // Game Screen
@@ -109,7 +108,7 @@ export function initUI() {
     withFriendsBtn = document.getElementById('with-friends-btn');
     vsCpuBtn = document.getElementById('vs-cpu-btn');
     multiplayerBrBtn = document.getElementById('multiplayer-br-btn');
-    dailyWordBtn = document.getElementById('daily-word-btn'); // <-- EKSİK SEÇİM EKLENDİ
+    dailyWordBtn = document.getElementById('daily-word-btn'); 
     createGameBtn = document.getElementById('create-game-btn');
     joinGameBtn = document.getElementById('join-game-btn');
     createBRGameBtn = document.getElementById('create-br-game-btn');
@@ -129,8 +128,8 @@ export function initUI() {
     showActiveGamesTabBtn = document.getElementById('show-active-games-tab-btn');
     showFinishedGamesTabBtn = document.getElementById('show-finished-games-tab-btn');
     showInvitesTabBtn = document.getElementById('show-invites-tab-btn');
-    gameInviteCount = document.getElementById('game-invite-count'); // <-- BU SATIRI EKLEYİN
-   
+    gameInviteCount = document.getElementById('game-invite-count');
+
     // Game Over
     newRoundBtn = document.getElementById('new-round-btn');
     mainMenuBtn = document.getElementById('main-menu-btn');
@@ -213,56 +212,36 @@ export function createKeyboard(handleKeyPress) {
     });
 }
 
-
-// js/ui.js -> updateKeyboard (NİHAİ DÜZELTİLMİŞ HAL)
-
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
     const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
     
-    // 1. Tahminlere göre renk durumunu hesapla
-    const keyStates = {}; // Bu, tahminlere dayalı renk haritasıdır
+    const keyStates = {}; 
     allGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
             const color = colors[i];
-            // 'correct' (yeşil) her zaman önceliklidir
             if (keyStates[letter] === 'correct') continue; 
-            // 'present' (sarı) ise ve yeni renk 'correct' değilse, 'present' kalsın
             if (keyStates[letter] === 'present' && color !== 'correct') continue; 
             keyStates[letter] = color;
         }
     });
 
-    // 2. Klavyeyi DİKKATLİCE güncelle
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
-
-        // Tahminlerden gelen rengi al
         const guessColor = keyStates[keyId]; 
-
-        // === BAŞLANGIÇ: DÜZELTİLMİŞ MANTIK ===
-        // Körü körüne `classList.remove` yapmıyoruz.
-        
-        // Eğer tahminlerde 'correct' (yeşil) bulunduysa:
         if (guessColor === 'correct') {
-            btn.classList.remove('present', 'absent'); // Varsa sarı veya griyi kaldır
+            btn.classList.remove('present', 'absent'); 
             btn.classList.add('correct');
         } 
-        // Eğer tahminlerde 'present' (sarı) bulunduysa VE tuş zaten 'correct' (yeşil) DEĞİLSE:
         else if (guessColor === 'present' && !btn.classList.contains('correct')) {
-            btn.classList.remove('absent'); // Varsa griyi kaldır
+            btn.classList.remove('absent'); 
             btn.classList.add('present');
         } 
-        // Eğer tahminlerde 'absent' (gri) bulunduysa VE tuş zaten 'correct' veya 'present' DEĞİLSE:
         else if (guessColor === 'absent' && !btn.classList.contains('correct') && !btn.classList.contains('present')) {
             btn.classList.add('absent');
         }
-        // Eğer tahminlerden hiçbir renk gelmediyse (guessColor tanımsızsa):
-        // HİÇBİR ŞEY YAPMA. 
-        // Bu, joker tarafından manuel olarak eklenen 'present' veya 'correct' renginin silinmesini engeller.
-        // === BİTİŞ: DÜZELTİLMİŞ MANTIK ===
     });
 }
 
@@ -300,7 +279,7 @@ export function updateMultiplayerScoreBoard(gameData) {
     
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     if (sequentialGameInfo) {
-        sequentialGameInfo.classList.toggle('hidden', isBR || !gameData.gameType || gameData.gameType === 'daily');
+        sequentialGameInfo.classList.toggle('hidden', isBR && state.getGameMode() !== 'daily');
     }
     
     multiplayerScoreBoard.classList.toggle('hidden', !isBR);
@@ -369,7 +348,7 @@ export function updateMultiplayerScoreBoard(gameData) {
     const p1ScoreEl = document.getElementById('player1-score');
     const p2ScoreEl = document.getElementById('player2-score');
     
-    if (p1ScoreEl && p2ScoreEl && !isBR) {
+    if (p1ScoreEl && p2ScoreEl && !isBR && state.getGameMode() !== 'daily') {
          const playerIds = Object.keys(gameData.players);
          let p1Id = gameData.creatorId || playerIds[0];
          
@@ -387,6 +366,7 @@ export function updateMultiplayerScoreBoard(gameData) {
          }
     }
 }
+
 
 export function switchFriendTab(tabName) {
     const tabs = { friends: document.getElementById('friends-tab'), requests: document.getElementById('requests-tab'), add: document.getElementById('add-friend-tab') };
@@ -432,6 +412,7 @@ export function switchMyGamesTab(tabName) {
     }
 }
 
+// === "Ayrıl" butonu mantığı burada ===
 export function renderMyGamesLists(activeGames, finishedGames, invites) {
     const activeTab = document.getElementById('active-games-tab');
     const finishedTab = document.getElementById('finished-games-tab');
@@ -443,7 +424,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
 
     const createPlaceholder = (text) => `<p class="text-center text-gray-400 mt-16">${text}</p>`;
 
-    // Aktif Oyunları Render Et
+    // Aktif Oyunları Render Et (AYRIL BUTONLU)
     if (activeGames.length > 0) {
         activeGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
@@ -456,15 +437,43 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             }
 
             const gameDiv = createElement('div', {
-                className: 'bg-gray-700 p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-600 transition',
-                onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)),
-                innerHTML: `
-                    <div class="flex justify-between items-center">
-                        <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
-                        <p class="text-sm ${game.currentPlayerId === state.getUserId() || (game.gameType === 'multiplayer-br' && game.status === 'playing') ? 'text-green-400 font-bold' : 'text-gray-400'}">${statusText}</p>
-                    </div>
-                `
+                className: 'bg-gray-700 p-3 rounded-lg mb-2 flex justify-between items-center'
             });
+
+            const infoDiv = createElement('div', {
+                className: 'cursor-pointer hover:opacity-75',
+                onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)),
+            });
+            
+            const titleP = createElement('p', {
+                className: 'font-bold',
+                textContent: game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername
+            });
+            
+            const statusP = createElement('p', {
+                className: `text-sm ${game.currentPlayerId === state.getUserId() || (game.gameType === 'multiplayer-br' && game.status === 'playing') ? 'text-green-400 font-bold' : 'text-gray-400'}`,
+                textContent: statusText
+            });
+
+            infoDiv.appendChild(titleP);
+            infoDiv.appendChild(statusP);
+
+            const leaveBtn = createElement('button', {
+                className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-xs flex-shrink-0',
+                textContent: 'Ayrıl',
+                onclick: (e) => {
+                    e.stopPropagation(); 
+                    const gameName = game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername;
+                    if (confirm(`'${gameName}' oyunundan ayrılmak istediğinize emin misiniz? Bu işlem oyunu sonlandırabilir.`)) {
+                        // 'gameDiv' elementini de yolluyoruz ki anında silebilelim
+                        abandonGame(game.id, gameDiv); 
+                    }
+                }
+            });
+            
+            gameDiv.appendChild(infoDiv);
+            gameDiv.appendChild(leaveBtn);
+
             activeTab.appendChild(gameDiv);
         });
     } else {
@@ -484,7 +493,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                  resultText = isWinner ? 'Kazandın' : (game.matchWinnerId === null ? 'Berabere' : 'Kaybettin');
                  borderColor = isWinner ? 'border-green-500' : (game.matchWinnerId === null ? 'border-yellow-500' : 'border-red-500');
              } else {
-                 const isWinner = game.roundWinner === state.getUserId();
+                 const isWinner = game.roundWinner === state.getUserId(); 
                  resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
                  borderColor = isWinner ? 'border-green-500' : (game.roundWinner === null ? 'border-yellow-500' : 'border-red-500');
              }
@@ -509,51 +518,40 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
         invites.forEach(invite => {
             const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
             
-            // 1. Ana kapsayıcı div (artık tıklanabilir değil)
             const inviteDiv = createElement('div', {
                 className: 'bg-gray-700 p-3 rounded-lg mb-2',
                 innerHTML: `<p><strong>${creatorUsername}</strong> seni bir ${invite.gameType === 'multiplayer-br' ? 'Battle Royale' : 'oyuna'} davet ediyor!</p>`
             });
 
-            // 2. Butonları taşıyacak div
             const buttonWrapper = createElement('div', {
-                className: 'flex gap-2 mt-2 justify-end' // Butonları sağa yaslar
+                className: 'flex gap-2 mt-2 justify-end' 
             });
 
-            // 3. İptal (Reddet) Butonu
             const rejectBtn = createElement('button', {
                 className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-xs',
                 textContent: 'İptal',
                 onclick: (e) => {
-                    e.stopPropagation(); // Üstteki dive tıklamayı engelle
-                    rejectInvite(invite.id); // Taşıdığımız rejectInvite fonksiyonunu çağır
+                    e.stopPropagation(); 
+                    rejectInvite(invite.id); 
                 }
             });
 
-            // 4. Katıl Butonu
             const joinBtn = createElement('button', {
                 className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-xs',
                 textContent: 'Katıl',
                 onclick: (e) => {
                     e.stopPropagation();
-                    // Davet tipine göre doğru katılma fonksiyonunu çağır
                     if (invite.gameType === 'multiplayer-br') {
                         joinBRGame(invite.id);
                     } else {
-                        // Sıralı oyunlarda 'acceptInvite' (joinGame + status update) çağrılır
                         acceptInvite(invite.id); 
                     }
                 }
             });
 
-            // Butonları sarmalayıcıya ekle
             buttonWrapper.appendChild(rejectBtn);
             buttonWrapper.appendChild(joinBtn);
-            
-            // Sarmalayıcıyı ana davet div'ine ekle
             inviteDiv.appendChild(buttonWrapper);
-            
-            // Ana div'i sekme listesine ekle
             invitesTab.appendChild(inviteDiv);
         });
     } else {
