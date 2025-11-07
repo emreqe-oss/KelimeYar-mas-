@@ -2,3 +2,11 @@ node_modules/
 *.local
 .env
 kelime-oyunu-flaneur-firebase-adminsdk-fbsvc-0d494dc230.json
+# Geliştirme script'lerini ve büyük veri dosyalarını yoksay
+functions/find_missing.js
+functions/scrape_meanings.js
+functions/check_meanings.js
+functions/tdk_guncel.json
+functions/tdk_anlamlar.json
+eksik_kelimeler.json
+anlami_olmayan_kelimeler.txt
