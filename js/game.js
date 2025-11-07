@@ -1535,7 +1535,7 @@ export function startGame() {
 }
 
 export async function createBRGame(options = {}) {
-    const timeLimit = 60; 
+    const timeLimit = 120; 
     const wordLength = getRandomWordLength(); 
     const { isHardMode = false } = options;
     if (!db || !state.getUserId()) {
