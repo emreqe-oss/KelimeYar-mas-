@@ -520,3 +520,31 @@ body.theme-light .back-button-hitbox:hover {
 .tutorial-tile-mini.absent {
     background-color: #374151;
 }
+
+/* ============================================== */
+/* === "NASIL OYNANIR?" JOKER ANİMASYONU CSS === */
+/* ============================================== */
+
+/* Tutorial'daki joker butonlarına geçiş efekti ekle */
+#tutorial-joker-container .joker-button {
+    transition: all 0.3s ease, transform 0.2s ease;
+}
+
+/* Jokeri "basılmış" gibi göstermek için vurgulama sınıfı */
+#tutorial-joker-container .tutorial-highlight {
+    transform: scale(1.15) !important;
+    /* Ana oyununuzdaki "present" rengi (sarı) ile parlama */
+    box-shadow: 0 0 15px 5px #f59e0b; 
+}
+
+/* Kullanılmış (devre dışı) tutorial jokerleri */
+#tutorial-joker-container .joker-button:disabled {
+    background-color: #374151;
+    opacity: 0.4;
+    border-color: #4b5563;
+}
+
+/* Kullanılmış jokerin rozetini gizle */
+#tutorial-joker-container .joker-button:disabled .joker-badge {
+    display: none;
+}
