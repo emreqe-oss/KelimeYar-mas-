@@ -94,14 +94,10 @@
                  <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Oyunlarım</h1>
              </header>
              <div class="flex border-b border-gray-600 mb-4">
-        <button id="show-active-games-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Aktif</button>
-        <button id="show-finished-games-tab-btn" class="flex-1 py-2 text-center text-gray-400">Biten</button>
-        
-        <button id="show-invites-tab-btn" class="flex-1 py-2 text-center text-gray-400">
-            Davetler
-            <span id="game-invite-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span>
-        </button>
-        </div>
+                 <button id="show-active-games-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Aktif</button>
+                 <button id="show-finished-games-tab-btn" class="flex-1 py-2 text-center text-gray-400">Biten</button>
+                 <button id="show-invites-tab-btn" class="flex-1 py-2 text-center text-gray-400">Davetler <span id="game-invite-count" class="hidden bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1">0</span></button>
+             </div>
              <div id="active-games-tab" class="flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Aktif oyununuz bulunmuyor.</p></div>
              <div id="finished-games-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Henüz biten oyununuz yok.</p></div>
              <div id="invites-tab" class="hidden flex-1 overflow-y-auto"><p class="text-center text-gray-400 mt-16">Yeni davetiniz yok.</p></div>
@@ -269,9 +265,89 @@
         </div>
 
         <div id="how-to-play-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center text-left">
-             <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
-             <p>İçerik buraya gelecek...</p>
-             <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
+            <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
+            <p class="text-center mb-4">Gizli 5 harfli kelimeyi 6 tahminde bulun.</p>
+
+            <div class="tutorial-container">
+                
+                <div id="tutorial-grid" class="grid gap-1 w-full" style="margin: 0 auto; max-width: 260px; grid-template-columns: repeat(5, 1fr);">
+                    <div class="tutorial-tile" id="t-0-0"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-0-1"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-0-2"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-0-3"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-0-4"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-1-0"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-1-1"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-1-2"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-1-3"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-1-4"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-2-0"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-2-1"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-2-2"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-2-3"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-2-4"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-3-0"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-3-1"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-3-2"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-3-3"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-3-4"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-4-0"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-4-1"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-4-2"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-4-3"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-4-4"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-5-0"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-5-1"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-5-2"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-5-3"><div class="front"></div><div class="back"></div></div>
+                    <div class="tutorial-tile" id="t-5-4"><div class="front"></div><div class="back"></div></div>
+                </div>
+                
+                <div id="tutorial-keyboard" class="w-full flex-shrink-0" style="padding: 8px 2px 2px 2px; box-sizing: border-box;">
+                    <div class="tutorial-key-row" style="display: flex; justify-content: center; gap: 4px; margin-bottom: 4px;">
+                        <button class="tutorial-key" data-key="E">E</button>
+                        <button class="tutorial-key" data-key="R">R</button>
+                        <button class="tutorial-key" data-key="T">T</button>
+                        <button class="tutorial-key" data-key="Y">Y</button>
+                        <button class="tutorial-key" data-key="U">U</button>
+                        <button class="tutorial-key" data-key="I">I</button>
+                        <button class="tutorial-key" data-key="O">O</button>
+                        <button class="tutorial-key" data-key="P">P</button>
+                        <button class="tutorial-key" data-key="Ğ">Ğ</button>
+                        <button class="tutorial-key" data-key="Ü">Ü</button>
+                    </div>
+                    <div class="tutorial-key-row" style="display: flex; justify-content: center; gap: 4px; margin-bottom: 4px;">
+                        <button class="tutorial-key" data-key="A">A</button>
+                        <button class="tutorial-key" data-key="S">S</button>
+                        <button class="tutorial-key" data-key="D">D</button>
+                        <button class="tutorial-key" data-key="F">F</button>
+                        <button class="tutorial-key" data-key="G">G</button>
+                        <button class="tutorial-key" data-key="H">H</button>
+                        <button class="tutorial-key" data-key="J">J</button>
+                        <button class="tutorial-key" data-key="K">K</button>
+                        <button class="tutorial-key" data-key="L">L</button>
+                        <button class="tutorial-key" data-key="Ş">Ş</button>
+                        <button class="tutorial-key" data-key="İ">İ</button>
+                    </div>
+                    <div class="tutorial-key-row" style="display: flex; justify-content: center; gap: 4px; margin-bottom: 4px;">
+                        <button class="tutorial-key" data-key="Z">Z</button>
+                        <button class="tutorial-key" data-key="C">C</button>
+                        <button class="tutorial-key" data-key="V">V</button>
+                        <button class="tutorial-key" data-key="B">B</button>
+                        <button class="tutorial-key" data-key="N">N</button>
+                        <button class="tutorial-key" data-key="M">M</button>
+                        <button class="tutorial-key" data-key="Ö">Ö</button>
+                        <button class="tutorial-key" data-key="Ç">Ç</button>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="text-left space-y-3 mt-4" style="padding: 0 10px;">
+                <li><span class="tutorial-tile-mini correct">Ö</span> Harf kelimede var ve <strong>doğru yerde</strong>.</li>
+                <li><span class="tutorial-tile-mini present">N</span> Harf kelimede var ama <strong>yanlış yerde</strong>.</li>
+                <li><span class="tutorial-tile-mini absent">R</span> Harf kelimede <strong>yok</strong>.</li>
+            </ul>
+            <button id="close-how-to-play-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Anladım</button>
         </div>
 
         <div id="game-screen" class="hidden flex-1 flex flex-col items-center px-2">

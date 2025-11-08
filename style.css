@@ -262,3 +262,261 @@ body.theme-light .back-button-hitbox:hover {
 .joker-button:disabled .joker-badge {
     display: none;
 }
+
+/* style.css dosyasının sonuna ekleyin */
+
+/* --- Nasıl Oynanır? Tutorial Animasyonu --- */
+.tutorial-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0;
+    min-height: 55px; /* Animasyon için boş alan */
+}
+
+.tutorial-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    /* Izgara boyutunu oyununuzdakiyle eşleşmesi için ayarlayabilirsiniz */
+    width: 250px; 
+    max-width: 250px;
+}
+
+.tutorial-tile {
+    width: 45px;
+    height: 45px;
+    font-size: 2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+    color: white;
+}
+
+/* Karelerin ön ve arka yüzleri */
+.tutorial-tile .front, .tutorial-tile .back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transition: transform 0.6s ease;
+    border-radius: 4px;
+}
+
+/* Ön yüz (Harfin yazıldığı yer) */
+.tutorial-tile .front {
+    border: 2px solid #565758; /* Başlangıçta boş kare rengi */
+    transform: rotateX(0deg);
+}
+
+/* Arka yüz (Rengin göründüğü yer) */
+.tutorial-tile .back {
+    transform: rotateX(-180deg); /* Başlangıçta arkası dönük */
+    border: 2px solid transparent;
+}
+
+/* Harf yazma (pop-in) animasyonu */
+@keyframes tutorial-pop {
+    from { transform: scale(0.8); opacity: 0.8; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+.tutorial-tile .front.pop {
+    animation: tutorial-pop 0.1s ease-out;
+    border-color: #888; /* Yazı yazılınca kenarlık rengi */
+}
+
+/* Çevrilme (flip) animasyonu */
+.tutorial-tile.flip .front {
+    transform: rotateX(180deg);
+}
+.tutorial-tile.flip .back {
+    transform: rotateX(0deg);
+}
+
+/* Renklerin mini gösterimi (Açıklama listesi için) */
+.tutorial-tile-mini {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 8px;
+    font-size: 1rem;
+    text-align: center;
+    line-height: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+/* style.css dosyasının sonuna ekleyin */
+
+/* --- Nasıl Oynanır? Tutorial Animasyonu (Gelişmiş) --- */
+.tutorial-container {
+    display: flex;
+    flex-direction: column; /* Izgarayı ve klavyeyi alt alta dizer */
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.tutorial-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(6, 1fr); /* 6 satır */
+    gap: 5px;
+    width: 260px; /* 5x50px + 4x5px gap */
+    height: 315px; /* 6x50px + 5x5px gap */
+    max-width: 260px;
+    margin-bottom: 10px;
+}
+
+/* Izgaradaki her bir kare */
+.tutorial-tile {
+    /* Boyutları ana oyun ızgaranızla (js/ui.js createGrid) eşleştirin */
+    width: 50px; 
+    height: 50px;
+    font-size: 2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+    color: white;
+}
+
+/* Karelerin ön ve arka yüzleri */
+.tutorial-tile .front, .tutorial-tile .back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transition: transform 0.6s ease;
+    border-radius: 4px;
+}
+
+.tutorial-tile .front {
+    border: 2px solid #565758; /* Başlangıçtaki boş kare rengi */
+    transform: rotateX(0deg);
+}
+
+.tutorial-tile .back {
+    transform: rotateX(-180deg); /* Başlangıçta arkası dönük */
+    border: 2px solid transparent;
+    /* Renkler ana style.css'teki .correct, .present, .absent'den gelir */
+}
+
+/* Harf yazma (pop-in) animasyonu */
+@keyframes tutorial-pop {
+    from { transform: scale(0.8); opacity: 0.8; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+.tutorial-tile .front.pop {
+    animation: tutorial-pop 0.1s ease-out;
+    border-color: #888; /* Yazı yazılınca kenarlık rengi */
+}
+
+/* Çevrilme (flip) animasyonu */
+.tutorial-tile.flip .front {
+    transform: rotateX(180deg);
+}
+.tutorial-tile.flip .back {
+    transform: rotateX(0deg);
+}
+
+/* Renklerin mini gösterimi (Açıklama listesi için) */
+.tutorial-tile-mini {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 8px;
+    font-size: 1.1rem;
+    text-align: center;
+    line-height: 28px;
+    font-weight: bold;
+    color: white;
+}
+
+/* Sahte klavye için stiller */
+#tutorial-keyboard {
+    padding: 8px 2px 2px 2px;
+    box-sizing: border-box;
+}
+.tutorial-key-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px; /* Tuşlar arası boşluk */
+    margin-bottom: 4px;
+}
+.tutorial-key {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    /* Klavye renklerini oyununuzdaki .keyboard-key'den alıyoruz */
+    background-color: #818384; 
+    color: white;
+    border: 0;
+    border-radius: 4px;
+    height: 45px; /* Yükseklik */
+    min-width: 28px; /* Genişlik */
+    padding: 0 6px;
+    text-transform: uppercase;
+    transition: background-color 0.2s ease;
+}
+/* Renkler (oyunla aynı) */
+.tutorial-key.correct { background-color: #538d4e; }
+.tutorial-key.present { background-color: #b59f3b; }
+.tutorial-key.absent { background-color: #3a3a3c; }
+
+/* ============================================== */
+/* === "NASIL OYNANIR?" ANİMASYON DÜZELTMESİ === */
+/* ============================================== */
+
+/* * Bu kurallar, animasyondaki kutuların (tile)
+ * ARKA YÜZLERİNİ renklendirir.
+ * Renk kodları, ana oyununuzdaki (.tile.correct)
+ * renk kodları ile aynıdır.
+ */
+
+.tutorial-tile .back.correct {
+    background-color: #10b981; /* Ana CSS'inizdeki yeşil */
+    border-color: #10b981;
+    color: white;
+}
+
+.tutorial-tile .back.present {
+    background-color: #f59e0b; /* Ana CSS'inizdeki sarı */
+    border-color: #f59e0b;
+    color: white;
+}
+
+.tutorial-tile .back.absent {
+    background-color: #374151; /* Ana CSS'inizdeki gri */
+    border-color: #374151;
+    color: white;
+}
+
+/* * Bonus: Bu kurallar, açıklama listesindeki mini kutuları
+ * (Ö, N, R harfleri) renklendirir.
+ */
+.tutorial-tile-mini.correct {
+    background-color: #10b981;
+}
+.tutorial-tile-mini.present {
+    background-color: #f59e0b;
+}
+.tutorial-tile-mini.absent {
+    background-color: #374151;
+}

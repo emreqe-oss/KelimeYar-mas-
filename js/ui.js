@@ -1,4 +1,4 @@
-// js/ui.js - TAM DOSYA (TÜM GÜNCELLEMELER DAHİL)
+// js/ui.js - TAM DOSYA (Mantık Hatası Düzeltildi)
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
@@ -324,8 +324,8 @@ export function updateMultiplayerScoreBoard(gameData) {
                         playerStatus = `${(player.guesses || []).length}/${gameData.GUESS_COUNT}`;
                         statusColor = isMe ? 'text-indigo-200' : 'text-gray-400';
                     } else if (gameData.status === 'waiting') {
-                         playerStatus = 'Bekliyor...';
-                         statusColor = 'text-gray-400';
+                        playerStatus = 'Bekliyor...';
+                        statusColor = 'text-gray-400';
                     }
 
                     slot.className = `${bgColor} p-2 rounded-lg shadow`; 
@@ -349,24 +349,23 @@ export function updateMultiplayerScoreBoard(gameData) {
     const p2ScoreEl = document.getElementById('player2-score');
     
     if (p1ScoreEl && p2ScoreEl && !isBR && state.getGameMode() !== 'daily') {
-         const playerIds = Object.keys(gameData.players);
-         let p1Id = gameData.creatorId || playerIds[0];
-         
-         if (playerIds.length > 0) {
-             const p1 = gameData.players[p1Id];
-             if (p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score || 0} Puan`;
-         }
-         
-         if (playerIds.length > 1) {
-             const p2Id = playerIds.find(id => id !== p1Id);
-             const p2 = gameData.players[p2Id];
-             if (p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score || 0} Puan`;
-         } else {
-             p2ScoreEl.innerHTML = '';
-         }
+        const playerIds = Object.keys(gameData.players);
+        let p1Id = gameData.creatorId || playerIds[0];
+        
+        if (playerIds.length > 0) {
+            const p1 = gameData.players[p1Id];
+            if (p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score || 0} Puan`;
+        }
+        
+        if (playerIds.length > 1) {
+            const p2Id = playerIds.find(id => id !== p1Id);
+            const p2 = gameData.players[p2Id];
+            if (p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score || 0} Puan`;
+        } else {
+            p2ScoreEl.innerHTML = '';
+        }
     }
 }
-
 
 export function switchFriendTab(tabName) {
     const tabs = { friends: document.getElementById('friends-tab'), requests: document.getElementById('requests-tab'), add: document.getElementById('add-friend-tab') };
@@ -412,7 +411,6 @@ export function switchMyGamesTab(tabName) {
     }
 }
 
-// === "Ayrıl" butonu mantığı burada ===
 export function renderMyGamesLists(activeGames, finishedGames, invites) {
     const activeTab = document.getElementById('active-games-tab');
     const finishedTab = document.getElementById('finished-games-tab');
@@ -424,7 +422,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
 
     const createPlaceholder = (text) => `<p class="text-center text-gray-400 mt-16">${text}</p>`;
 
-    // Aktif Oyunları Render Et (AYRIL BUTONLU)
+    // Aktif Oyunları Render Et
     if (activeGames.length > 0) {
         activeGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
@@ -465,7 +463,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                     e.stopPropagation(); 
                     const gameName = game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername;
                     if (confirm(`'${gameName}' oyunundan ayrılmak istediğinize emin misiniz? Bu işlem oyunu sonlandırabilir.`)) {
-                        // 'gameDiv' elementini de yolluyoruz ki anında silebilelim
                         abandonGame(game.id, gameDiv); 
                     }
                 }
@@ -483,31 +480,31 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     // Biten Oyunları Render Et
     if (finishedGames.length > 0) {
         finishedGames.forEach(game => {
-             const opponentId = game.playerIds.find(id => id !== state.getUserId());
-             const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Bilinmiyor';
-             let resultText = 'Bitti';
-             let borderColor = 'border-gray-500';
+            const opponentId = game.playerIds.find(id => id !== state.getUserId());
+            const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Bilinmiyor';
+            let resultText = 'Bitti';
+            let borderColor = 'border-gray-500';
 
-             if (game.gameType === 'multiplayer-br') {
-                 const isWinner = game.matchWinnerId === state.getUserId();
-                 resultText = isWinner ? 'Kazandın' : (game.matchWinnerId === null ? 'Berabere' : 'Kaybettin');
-                 borderColor = isWinner ? 'border-green-500' : (game.matchWinnerId === null ? 'border-yellow-500' : 'border-red-500');
-             } else {
-                 const isWinner = game.roundWinner === state.getUserId(); 
-                 resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
-                 borderColor = isWinner ? 'border-green-500' : (game.roundWinner === null ? 'border-yellow-500' : 'border-red-500');
-             }
+            if (game.gameType === 'multiplayer-br') {
+                const isWinner = game.matchWinnerId === state.getUserId();
+                resultText = isWinner ? 'Kazandın' : (game.matchWinnerId === null ? 'Berabere' : 'Kaybettin');
+                borderColor = isWinner ? 'border-green-500' : (game.matchWinnerId === null ? 'border-yellow-500' : 'border-red-500');
+            } else {
+                const isWinner = game.roundWinner === state.getUserId(); 
+                resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
+                borderColor = isWinner ? 'border-green-500' : (game.roundWinner === null ? 'border-yellow-500' : 'border-red-500');
+            }
 
-             const gameDiv = createElement('div', {
-                 className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor}`,
-                 innerHTML: `
-                     <div class="flex justify-between items-center">
-                         <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
-                         <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
-                     </div>
-                 `
-             });
-             finishedTab.appendChild(gameDiv);
+            const gameDiv = createElement('div', {
+                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor}`,
+                innerHTML: `
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
+                        <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
+                    </div>
+                `
+            });
+            finishedTab.appendChild(gameDiv);
         });
     } else {
         finishedTab.innerHTML = createPlaceholder('Henüz biten oyununuz yok.');
@@ -578,3 +575,203 @@ export function updateJokerUI(jokersUsed, isMyTurn, gameStatus) {
         }
     });
 }
+
+// === BAŞLANGIÇ: YENİ ANİMASYON KODLARI (HARF KAYBOLMA SORUNU DÜZELTİLDİ) ===
+
+let tutorialTimeoutIds = []; 
+let isTutorialRunning = false; 
+
+/**
+ * Yardımcı Fonksiyon: Belirtilen milisaniye kadar bekler.
+ */
+const wait = (ms) => new Promise((resolve, reject) => {
+    // Animasyon durdurulursa, beklemeyi reddet (reject)
+    if (!isTutorialRunning) {
+        reject(new Error("Tutorial stopped"));
+        return;
+    }
+    const id = setTimeout(resolve, ms);
+    tutorialTimeoutIds.push(id);
+});
+
+/**
+ * Yardımcı Fonksiyon: Panoyu ve klavyeyi temizler.
+ * (Bu fonksiyon 'isTutorialRunning' bayrağını DEĞİŞTİRMEZ)
+ */
+function cleanTutorialBoard() {
+    // Tüm bekleyen 'setTimeout'ları iptal et
+    tutorialTimeoutIds.forEach(id => clearTimeout(id));
+    tutorialTimeoutIds = [];
+
+    // Tüm (6x5=30) kareleri sıfırla
+    for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 5; c++) {
+            const tile = document.getElementById(`t-${r}-${c}`);
+            if (tile) {
+                tile.classList.remove('flip');
+                const front = tile.querySelector('.front');
+                const back = tile.querySelector('.back');
+                front.textContent = '';
+                front.classList.remove('pop');
+                back.textContent = ''; // Arka yüzü de temizle
+                back.className = 'tile-inner back'; 
+            }
+        }
+    }
+    
+    // Sahte klavyeyi sıfırla
+    document.querySelectorAll('#tutorial-keyboard .tutorial-key').forEach(key => {
+        key.className = 'tutorial-key'; 
+    });
+}
+
+/**
+ * Yardımcı Fonksiyon: Tek bir kareye harf yazar
+ */
+async function typeTutorialTile(row, col, letter, delay) {
+    await wait(delay);
+    const tile = document.getElementById(`t-${row}-${col}`);
+    if (tile) {
+        const front = tile.querySelector('.front');
+        front.textContent = letter;
+        front.classList.add('pop');
+    }
+}
+
+/**
+ * ==== DÜZELTİLMİŞ FONKSİYON ====
+ * Yardımcı Fonksiyon: Tek bir kareyi çevirir ve renklendirir
+ */
+async function flipTutorialTile(row, col, colorClass, delay) {
+    await wait(delay);
+    const tile = document.getElementById(`t-${row}-${col}`);
+    if (tile) {
+        const front = tile.querySelector('.front');
+        const back = tile.querySelector('.back');
+        
+        // === HARF KAYBOLMA DÜZELTMESİ ===
+        // Harfi (veya içeriği) ön yüzden alıp arka yüze de kopyala
+        back.textContent = front.textContent; 
+        
+        // Rengi .back elementine ekle
+        back.className = 'tile-inner back ' + colorClass; 
+        // === DÜZELTME SONU ===
+
+        tile.classList.add('flip'); 
+    }
+}
+
+/**
+ * Yardımcı Fonksiyon: Sahte klavyedeki tuşları günceller
+ */
+async function updateTutorialKeyboard(keys, colorClass, delay) {
+    await wait(delay);
+    keys.forEach(key => {
+        const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`);
+        if (keyEl && !keyEl.classList.contains('correct')) { 
+            if (colorClass === 'present' && keyEl.classList.contains('present')) {
+                 // 'present' olan bir tuşu tekrar 'present' yapmaya gerek yok
+            } else {
+                keyEl.className = 'tutorial-key ' + colorClass; 
+            }
+        }
+    });
+}
+
+/**
+ * GÜNCELLENMİŞ Animasyonu başlatan ana fonksiyon
+ */
+export async function playTutorialAnimation() {
+    // 1. Zaten çalışan bir animasyon varsa, tekrar başlatma
+    if (isTutorialRunning) return; 
+    
+    // 2. Bayrağı ayarla ve panoyu temizle
+    isTutorialRunning = true; 
+    cleanTutorialBoard(); 
+
+    // 3. Animasyon senaryosu
+    const guesses = [
+        { word: ['Ö', 'R', 'N', 'E', 'K'], colors: ['correct', 'absent', 'present', 'absent', 'absent'], keys: { correct: ['Ö'], present: ['N'], absent: ['R', 'E', 'K'] } },
+        
+        // === MANTIK HATASI DÜZELTMESİ (ÖLÇÜT KELİMESİ) ===
+        // 'Ü' harfi (index 3) 'present' (sarı) değil, 'correct' (yeşil) olmalıydı.
+        { word: ['Ö', 'L', 'Ç', 'Ü', 'T'], colors: ['correct', 'absent', 'absent', 'correct', 'absent'], keys: { correct: ['Ü'], absent: ['L', 'Ç', 'T'] } },
+        // === DÜZELTME SONU ===
+
+        { word: ['Ö', 'N', 'C', 'Ü', 'L'], colors: ['correct', 'correct', 'absent', 'correct', 'correct'], keys: { correct: ['N', 'Ü', 'L'], absent: ['C'] } },
+        { word: ['Ö', 'N', 'G', 'Ü', 'L'], colors: ['correct', 'correct', 'correct', 'correct', 'correct'], keys: { correct: ['G'] } }
+    ];
+
+    try {
+        // --- ADIM 1: ÖRNEK (SATIR 0) ---
+        await typeTutorialTile(0, 0, guesses[0].word[0], 50); 
+        await typeTutorialTile(0, 1, guesses[0].word[1], 150);
+        await typeTutorialTile(0, 2, guesses[0].word[2], 150);
+        await typeTutorialTile(0, 3, guesses[0].word[3], 150);
+        await typeTutorialTile(0, 4, guesses[0].word[4], 150);
+        await wait(1000);
+        for (let i = 0; i < 5; i++) await flipTutorialTile(0, i, guesses[0].colors[i], 300);
+        await updateTutorialKeyboard(guesses[0].keys.correct, 'correct', 0);
+        await updateTutorialKeyboard(guesses[0].keys.present, 'present', 0);
+        await updateTutorialKeyboard(guesses[0].keys.absent, 'absent', 0);
+        await wait(2000);
+
+        // --- ADIM 2: ÖLÇÜT (SATIR 1) ---
+        await typeTutorialTile(1, 0, guesses[1].word[0], 500);
+        await typeTutorialTile(1, 1, guesses[1].word[1], 150);
+        await typeTutorialTile(1, 2, guesses[1].word[2], 150);
+        await typeTutorialTile(1, 3, guesses[1].word[3], 150);
+        await typeTutorialTile(1, 4, guesses[1].word[4], 150);
+        await wait(1000);
+        for (let i = 0; i < 5; i++) await flipTutorialTile(1, i, guesses[1].colors[i], 300);
+        await updateTutorialKeyboard(guesses[1].keys.correct, 'correct', 0); // 'Ü' harfini yeşil yapmak için 'present' yerine 'correct' kullandık
+        await updateTutorialKeyboard(guesses[1].keys.absent, 'absent', 0);
+        await wait(2000);
+
+        // --- ADIM 3: ÖNCÜL (SATIR 2) ---
+        await typeTutorialTile(2, 0, guesses[2].word[0], 500);
+        await typeTutorialTile(2, 1, guesses[2].word[1], 150);
+        await typeTutorialTile(2, 2, guesses[2].word[2], 150);
+        await typeTutorialTile(2, 3, guesses[2].word[3], 150);
+        await typeTutorialTile(2, 4, guesses[2].word[4], 150);
+        await wait(1000);
+        for (let i = 0; i < 5; i++) await flipTutorialTile(2, i, guesses[2].colors[i], 300);
+        await updateTutorialKeyboard(guesses[2].keys.correct, 'correct', 0);
+        await updateTutorialKeyboard(guesses[2].keys.absent, 'absent', 0);
+        await wait(2000);
+
+        // --- ADIM 4: ÖNGÜL (SATIR 3) ---
+        await typeTutorialTile(3, 0, guesses[3].word[0], 500);
+        await typeTutorialTile(3, 1, guesses[3].word[1], 150);
+        await typeTutorialTile(3, 2, guesses[3].word[2], 150);
+        await typeTutorialTile(3, 3, guesses[3].word[3], 150);
+        await typeTutorialTile(3, 4, guesses[3].word[4], 150);
+        await wait(1000);
+        for (let i = 0; i < 5; i++) await flipTutorialTile(3, i, guesses[3].colors[i], 300);
+        await updateTutorialKeyboard(guesses[3].keys.correct, 'correct', 0);
+        
+        // Animasyon bitti. Pano dolu kalacak.
+        
+    } catch (e) {
+        // "Anladım"a basılırsa burası çalışır.
+        console.log("Tutorial animation stopped by user.");
+    } finally {
+        // Animasyon ister bitsin (try), ister durdurulsun (catch),
+        // 'isTutorialRunning' bayrağı her zaman false olmalı ki
+        // tekrar çalıştırılabilsin.
+        isTutorialRunning = false;
+    }
+}
+
+/**
+ * GÜNCELLENMİŞ Animasyonu durduran ve temizleyen fonksiyon
+ */
+export function stopTutorialAnimation() {
+    // 1. 'isTutorialRunning' bayrağını false yap
+    // Bu, 'wait' fonksiyonunun hata fırlatmasını (reject) ve 'try' bloğunun durmasını sağlar
+    isTutorialRunning = false; 
+
+    // 2. Panoyu temizle
+    cleanTutorialBoard();
+}
+// === BİTİŞ: YENİ ANİMASYON KODLARI ===
