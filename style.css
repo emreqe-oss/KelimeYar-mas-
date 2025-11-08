@@ -548,3 +548,159 @@ body.theme-light .back-button-hitbox:hover {
 #tutorial-joker-container .joker-button:disabled .joker-badge {
     display: none;
 }
+
+/* ============================================== */
+/* === TUTORIAL KLAVYE POP ANİMASYONU === */
+/* ============================================== */
+@keyframes tutorial-key-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+/* Bu sınıf JavaScript tarafından anlık olarak eklenecek */
+.tutorial-key.key-pop {
+    animation: tutorial-key-pop 0.2s ease-out;
+}
+
+/* ======================================================= */
+/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ (FİNAL) === */
+/* ======================================================= */
+
+/* --- 1. JOKER RENKLERİ --- */
+/* Tutorial'daki sahte joker butonlarına ana oyundaki renkleri verir */
+
+#tutorial-joker-correct {
+    background-color: #16a34a; /* Yeşil */
+    border-color: #22c55e;
+}
+#tutorial-joker-present {
+    background-color: #eab308; /* Sarı */
+    border-color: #fde047;
+}
+#tutorial-joker-remove {
+    background-color: #4b5563; /* Gri */
+    border-color: #9ca3af;
+}
+
+/* --- 2. JOKER VURGULAMA VE KULLANIM --- */
+
+#tutorial-joker-container .joker-button {
+    transition: all 0.3s ease, transform 0.2s ease;
+}
+
+/* Jokere "basılma" efekti (parlama) */
+#tutorial-joker-container .tutorial-highlight {
+    transform: scale(1.15) !important;
+    box-shadow: 0 0 15px 5px #f59e0b; /* Sarı parlama */
+}
+
+/* Kullanılmış (devre dışı) tutorial jokerleri */
+#tutorial-joker-container .joker-button:disabled {
+    background-color: #374151;
+    opacity: 0.4;
+    border-color: #4b5563;
+}
+#tutorial-joker-container .joker-button:disabled .joker-badge {
+    display: none;
+}
+
+/* --- 3. KLAVYE "PATLAMA" (POP) EFEKTİ --- */
+@keyframes tutorial-key-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+/* Bu sınıf JavaScript tarafından anlık olarak eklenecek */
+.tutorial-key.key-pop {
+    animation: tutorial-key-pop 0.2s ease-out;
+}
+
+/* ======================================================= */
+/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ (FİNAL) === */
+/* ======================================================= */
+
+/* --- 1. JOKER RENKLERİ --- */
+/* Tutorial'daki sahte joker butonlarına ana oyundaki renkleri verir */
+
+#tutorial-joker-correct {
+    background-color: #16a34a; /* Yeşil */
+    border-color: #22c55e;
+}
+#tutorial-joker-present {
+    background-color: #eab308; /* Sarı */
+    border-color: #fde047;
+}
+#tutorial-joker-remove {
+    background-color: #4b5563; /* Gri */
+    border-color: #9ca3af;
+}
+
+/* --- 2. JOKER VURGULAMA VE KULLANIM --- */
+
+#tutorial-joker-container .joker-button {
+    transition: all 0.3s ease, transform 0.2s ease;
+}
+
+/* Jokere "basılma" efekti (parlama) */
+#tutorial-joker-container .tutorial-highlight {
+    transform: scale(1.15) !important;
+    box-shadow: 0 0 15px 5px #f59e0b; /* Sarı parlama */
+}
+
+/* Kullanılmış (devre dışı) tutorial jokerleri */
+#tutorial-joker-container .joker-button:disabled {
+    background-color: #374151;
+    opacity: 0.4;
+    border-color: #4b5563;
+}
+#tutorial-joker-container .joker-button:disabled .joker-badge {
+    display: none;
+}
+
+/* --- 3. KLAVYE "PATLAMA" (POP) EFEKTİ --- */
+@keyframes tutorial-key-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+/* Bu sınıf JavaScript tarafından anlık olarak eklenecek */
+.tutorial-key.key-pop {
+    animation: tutorial-key-pop 0.2s ease-out;
+}
+
+/* ======================================================= */
+/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ (FİNAL) === */
+/* ======================================================= */
+
+/* --- 1. JOKER RENKLERİ --- */
+#tutorial-joker-correct { background-color: #16a34a; border-color: #22c55e; }
+#tutorial-joker-present { background-color: #eab308; border-color: #fde047; }
+#tutorial-joker-remove { background-color: #4b5563; border-color: #9ca3af; }
+
+/* --- 2. JOKER VURGULAMA VE KULLANIM --- */
+#tutorial-joker-container .joker-button {
+    transition: all 0.3s ease, transform 0.2s ease;
+}
+#tutorial-joker-container .tutorial-highlight {
+    transform: scale(1.15) !important;
+    box-shadow: 0 0 15px 5px #f59e0b; /* Sarı parlama */
+}
+#tutorial-joker-container .joker-button:disabled {
+    background-color: #374151; opacity: 0.4; border-color: #4b5563;
+}
+#tutorial-joker-container .joker-button:disabled .joker-badge {
+    display: none;
+}
+
+/* --- 3. KLAVYE "PATLAMA" (POP) EFEKTİ --- */
+@keyframes tutorial-key-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+.tutorial-key.key-pop {
+    animation: tutorial-key-pop 0.2s ease-out;
+}
