@@ -1,4 +1,4 @@
-// js/ui.js - TAM DOSYA (FİNAL SENARYO - Mantık Sıralaması Düzeltildi)
+// js/ui.js - TAM DOSYA (FİNAL SENARYO + YENİ YARDIMCI FONKSİYONLAR EKLENDİ)
 
 import * as state from './state.js';
 import { getStatsFromProfile, createElement } from './utils.js';
@@ -244,6 +244,55 @@ export function updateKeyboard(gameData) {
         }
     });
 }
+
+
+// === BAŞLANGIÇ: YENİ EKLENEN FONKSİYONLAR (GERÇEK OYUN İÇİN) ===
+
+/**
+ * YENİ FONKSİYON: Bir kareyi animasyonsuz, anında günceller.
+ * (Yeşil harfleri alt satıra taşımak için kullanılır)
+ */
+export function updateStaticTile(row, col, letter, colorClass) {
+    const tileId = `tile-${row}-${col}`;
+    const tile = document.getElementById(tileId);
+    if (!tile) return;
+
+    const front = tile.querySelector('.front');
+    const back = tile.querySelector('.back');
+
+    // Harfi hem öne hem arkaya yaz
+    front.textContent = letter;
+    back.textContent = letter;
+
+    // Rengi .back yüzüne ver
+    back.className = 'tile-inner back ' + colorClass;
+
+    // Kutuya 'flip' (dönme) sınıfı VERME.
+    // Sadece statik rengi göstermesi için 'tile' sınıfına da ekle.
+    tile.className = 'tile static ' + colorClass;
+}
+
+/**
+ * YENİ FONKSİYON: Bir satırdaki tüm statik (taşınan) kareleri temizler.
+ * (Kullanıcı yazmaya başladığında çağrılır)
+ */
+export function clearStaticTiles(row, wordLength) {
+     for (let j = 0; j < wordLength; j++) {
+        const tileId = `tile-${row}-${j}`;
+        const tile = document.getElementById(tileId);
+        // Sadece 'static' sınıfına sahip olanları temizle
+        if (tile && tile.classList.contains('static')) {
+             // Statik rengi kaldır, normal boş tile'a döndür
+             tile.className = 'tile';
+             const front = tile.querySelector('.front');
+             // Harfleri ön yüzden sil (kullanıcı buraya yazacak)
+             if (front) front.textContent = '';
+        }
+    }
+}
+
+// === BİTİŞ: YENİ EKLENEN FONKSİYONLAR ===
+
 
 export function getUsername() {
     const profile = state.getCurrentUserProfile();
@@ -781,7 +830,7 @@ export async function playTutorialAnimation() {
         await flipTutorialTile(2, 0, 'correct', 0);
         await typeTutorialTile(2, 3, 'E', 150); // 3. index
         await flipTutorialTile(2, 3, 'correct', 0);
-        await wait(1500); // *** KRİTİK BEKLEME 2: Kullanıcı taşınan 2 harfi görsün ***
+        await wait(2000); // *** KRİTİK BEKLEME 2: (Yavaşlatıldı) Kullanıcı taşınan 2 harfi görsün ***
 
         // "ondan sonra turuncu jokere basılsın"
         await highlightTutorialJoker('tutorial-joker-present', 0, 1000);
@@ -791,7 +840,7 @@ export async function playTutorialAnimation() {
         // "aynı yeşil jokerde ki gibi ... ipucu gelsin"
         await typeTutorialTile(2, 1, 'N', 500); // Jokerin ipucu verdiği 'N' harfi
         await flipTutorialTile(2, 1, 'present', 0); // Anında SARI yap
-        await wait(1500); // *** KRİTİK BEKLEME 3: Kullanıcı sarı joker ipucunu görsün ***
+        await wait(2000); // *** KRİTİK BEKLEME 3: (Yavaşlatıldı) Kullanıcı sarı joker ipucunu görsün ***
         
         // Kalan harfleri yaz ("ÖNDER")
         await typeTutorialTile(2, 2, 'D', 150);
@@ -813,7 +862,7 @@ export async function playTutorialAnimation() {
         await flipTutorialTile(3, 0, 'correct', 0);
         await typeTutorialTile(3, 3, 'E', 150); // 4. Satıra (index 3) 'E' koy
         await flipTutorialTile(3, 3, 'correct', 0);
-        await wait(1500); // *** KRİTİK BEKLEME 4: Taşınan harfleri gör ***
+        await wait(2000); // *** KRİTİK BEKLEME 4: (Yavaşlatıldı) Taşınan harfleri gör ***
 
         // *Şimdi* klavye jokerine bas
         await highlightTutorialJoker('tutorial-joker-remove', 0, 1000);
@@ -831,7 +880,7 @@ export async function playTutorialAnimation() {
         // "son harf olan k harfi yeşil yansın."
         await typeTutorialTile(3, 4, 'K', 500); // Jokerin ipucu verdiği 'K' harfi
         await flipTutorialTile(3, 4, 'correct', 0); // Anında YEŞİL yap
-        await wait(1500); // *** KRİTİK BEKLEME 5: Yeşil joker ipucunu gör ***
+        await wait(2000); // *** KRİTİK BEKLEME 5: (Yavaşlatıldı) Yeşil joker ipucunu gör ***
         
         // "örnek tahmini yapılsın ve oyun kazanılsın." (Kalan harfleri yaz)
         const guess4 = { word: ['Ö', 'R', 'N', 'E', 'K'], colors: ['correct', 'correct', 'correct', 'correct', 'correct'], keys: { correct: ['R', 'N', 'K'] } };

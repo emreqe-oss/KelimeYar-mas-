@@ -1,4 +1,4 @@
-// js/main.js - TAM DOSYA (TÜM GÜNCELLEMELER DAHİL)
+// js/main.js - TAM DOSYA (YENİ TUR HATASI DÜZELTİLDİ)
 
 import { 
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
@@ -245,9 +245,16 @@ function addEventListeners() {
     startGameBtn.addEventListener('click', startGame);
 
     // Skor Ekranı Butonları
-    newRoundBtn.addEventListener('click', () => {
-        console.log("Yeni Tur butonu main.js'den tıklandı.");
-    });
+    
+    // === DÜZELTME: (SIRA SENDE HATASI) ===
+    // 'newRoundBtn' için olan 'addEventListener' kaldırıldı.
+    // Bu butonun mantığı artık tamamen game.js içindeki 'showScoreboard' tarafından .onclick = startNewRound;
+    // şeklinde yönetiliyor. Buradaki eski listener, o fonksiyonun çalışmasını engelliyordu.
+    // newRoundBtn.addEventListener('click', () => {
+    //     console.log("Yeni Tur butonu main.js'den tıklandı.");
+    // });
+    // === DÜZELTME SONU ===
+    
     mainMenuBtn.addEventListener('click', leaveGame);
     
     // Kopyala & Paylaş

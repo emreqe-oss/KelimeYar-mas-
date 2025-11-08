@@ -1,4 +1,4 @@
-// js/game.js - TAM DOSYA (TÜM GÜNCELLEMELER DAHİL)
+// js/game.js - TAM DOSYA (CPU Hataları Düzeltildi)
 
 // Firebase v9'dan gerekli modülleri içe aktar
 import { 
@@ -19,15 +19,29 @@ import {
     deleteDoc 
 } from "firebase/firestore";
 
-// Diğer modülleri ve kelime listelerini içe aktar
+// === YENİ: STATE'den 'reset' fonksiyonlarını import et ===
 import * as state from './state.js';
+import { 
+    getKnownCorrectPositions, 
+    setKnownCorrectPositions, 
+    resetKnownCorrectPositions 
+} from './state.js';
+// === YENİ EKLEME SONU ===
+
 import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement } from './utils.js';
-import { showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, 
+
+// === YENİ: UI'dan 'updateStaticTile' ve 'clearStaticTiles'ı import et ===
+import { 
+    showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, 
     brTimerDisplay, brTurnDisplay, brRoundCounter,
     shareGameBtn, startGameBtn, keyboardContainer, updateMultiplayerScoreBoard,
     updateJokerUI,
-    turnDisplay, timerDisplay, gameIdDisplay, roundCounter
+    turnDisplay, timerDisplay, gameIdDisplay, roundCounter,
+    updateStaticTile, // YENİ
+    clearStaticTiles  // YENİ
 } from './ui.js';
+// === YENİ EKLEME SONU ===
+
 import { default as allWordList } from '../functions/kelimeler.json'; 
 
 
@@ -285,7 +299,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                 const back = tile.querySelector('.back');
                 const oldIcon = back.querySelector('.meaning-icon');
                 if (oldIcon) { oldIcon.remove(); }
-                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake');
+                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static'); // 'static'i de temizle
                 if (i !== currentRow) {
                     front.textContent = '';
                     back.textContent = '';
@@ -304,7 +318,22 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                         tile.classList.add(guess.colors[j]);
                         tile.classList.add('flip');
                     }
+                } 
+                // === YENİ EKLEME BAŞLANGICI ===
+                // Mevcut satıra (currentRow) ve oyun oynanıyorsa, bilinen harfleri bas
+                else if (i === currentRow && gameData.status === 'playing') {
+                    // Sadece 'vsCPU' ve 'daily' modlarında değil, 'multiplayer' modunda da
+                    // kendi sıramızdaysa yeşil harfleri taşı.
+                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR;
+                    if (isMyTurn) {
+                        const knownPositions = getKnownCorrectPositions();
+                        if (knownPositions[j]) {
+                            // Bu pozisyonda bilinen bir harf var. UI'ı anında güncelle.
+                            updateStaticTile(i, j, knownPositions[j], 'correct');
+                        }
+                    }
                 }
+                // === YENİ EKLEME SONU ===
             } // for j
             if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
                 const guessWord = playerGuesses[i].word;
@@ -372,6 +401,25 @@ export async function fetchWordMeaning(word) {
     }
 }
 
+// === YENİ YARDIMCI FONKSİYON ===
+// Tahminlere bakarak bilinen doğru harfleri günceller
+function updateKnownPositions(playerGuesses) {
+    const newPositions = {};
+    if (playerGuesses) {
+        playerGuesses.forEach(guess => {
+            guess.colors.forEach((color, index) => {
+                if (color === 'correct') {
+                    newPositions[index] = guess.word[index];
+                }
+            });
+        });
+    }
+    state.setKnownCorrectPositions(newPositions);
+    return newPositions;
+}
+// === YENİ EKLEME SONU ===
+
+
 export function listenToGameUpdates(gameId) {
     const gameUnsubscribe = state.getGameUnsubscribe();
     if (gameUnsubscribe) gameUnsubscribe();
@@ -386,6 +434,14 @@ export function listenToGameUpdates(gameId) {
         const oldGameData = state.getLocalGameData();
         const oldStatus = oldGameData?.status;
         state.setLocalGameData(gameData);
+        
+        // === YENİ EKLEME BAŞLANGICI ===
+        // Sunucudan veri her geldiğinde, *sadece kendi* bilinen harf hafızamızı güncelleyelim
+        if (gameData.players && gameData.players[state.getUserId()]) {
+            updateKnownPositions(gameData.players[state.getUserId()].guesses);
+        }
+        // === YENİ EKLEME SONU ===
+
         const wasFinished = oldStatus === 'finished';
         const isNowPlaying = gameData.status === 'playing';
         if (wasFinished && isNowPlaying) {
@@ -415,6 +471,10 @@ export function listenToGameUpdates(gameId) {
 // *** BAŞLATMA VE KATILMA FONKSİYONLARI ***
 
 export async function findOrCreateRandomGame(config) {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions();
+    // === YENİ EKLEME SONU ===
+
     const { timeLimit, matchLength, gameType } = config;
     const currentUserId = state.getUserId();
     if (!currentUserId) return showToast("Lütfen önce giriş yapın.", true);
@@ -451,6 +511,10 @@ export async function findOrCreateRandomGame(config) {
 }
 
 export async function createGame(options = {}) {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions();
+    // === YENİ EKLEME SONU ===
+
     const { invitedFriendId = null, timeLimit = 45, matchLength = 5, gameType = 'friend' } = options;
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
     const currentUserId = state.getUserId();
@@ -502,6 +566,10 @@ export async function createGame(options = {}) {
 }
 
 export async function joinGame(gameId) {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions(); // Oyuna katılırken de sıfırla
+    // === YENİ EKLEME SONU ===
+    
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
     const username = getUsername();
     const gameRef = doc(db, "games", gameId);
@@ -581,6 +649,10 @@ function getDailySecretWord() {
 }
 
 export async function startNewGame(config) {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions();
+    // === YENİ EKLEME SONU ===
+
     state.setGameMode(config.mode);
     let secretWord;
     const gameSettings = { isHardMode: false };
@@ -676,6 +748,12 @@ function saveDailyGameState(gameState) {
 }
 
 function restoreDailyGame(savedState) {
+    // === YENİ EKLEME ===
+    // Kayıttan geri yüklerken de bilinen harfleri hesapla
+    resetKnownCorrectPositions(); 
+    updateKnownPositions(savedState.guesses); 
+    // === YENİ EKLEME SONU ===
+    
     const gameData = {
         wordLength: savedState.secretWord.length, 
         secretWord: savedState.secretWord, timeLimit: 60,
@@ -823,6 +901,12 @@ async function submitGuess() {
     const colors = calculateColors(guessWord, secretWord);
     const newGuess = { word: guessWord, colors: colors };
     localGameData.players[currentUserId].guesses.push(newGuess);
+    
+    // === YENİ EKLEME ===
+    // Lokal oyunda tahmini yaptıktan sonra bilinen harfleri güncelle
+    updateKnownPositions(localGameData.players[currentUserId].guesses);
+    // === YENİ EKLEME SONU ===
+    
     let isWinner = (guessWord === secretWord);
     if (isWinner) {
         localGameData.status = 'finished';
@@ -841,6 +925,15 @@ async function submitGuess() {
     }
     const didWin = localGameData.roundWinner === currentUserId;
     const guessCount = didWin ? localGameData.players[currentUserId].guesses.length : 0;
+    
+    // === YENİ EKLEME (PUANLAMA DÜZELTMESİ) ===
+    // Puanlamayı *sadece* oyun bittiğinde ve kazanan oyuncuysa yap
+    if (localGameData.status === 'finished' && didWin) {
+        const roundScore = calculateRoundScore(guessCount, true);
+        localGameData.players[currentUserId].score += roundScore;
+    }
+    // === YENİ EKLEME SONU ===
+
     if (localGameData.status === 'finished') { 
         await updateStats(didWin, guessCount);
         if (gameMode === 'daily') {
@@ -947,14 +1040,40 @@ function addLetter(letter) {
     if (!localGameData) return;
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
+
+    // === YENİ EKLEME BAŞLANGICI ===
+    // Kullanıcı yazmaya başladığı an, statik ipuçlarını temizle.
+    // Bunu sadece mevcut satırdaki ilk boş kutuyu (veya statik kutuyu) bulduğumuzda yap.
+    
+    let firstEmptyCol = -1;
     for (let i = 0; i < wordLength; i++) {
-        const tile = document.getElementById(`tile-${currentRow}-${i}`);
-        if (tile && tile.querySelector('.front').textContent === '') {
-            tile.querySelector('.front').textContent = letter;
-            playSound('click');
-            break;
+         const tile = document.getElementById(`tile-${currentRow}-${i}`);
+         if (tile && tile.querySelector('.front').textContent === '') {
+             firstEmptyCol = i;
+             break;
+         }
+    }
+    
+    // Eğer ilk boş kutu 0'sa (veya statik bir kutu varsa) satırı temizle
+    if (firstEmptyCol === 0) {
+        clearStaticTiles(currentRow, wordLength);
+    } else if (firstEmptyCol > 0) {
+        // Eğer 0. kutu doluysa (yazılmış) ama 1. kutu statikse, onu temizleme
+        // Bu durum "özgür yazmayı" sağlar.
+        const tile = document.getElementById(`tile-${currentRow}-${firstEmptyCol}`);
+        if(tile && tile.classList.contains('static')) {
+            tile.className = 'tile';
+            tile.querySelector('.front').textContent = '';
         }
     }
+    
+    // Şimdi harfi ilk boş kutuya yaz
+    if(firstEmptyCol !== -1) {
+        const tile = document.getElementById(`tile-${currentRow}-${firstEmptyCol}`);
+        tile.querySelector('.front').textContent = letter;
+        playSound('click');
+    }
+    // === YENİ EKLEME SONU ===
 }
 
 function deleteLetter() {
@@ -962,6 +1081,26 @@ function deleteLetter() {
     if (!localGameData) return;
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
+
+    // === YENİ EKLEME BAŞLANGICI ===
+    // Silme işlemi yaparken, statik ipuçları hala görünüyorsa (hiç yazma yapılmamışsa)
+    // silme işlemi yapmayı engelle.
+    const knownPositions = getKnownCorrectPositions();
+    let isRowStatic = false;
+    // Eğer bilinen pozisyon varsa VE o pozisyondaki kutu 'static' ise, satır statiktir.
+    for (const pos in knownPositions) {
+        const tile = document.getElementById(`tile-${currentRow}-${pos}`);
+        if (tile && tile.classList.contains('static')) {
+            isRowStatic = true;
+            break;
+        }
+    }
+    if (isRowStatic) {
+        // Statik harfleri silemezsin. Önce yazmaya başla.
+        return; 
+    }
+    // === YENİ EKLEME SONU ===
+
     for (let i = wordLength - 1; i >= 0; i--) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
         if (tile && tile.querySelector('.front').textContent !== '') {
@@ -970,7 +1109,7 @@ function deleteLetter() {
         }
     }
 }
-
+// ... (calculateColors, findBestCpuGuess)
 function calculateColors(guess, secret) {
     const secretLetters = secret.split('');
     const guessLetters = guess.split('');
@@ -1097,6 +1236,12 @@ async function cpuTurn() {
     const colors = calculateColors(finalGuess, secretWord);
     const newGuess = { word: finalGuess, colors: colors };
     localGameData.players['cpu'].guesses.push(newGuess);
+    
+    // === DÜZELTME 1: (CPU HARF SIZMASI HATASI) ===
+    // CPU'nun tahminleri, oyuncunun 'knownCorrectPositions' hafızasını GÜNCELLEMEMELİ.
+    // updateKnownPositions(localGameData.players[state.getUserId()].guesses.concat(localGameData.players['cpu'].guesses)); // BU SATIR SİLİNDİ
+    // === DÜZELTME SONU ===
+    
     if (finalGuess === secretWord) {
         localGameData.status = 'finished';
         localGameData.roundWinner = 'cpu';
@@ -1113,7 +1258,13 @@ async function cpuTurn() {
     }
     await renderGameState(localGameData, true);
     if (localGameData.status === 'finished') {
-        await updateStats(false, 0); 
+        
+        // === DÜZELTME 2: (PUANLAMA HATASI) ===
+        // CPU'nun turu bittiğinde oyuncunun istatistikleri GÜNCELLENMEMELİ.
+        // Oyuncunun istatistikleri SADECE oyuncunun kendi 'submitGuess' fonksiyonunda güncellenir.
+        // await updateStats(false, 0); // BU SATIR SİLİNDİ
+        // === DÜZELTME SONU ===
+        
         setTimeout(() => showScoreboard(localGameData), wordLength * 300);
     }
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
@@ -1201,6 +1352,10 @@ export async function getDailyLeaderboardStats(currentUserId, secretWord) {
 }
 
 export async function startNewRound() {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions();
+    // === YENİ EKLEME SONU ===
+
     const gameMode = state.getGameMode();
     const localGameData = state.getLocalGameData();
     if (gameMode === 'daily') {
@@ -1243,7 +1398,7 @@ export async function startNewRound() {
         const updates = {
             wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
             currentRound: (localGameData.currentRound || 0) + 1, 
-            currentPlayerId: localGameData.creatorId, 
+            currentPlayerId: state.getUserId(), // === DÜZELTME 3: Sırayı her zaman oyuncuya ver === 
             roundWinner: null, turnStartTime: new Date(), 
             players: { ...localGameData.players },
         };
@@ -1535,6 +1690,10 @@ export function startGame() {
 }
 
 export async function createBRGame(options = {}) {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions();
+    // === YENİ EKLEME SONU ===
+    
     const timeLimit = 120; 
     const wordLength = getRandomWordLength(); 
     const { isHardMode = false } = options;
@@ -1589,6 +1748,10 @@ export async function createBRGame(options = {}) {
 }
 
 export async function joinBRGame(gameId) {
+    // === YENİ EKLEME ===
+    state.resetKnownCorrectPositions();
+    // === YENİ EKLEME SONU ===
+    
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
     const username = getUsername();
     const gameRef = doc(db, "games", gameId);

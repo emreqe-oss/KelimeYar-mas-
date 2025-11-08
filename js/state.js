@@ -1,4 +1,4 @@
-// js/state.js
+// js/state.js (GÜNCELLENMİŞ)
 
 // --- ÖZEL (PRIVATE) DEĞİŞKENLER ---
 let _userId = null;
@@ -9,6 +9,11 @@ let _gameMode = null;
 let _singlePlayerMode = null;
 let _gameIdFromUrl = null;
 let _challengedFriendId = null;
+
+// === YENİ EKLEME BAŞLANGICI ===
+// Bir tur boyunca bilinen yeşil harflerin konumunu saklar (örn: { 0: 'Ö', 3: 'E' })
+let _knownCorrectPositions = {};
+// === YENİ EKLEME SONU ===
 
 // Fonksiyon ve interval referansları
 let _gameUnsubscribe = null;
@@ -44,6 +49,14 @@ export function getGameIdFromUrl() { return _gameIdFromUrl; }
 
 export function setChallengedFriendId(id) { _challengedFriendId = id; }
 export function getChallengedFriendId() { return _challengedFriendId; }
+
+// === YENİ EKLEME BAŞLANGICI ===
+// Yeşil harf hafızasını yöneten fonksiyonlar
+export function getKnownCorrectPositions() { return _knownCorrectPositions; }
+export function setKnownCorrectPositions(positions) { _knownCorrectPositions = positions; }
+export function resetKnownCorrectPositions() { _knownCorrectPositions = {}; }
+// === YENİ EKLEME SONU ===
+
 
 // --- Dinleyici (Listener) ve Interval State'i ---
 export function setGameUnsubscribe(func) { _gameUnsubscribe = func; }
