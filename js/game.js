@@ -1,4 +1,4 @@
-// js/game.js - TAM DOSYA (YAZMA HATALARI DÜZELTİLDİ)
+// js/game.js - TAM DOSYA (YEŞİL JOKER 'ZOR MOD' HATASI DÜZELTİLDİ)
 
 // Firebase v9'dan gerekli modülleri içe aktar
 import { 
@@ -461,7 +461,8 @@ export function listenToGameUpdates(gameId) {
         // Yeni bir tahmin yapıldıysa (didMyGuessChange) VEYA 
         // sıra CPU'dan bize geldiyse (oldPlayerId === 'cpu'),
         // yazma bayrağını sıfırla.
-        if (didMyGuessChange || (oldPlayerId === 'cpu' && isMyTurnNow)) {
+        const isTurnComingToMe = (oldPlayerId !== state.getUserId() && isMyTurnNow);
+        if (didMyGuessChange || isTurnComingToMe) {
             state.resetHasUserStartedTyping();
         }
         // === YENİ EKLEME SONU ===
@@ -1142,6 +1143,7 @@ function calculateColors(guess, secret) {
     return colors;
 }
 
+// === DÜZELTME (CPU ZORLUK SEVİYESİ) ===
 function findBestCpuGuess() {
     const localGameData = state.getLocalGameData();
     const playerGuesses = localGameData.players[state.getUserId()]?.guesses || []; 
@@ -1195,35 +1197,48 @@ function findBestCpuGuess() {
         }
         return true;
     });
+    
     const guessedWords = new Set(allGuesses.map(g => g.word));
     let finalWords = possibleWords.filter(w => !guessedWords.has(w));
+    
     const secretWord = localGameData.secretWord;
     const winningWordIndex = finalWords.indexOf(secretWord);
     let winningWord = null;
-    let otherPossibleWords = [...finalWords];
+    let otherPossibleWords = [...finalWords]; // 'finalWords' = tüm geçerli kelimeler
     if (winningWordIndex !== -1) {
         winningWord = secretWord;
-        otherPossibleWords.splice(winningWordIndex, 1);
+        otherPossibleWords.splice(winningWordIndex, 1); // 'otherPossibleWords' = (varsa) kazanmayan geçerli kelimeler
     }
+
     const currentGuesses = localGameData.players['cpu']?.guesses.length || 0;
-    if (winningWord && currentGuesses < 4 && Math.random() < 0.6) { 
-        if (otherPossibleWords.length > 2) { 
+
+    // === YENİ CPU ZORLUK MANTIĞI ===
+    // 4. tahmine kadar (index 0, 1, 2) CPU "kolay" modda oynar.
+    if (currentGuesses < 3) {
+        // Eğer kazanmayan BAŞKA geçerli kelimeler varsa...
+        if (otherPossibleWords.length > 0) {
+            // ...KAZANMAYAN bir kelime seç. (Daha fazla ipucu toplamaya çalışsın)
             const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
             return otherPossibleWords[randomIndex];
-        }
-        const randomGuessList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w) && w !== secretWord);
-        if (randomGuessList.length > 0) {
-            return randomGuessList[Math.floor(Math.random() * randomGuessList.length)];
+        } else {
+            // Eğer tek seçenek kazanmaksa (veya hiç seçenek yoksa), normal devam et
+            // (Bu, 'finalWords' bloğuna düşer)
         }
     }
+    // 4. tahmin ve sonrasında (index 3, 4, 5) CPU "zor" modda oynar
+    // ve kazanmak için 'finalWords' listesinden (kazanan kelime dahil) seçim yapabilir.
+    // === YENİ MANTIK SONU ===
+
     if (finalWords.length > 0) {
         const randomIndex = Math.floor(Math.random() * finalWords.length);
-        return finalWords[randomIndex];
+        return finalWords[randomIndex]; // Burası artık "zor" mod (veya kolay modda tek seçenek kaldıysa)
     } else {
+        // (acil durum fallback'i - bu aynı kalır)
         const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
         return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : localGameData.secretWord;
     }
 }
+// === DÜZELTME SONU ===
 
 
 async function cpuTurn() {
@@ -1248,7 +1263,6 @@ async function cpuTurn() {
     
     // === DÜZELTME 1: (CPU HARF SIZMASI HATASI) ===
     // CPU'nun tahminleri, oyuncunun 'knownCorrectPositions' hafızasını GÜNCELLEMEMELİ.
-    // updateKnownPositions(localGameData.players[state.getUserId()].guesses.concat(localGameData.players['cpu'].guesses)); // BU SATIR SİLİNDİ
     // === DÜZELTME SONU ===
     
     if (finalGuess === secretWord) {
@@ -1270,7 +1284,6 @@ async function cpuTurn() {
         
         // === DÜZELTME 2: (PUANLAMA HATASI) ===
         // CPU'nun turu bittiğinde oyuncunun istatistikleri GÜNCELLENMEMELİ.
-        // await updateStats(false, 0); // BU SATIR SİLİNDİ
         // === DÜZELTME SONU ===
         
         setTimeout(() => showScoreboard(localGameData), wordLength * 300);
@@ -1959,13 +1972,12 @@ export async function useCorrectJoker() {
         showToast("Tahmin hakkınız doldu!", true);
         return; 
     }
-    const tile = document.getElementById(`tile-${currentRow}-${hintIndex}`);
-    if (tile) {
-        const tileFront = tile.querySelector('.front');
-        if (tileFront) {
-            tileFront.textContent = hintLetter; 
-        }
-    }
+
+    // === JOKER DÜZELTMESİ (Hard Mode Hatası) ===
+    // Harfi ızgaraya 'static' (ipucu) olarak ekle
+    updateStaticTile(currentRow, hintIndex, hintLetter, 'correct');
+    // === DÜZELTME SONU ===
+    
     const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
     if (keyButton) {
         keyButton.classList.remove('present');
