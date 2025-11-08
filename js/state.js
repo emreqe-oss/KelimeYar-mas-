@@ -1,4 +1,4 @@
-// js/state.js (GÜNCELLENMİŞ)
+// js/state.js (GÜNCELLENMİŞ - YAZMA BAYRAĞI EKLENDİ)
 
 // --- ÖZEL (PRIVATE) DEĞİŞKENLER ---
 let _userId = null;
@@ -13,6 +13,8 @@ let _challengedFriendId = null;
 // === YENİ EKLEME BAŞLANGICI ===
 // Bir tur boyunca bilinen yeşil harflerin konumunu saklar (örn: { 0: 'Ö', 3: 'E' })
 let _knownCorrectPositions = {};
+// Kullanıcının mevcut satıra yazmaya başlayıp başlamadığını takip eder
+let _hasUserStartedTypingInCurrentRow = false;
 // === YENİ EKLEME SONU ===
 
 // Fonksiyon ve interval referansları
@@ -55,6 +57,11 @@ export function getChallengedFriendId() { return _challengedFriendId; }
 export function getKnownCorrectPositions() { return _knownCorrectPositions; }
 export function setKnownCorrectPositions(positions) { _knownCorrectPositions = positions; }
 export function resetKnownCorrectPositions() { _knownCorrectPositions = {}; }
+
+// Yazma bayrağını yöneten fonksiyonlar
+export function setHasUserStartedTyping(value) { _hasUserStartedTypingInCurrentRow = value; }
+export function getHasUserStartedTyping() { return _hasUserStartedTypingInCurrentRow; }
+export function resetHasUserStartedTyping() { _hasUserStartedTypingInCurrentRow = false; }
 // === YENİ EKLEME SONU ===
 
 

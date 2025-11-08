@@ -1,6 +1,6 @@
-// js/ui.js - TAM DOSYA (FİNAL SENARYO + YENİ YARDIMCI FONKSİYONLAR EKLENDİ)
+// js/ui.js - TAM DOSYA (TÜM DÜZELTMELER DAHİL)
 
-import * as state from './state.js';
+import * as state from './state.js'; // Sunucunun çökmemesi için import
 import { getStatsFromProfile, createElement } from './utils.js';
 import { joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame } from './game.js';
 
@@ -212,21 +212,63 @@ export function createKeyboard(handleKeyPress) {
     });
 }
 
+
+// === BAŞLANGIÇ: DÜZELTİLMİŞ updateKeyboard FONKSİYONU ===
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
-    const allGuesses = Object.values(gameData.players).flatMap(p => p.guesses);
-    
-    const keyStates = {}; 
-    allGuesses.forEach(({ word, colors }) => {
+
+    // Kendi ID'mizi state'den alıyoruz
+    const currentUserId = state.getUserId(); 
+    if (!currentUserId) return; // ID yoksa (olmamalı ama) çık
+
+    const keyStates = {};
+
+    // 1. ADIM: SADECE KENDİ TAHMİNLERİMİZİ İŞLE
+    const myGuesses = gameData.players[currentUserId]?.guesses || [];
+    myGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
             const color = colors[i];
+            
             if (keyStates[letter] === 'correct') continue; 
             if (keyStates[letter] === 'present' && color !== 'correct') continue; 
             keyStates[letter] = color;
         }
     });
 
+    // 2. ADIM: RAKİPLERİN TAHMİNLERİNİ İŞLE
+    Object.keys(gameData.players).forEach(playerId => {
+        if (playerId === currentUserId) return; 
+
+        const opponentGuesses = gameData.players[playerId]?.guesses || [];
+        opponentGuesses.forEach(({ word, colors }) => {
+            for (let i = 0; i < word.length; i++) {
+                const letter = word[i];
+                const color = colors[i];
+                const myCurrentColor = keyStates[letter];
+
+                // Rakip yeşil VEYA sarı bulduysa
+                if (color === 'correct' || color === 'present') {
+                    // Ve biz bu harfi ya hiç bulamadıysak YA DA 'absent' sanıyorsak...
+                    if (!myCurrentColor || myCurrentColor === 'absent') {
+                        // ...klavyemizi 'present' (sarı) olarak güncelle.
+                        keyStates[letter] = 'present';
+                    }
+                }
+                // Rakip gri bulduysa
+                else if (color === 'absent') {
+                    // Ve biz bu harf hakkında HİÇBİR ŞEY bilmiyorsak...
+                    if (!myCurrentColor) {
+                        // ...o zaman gri olarak işaretle.
+                        keyStates[letter] = 'absent';
+                    }
+                }
+            }
+        });
+    });
+    // === DÜZELTME SONU ===
+
+    // 3. ADIM: keyStates'i UI'a uygula
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
@@ -244,6 +286,7 @@ export function updateKeyboard(gameData) {
         }
     });
 }
+// === BİTİŞ: DÜZELTİLMİŞ updateKeyboard FONKSİYONU ===
 
 
 // === BAŞLANGIÇ: YENİ EKLENEN FONKSİYONLAR (GERÇEK OYUN İÇİN) ===
@@ -285,8 +328,12 @@ export function clearStaticTiles(row, wordLength) {
              // Statik rengi kaldır, normal boş tile'a döndür
              tile.className = 'tile';
              const front = tile.querySelector('.front');
-             // Harfleri ön yüzden sil (kullanıcı buraya yazacak)
+             // === DÜZELTME (Hard Mode Hatası için) ===
+             // Harfleri hem önden hem arkadan sil
              if (front) front.textContent = '';
+             const back = tile.querySelector('.back');
+             if (back) back.textContent = '';
+             // === DÜZELTME SONU ===
         }
     }
 }
@@ -625,14 +672,11 @@ export function updateJokerUI(jokersUsed, isMyTurn, gameStatus) {
     });
 }
 
-// === BAŞLANGIÇ: YENİ ANİMASYON KODLARI (FİNAL SENARYO - MANTIK SIRALAMASI DÜZELTİLDİ) ===
+// === BAŞLANGIÇ: "NASIL OYNANIR" ANİMASYON KODLARI (DEĞİŞİKLİK YOK) ===
 
 let tutorialTimeoutIds = []; 
 let isTutorialRunning = false; 
 
-/**
- * Yardımcı Fonksiyon: Belirtilen milisaniye kadar bekler.
- */
 const wait = (ms) => new Promise((resolve, reject) => {
     if (!isTutorialRunning) {
         reject(new Error("Tutorial stopped"));
@@ -642,9 +686,6 @@ const wait = (ms) => new Promise((resolve, reject) => {
     tutorialTimeoutIds.push(id);
 });
 
-/**
- * Yardımcı Fonksiyon: Panoyu, klavyeyi ve jokerleri temizler.
- */
 function cleanTutorialBoard() {
     tutorialTimeoutIds.forEach(id => clearTimeout(id));
     tutorialTimeoutIds = [];
@@ -678,9 +719,6 @@ function cleanTutorialBoard() {
     });
 }
 
-/**
- * Yardımcı Fonksiyon: Tek bir kareye harf yazar
- */
 async function typeTutorialTile(row, col, letter, delay) {
     await wait(delay);
     const tile = document.getElementById(`t-${row}-${col}`);
@@ -691,9 +729,6 @@ async function typeTutorialTile(row, col, letter, delay) {
     }
 }
 
-/**
- * Yardımcı Fonksiyon: Tek bir kareyi çevirir ve renklendirir
- */
 async function flipTutorialTile(row, col, colorClass, delay) {
     await wait(delay);
     const tile = document.getElementById(`t-${row}-${col}`);
@@ -707,21 +742,16 @@ async function flipTutorialTile(row, col, colorClass, delay) {
     }
 }
 
-/**
- * Yardımcı Fonksiyon: Sahte klavyedeki tuşları günceller (Patlama Efektli)
- */
 async function updateTutorialKeyboard(keys, colorClass, delay) {
     await wait(delay);
     keys.forEach(key => {
         const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`);
-        if (!keyEl) return; // Tuş yoksa atla
+        if (!keyEl) return; 
 
-        // === Renk durumunu kontrol et ===
         if (keyEl.classList.contains('correct')) return;
         if (keyEl.classList.contains('present') && colorClass === 'absent') return;
         if (keyEl.classList.contains(colorClass)) return;
         
-        // === Sınıfı güncelle ===
         if (colorClass === 'correct') {
             keyEl.className = 'tutorial-key correct';
         } else if (colorClass === 'present') {
@@ -730,16 +760,11 @@ async function updateTutorialKeyboard(keys, colorClass, delay) {
             keyEl.className = 'tutorial-key absent';
         }
         
-        // === Patlama (Pop) Animasyonu ===
         keyEl.classList.add('key-pop');
-        // (style.css'teki 200ms animasyon süresiyle eşleşmeli)
         setTimeout(() => keyEl.classList.remove('key-pop'), 200); 
     });
 }
 
-/**
- * Yardımcı Fonksiyon: Tutorial jokerini vurgular
- */
 async function highlightTutorialJoker(jokerId, delay, duration = 1000) {
     await wait(delay);
     const jokerBtn = document.getElementById(jokerId);
@@ -750,9 +775,6 @@ async function highlightTutorialJoker(jokerId, delay, duration = 1000) {
     }
 }
 
-/**
- * Yardımcı Fonksiyon: Tutorial jokerini devre dışı bırakır
- */
 async function disableTutorialJoker(jokerId, delay) {
     await wait(delay);
     const jokerBtn = document.getElementById(jokerId);
@@ -761,21 +783,16 @@ async function disableTutorialJoker(jokerId, delay) {
     }
 }
 
-/**
- * Yardımcı Fonksiyon: 'Harf Ele' joker animasyonu (4 harf)
- */
 async function animateJokerRemove(delay) {
     await wait(delay);
-    // İsteğiniz üzerine sadece 4 alakasız harfi siliyoruz
-    const keysToEliminate = ['Y', 'I', 'P', 'A']; // 4 tane seçtik
+    const keysToEliminate = ['Y', 'I', 'P', 'A']; 
     
-    let eliminationDelay = 100; // Harflerin silinme hızı
+    let eliminationDelay = 100; 
     for (const key of keysToEliminate) {
         const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`);
         if (keyEl && !keyEl.classList.contains('absent')) {
             await wait(eliminationDelay);
             keyEl.className = 'tutorial-key absent'; 
-            // Patlama efektini burada da tetikle
             keyEl.classList.add('key-pop');
             setTimeout(() => keyEl.classList.remove('key-pop'), 200);
         }
@@ -783,9 +800,6 @@ async function animateJokerRemove(delay) {
 }
 
 
-/**
- * GÜNCELLENMİŞ (FİNAL SENARYO - MANTIK SIRALAMASI DÜZELTİLDİ) Animasyonu başlatan ana fonksiyon
- */
 export async function playTutorialAnimation() {
     if (isTutorialRunning) return; 
     isTutorialRunning = true; 
@@ -824,7 +838,6 @@ export async function playTutorialAnimation() {
         await wait(2000); 
 
         // --- ADIM 3: SARI JOKER + TAHMİN "ÖNDER" (SATIR 2) ---
-        // "sarı joker oncesi 3. tahmin öncesi ö ve e yeşil yansın"
         await wait(500); // Adımlar arası bekleme
         await typeTutorialTile(2, 0, 'Ö', 0); // 0. index
         await flipTutorialTile(2, 0, 'correct', 0);
@@ -832,21 +845,17 @@ export async function playTutorialAnimation() {
         await flipTutorialTile(2, 3, 'correct', 0);
         await wait(2000); // *** KRİTİK BEKLEME 2: (Yavaşlatıldı) Kullanıcı taşınan 2 harfi görsün ***
 
-        // "ondan sonra turuncu jokere basılsın"
         await highlightTutorialJoker('tutorial-joker-present', 0, 1000);
         await disableTutorialJoker('tutorial-joker-present', 1000);
         await wait(1000); // Jokerin basılma efektini gör
 
-        // "aynı yeşil jokerde ki gibi ... ipucu gelsin"
         await typeTutorialTile(2, 1, 'N', 500); // Jokerin ipucu verdiği 'N' harfi
         await flipTutorialTile(2, 1, 'present', 0); // Anında SARI yap
         await wait(2000); // *** KRİTİK BEKLEME 3: (Yavaşlatıldı) Kullanıcı sarı joker ipucunu görsün ***
         
-        // Kalan harfleri yaz ("ÖNDER")
         await typeTutorialTile(2, 2, 'D', 150);
         await typeTutorialTile(2, 4, 'R', 150);
 
-        // Tahmini değerlendir
         const guess3 = { word: ['Ö', 'N', 'D', 'E', 'R'], colors: ['correct', 'present', 'absent', 'correct', 'present'], keys: { present: ['N', 'R'], absent: ['D'] } };
         await wait(1000);
         await flipTutorialTile(2, 2, guess3.colors[2], 300); // D (gri)
@@ -856,7 +865,6 @@ export async function playTutorialAnimation() {
         await wait(2000); 
 
         // --- ADIM 4: KLAVYE JOKERİ (Remove) ---
-        // "klavye jokerine basmadan önce ö ve e 4. satıra geçmiş olsun"
         await wait(500); // Adımlar arası bekleme
         await typeTutorialTile(3, 0, 'Ö', 0); // 4. Satıra (index 3) 'Ö' koy
         await flipTutorialTile(3, 0, 'correct', 0);
@@ -864,35 +872,29 @@ export async function playTutorialAnimation() {
         await flipTutorialTile(3, 3, 'correct', 0);
         await wait(2000); // *** KRİTİK BEKLEME 4: (Yavaşlatıldı) Taşınan harfleri gör ***
 
-        // *Şimdi* klavye jokerine bas
         await highlightTutorialJoker('tutorial-joker-remove', 0, 1000);
         await disableTutorialJoker('tutorial-joker-remove', 1000);
         await animateJokerRemove(1000); // 4 harfi sil
         await wait(2000); 
 
         // --- ADIM 5: YEŞİL JOKER (Correct) + "ÖRNEK" TAHMİNİ (SATIR 3) ---
-        // Yeşil harfler (Ö, E) zaten 4. satırda (index 3)
         await wait(500); // Adımlar arası bekleme
         await highlightTutorialJoker('tutorial-joker-correct', 0, 1000);
         await disableTutorialJoker('tutorial-joker-correct', 1000);
         await wait(1000); // Jokerin basılma efektini gör
         
-        // "son harf olan k harfi yeşil yansın."
         await typeTutorialTile(3, 4, 'K', 500); // Jokerin ipucu verdiği 'K' harfi
         await flipTutorialTile(3, 4, 'correct', 0); // Anında YEŞİL yap
         await wait(2000); // *** KRİTİK BEKLEME 5: (Yavaşlatıldı) Yeşil joker ipucunu gör ***
         
-        // "örnek tahmini yapılsın ve oyun kazanılsın." (Kalan harfleri yaz)
         const guess4 = { word: ['Ö', 'R', 'N', 'E', 'K'], colors: ['correct', 'correct', 'correct', 'correct', 'correct'], keys: { correct: ['R', 'N', 'K'] } };
         await typeTutorialTile(3, 1, guess4.word[1], 150); // R
         await typeTutorialTile(3, 2, guess4.word[2], 150); // N
         
         await wait(1000);
-        // Satırı çevir (Kalan harfler: R, N)
         await flipTutorialTile(3, 1, guess4.colors[1], 300);
         await flipTutorialTile(3, 2, guess4.colors[2], 300);
         
-        // Klavyedeki son harfleri güncelle
         await updateTutorialKeyboard(guess4.keys.correct, 0);
         
         // Animasyon bitti.
@@ -905,11 +907,8 @@ export async function playTutorialAnimation() {
     }
 }
 
-/**
- * GÜNCELLENMİŞ Animasyonu durduran ve temizleyen fonksiyon
- */
 export function stopTutorialAnimation() {
     isTutorialRunning = false; 
     cleanTutorialBoard();
 }
-// === BİTİŞ: YENİ ANİMASYON KODLARI ===
+// === BİTİŞ: "NASIL OYNANIR" ANİMASYON KODLARI ===
