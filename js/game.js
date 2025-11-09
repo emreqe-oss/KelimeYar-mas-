@@ -1150,120 +1150,121 @@ function calculateColors(guess, secret) {
     return colors;
 }
 
-// === DÜZELTME (CPU ZORLUK SEVİYESİ) ===
+// game.js dosyanızdaki mevcut findBestCpuGuess fonksiyonunun
+// tamamını AŞAĞIDAKİ BU BLOK ile değiştirin:
+
 function findBestCpuGuess() {
-    const localGameData = state.getLocalGameData();
-    const playerGuesses = localGameData.players[state.getUserId()]?.guesses || []; 
-    const cpuGuesses = localGameData.players['cpu']?.guesses || [];
-    const allGuesses = [...playerGuesses, ...cpuGuesses];
-    const wordLenStr = String(localGameData.wordLength);
-    let possibleWords = [...(allWordList[wordLenStr] || [])]; 
-    const correctLetters = {}; 
-    const presentLetters = new Set(); 
-    const absentLetters = new Set(); 
-    const positionMisplaced = {}; 
-    allGuesses.forEach(g => {
-        for (let i = 0; i < g.word.length; i++) {
-            const letter = g.word[i];
-            const color = g.colors[i];
-            if (color === 'correct') {
-                correctLetters[i] = letter;
-                presentLetters.add(letter);
-            } else if (color === 'present') {
-                presentLetters.add(letter);
-                if (!positionMisplaced[letter]) positionMisplaced[letter] = new Set();
-                positionMisplaced[letter].add(i);
-            } else if (color === 'absent') {
-                let isKnownPresent = false;
-                for (let k = 0; k < g.word.length; k++) {
-                    if ((g.colors[k] === 'correct' || g.colors[k] === 'present') && g.word[k] === letter) {
-                        isKnownPresent = true;
-                        break;
-                    }
-                }
-                if (!isKnownPresent) {
-                    absentLetters.add(letter);
-                }
+    const localGameData = state.getLocalGameData();
+    const playerGuesses = localGameData.players[state.getUserId()]?.guesses || []; 
+    const cpuGuesses = localGameData.players['cpu']?.guesses || [];
+    const allGuesses = [...playerGuesses, ...cpuGuesses];
+    const wordLenStr = String(localGameData.wordLength);
+    let possibleWords = [...(allWordList[wordLenStr] || [])]; 
+    const correctLetters = {}; 
+    const presentLetters = new Set(); 
+    const absentLetters = new Set(); 
+    const positionMisplaced = {}; 
+
+    // (İpuçlarını toplama kısmı)
+    allGuesses.forEach(g => {
+        for (let i = 0; i < g.word.length; i++) {
+            const letter = g.word[i];
+            const color = g.colors[i];
+            if (color === 'correct') {
+                correctLetters[i] = letter;
+                presentLetters.add(letter);
+            } else if (color === 'present') {
+                presentLetters.add(letter);
+                if (!positionMisplaced[letter]) positionMisplaced[letter] = new Set();
+                positionMisplaced[letter].add(i);
+            } else if (color === 'absent') {
+                let isKnownPresent = false;
+                for (let k = 0; k < g.word.length; k++) {
+                    if ((g.colors[k] === 'correct' || g.colors[k] === 'present') && g.word[k] === letter) {
+                        isKnownPresent = true;
+                        break;
+                    }
+                }
+                if (!isKnownPresent) {
+                    absentLetters.add(letter);
+                }
+            }
+        }
+    });
+
+    // (Kelime listesini filtreleme kısmı)
+    possibleWords = possibleWords.filter(word => {
+        for (const pos in correctLetters) {
+            if (word[pos] !== correctLetters[pos]) return false;
+        }
+        for (const letter of absentLetters) {
+            if (word.includes(letter)) return false;
+        }
+        for (const letter of presentLetters) {
+            if (!word.includes(letter)) return false;
+        }
+        for (const letter in positionMisplaced) {
+             for (const pos of positionMisplaced[letter]) {
+                 if (word[pos] === letter) return false;
+             }
+        }
+        return true;
+    });
+    
+    const guessedWords = new Set(allGuesses.map(g => g.word));
+    let finalWords = possibleWords.filter(w => !guessedWords.has(w));
+    
+    const secretWord = localGameData.secretWord;
+    const winningWordIndex = finalWords.indexOf(secretWord);
+    let winningWord = null;
+    let otherPossibleWords = [...finalWords]; 
+    if (winningWordIndex !== -1) {
+        winningWord = secretWord;
+        otherPossibleWords.splice(winningWordIndex, 1); 
+    }
+
+    const currentGuesses = localGameData.players['cpu']?.guesses.length || 0;
+
+    // === BAŞLANGIÇ: YENİ DENGELİ CPU AYARI ===
+
+    // 1. AYAR: "Kolay Mod" (İlk 3 Tahmin: index 0, 1, 2)
+    if (currentGuesses < 3) { 
+        // Eğer kazanmayan BAŞKA geçerli kelimeler varsa...
+        if (otherPossibleWords.length > 0) {
+            // ...KAZANMAYAN bir kelime seç (İpucu toplamaya çalışsın).
+            const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
+            return otherPossibleWords[randomIndex];
+        } else {
+            // "APTAL TAHMİN" MANTIĞI (DÜZELTİLDİ)
+            // Eğer tek mantıklı seçenek 'winningWord' ise (2. veya 3. turda),
+            // onu seçme, ipuçlarına uymayan rastgele bir kelime seç.
+            const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
+            if (emergencyList.length > 0) {
+                 return emergencyList[Math.floor(Math.random() * emergencyList.length)];
             }
-        }
-    });
-    possibleWords = possibleWords.filter(word => {
-        for (const pos in correctLetters) {
-            if (word[pos] !== correctLetters[pos]) return false;
-        }
-        for (const letter of absentLetters) {
-            if (word.includes(letter)) return false;
-        }
-        for (const letter of presentLetters) {
-            if (!word.includes(letter)) return false;
-        }
-        for (const letter in positionMisplaced) {
-             for (const pos of positionMisplaced[letter]) {
-                 if (word[pos] === letter) return false;
-             }
-        }
-        return true;
-    });
-    
-    const guessedWords = new Set(allGuesses.map(g => g.word));
-    let finalWords = possibleWords.filter(w => !guessedWords.has(w));
-    
-    const secretWord = localGameData.secretWord;
-    const winningWordIndex = finalWords.indexOf(secretWord);
-    let winningWord = null;
-    let otherPossibleWords = [...finalWords]; // 'finalWords' = tüm geçerli kelimeler
-    if (winningWordIndex !== -1) {
-        winningWord = secretWord;
-        otherPossibleWords.splice(winningWordIndex, 1); // 'otherPossibleWords' = (varsa) kazanmayan geçerli kelimeler
-    }
+        }
+    }
 
-    const currentGuesses = localGameData.players['cpu']?.guesses.length || 0;
-
-    // === YENİ CPU ZORLUK MANTIĞI ===
-    // 4. tahmine kadar (index 0, 1, 2) CPU "kolay" modda oynar.
-    if (currentGuesses < 4) {
-        // Eğer kazanmayan BAŞKA geçerli kelimeler varsa...
-        if (otherPossibleWords.length > 0) {
-            // ...KAZANMAYAN bir kelime seç. (Daha fazla ipucu toplamaya çalışsın)
-            const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
-            return otherPossibleWords[randomIndex];
-        } else {
-            // Eğer tek seçenek kazanmaksa (veya hiç seçenek yoksa), normal devam et
-            // (Bu, 'finalWords' bloğuna düşer)
-        }
-    }
-    // 4. tahmin ve sonrasında (index 3, 4, 5) CPU "zor" modda oynar
-    // ve kazanmak için 'finalWords' listesinden (kazanan kelime dahil) seçim yapabilir.
-    // === YENİ MANTIK SONU ===
-// ... (yaklaşık 1102. satır)
-    // === YENİ MANTIK SONU ===
-
-    // === YENİ ŞANS FAKTÖRÜ (ÇÖZÜM 2) BAŞLANGICI ===
-    // 'zor' moddayken (yani currentGuesses >= 3 ise)
-
-    // Eğer kazanma kelimesi listedeyse (winningWord) VE kazanmayan başka kelimeler de varsa
+    // 2. AYAR: "Zor Mod" Şans Faktörü (3. Tahminden Sonra: index 3, 4, 5)
     if (winningWord && otherPossibleWords.length > 0) {
         
-        // %50 şansla "pas geç" ve kazanmayan bir kelime seç
-        // (Not: 0.5'i 0.7 yaparsanız %70 şansla pas geçer, daha da 'aptal' olur)
+        // %50 şansla "pas geç" ve kazanmayan MANTIKLI bir kelime seç
         if (Math.random() < 0.5) { 
              const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
-             return otherPossibleWords[randomIndex]; // Bilerek kazanmayan kelimeyi seç
+             return otherPossibleWords[randomIndex]; 
         }
-        // %50 şansla 'pas geçme' ve aşağıdaki 'finalWords' bloğuna düş (kazanabilir)
     }
-    // === YENİ ŞANS FAKTÖRÜ SONU ===
 
+    // === BİTİŞ: YENİ DENGELİ CPU AYARI ===
 
-    // (Bu satır zaten kodunuzda var, bunun üstüne ekleyin)
-    if (finalWords.length > 0) {
-        const randomIndex = Math.floor(Math.random() * finalWords.length);
-        return finalWords[randomIndex];
-    } else {
-        // (acil durum fallback'i - bu aynı kalır)
-        const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
-        return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : localGameData.secretWord;
-    }
+    if (finalWords.length > 0) {
+        const randomIndex = Math.floor(Math.random() * finalWords.length);
+        return finalWords[randomIndex]; 
+    } else {
+        // (Acil durum fallback'i)
+        const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
+        return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : localGameData.secretWord;
+    }
 }
 // === DÜZELTME SONU ===
 
