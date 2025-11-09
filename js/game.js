@@ -407,7 +407,7 @@ export async function fetchWordMeaning(word) {
 // === YENİ YARDIMCI FONKSİYON ===
 // Tahminlere bakarak bilinen doğru harfleri günceller
 function updateKnownPositions(playerGuesses) {
-    const newPositions = {};
+    const newPositions =state.getKnownCorrectPositions() || {};
     if (playerGuesses) {
         playerGuesses.forEach(guess => {
             guess.colors.forEach((color, index) => {
