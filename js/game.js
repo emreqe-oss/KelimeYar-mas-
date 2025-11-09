@@ -456,7 +456,14 @@ export function listenToGameUpdates(gameId) {
         const currentGuesses = gameData.players[state.getUserId()]?.guesses || [];
         const oldGuessesCount = oldGameData?.players[state.getUserId()]?.guesses.length || 0;
         const didMyGuessChange = currentGuesses.length > oldGuessesCount;
-        
+
+        // === HATA DÜZELTMESİ (ReferenceError) ===
+        // Bu değişkenler aşağıdaki "YAZMA BAYRAĞI" bloğu için eksikti.
+        const oldPlayerId = oldGameData?.currentPlayerId;
+        const currentUserId = state.getUserId(); // isMyTurnNow için bu da gerekli
+        const isMyTurnNow = gameData.currentPlayerId === currentUserId;
+        // === DÜZELTME SONU ===
+
         // === YENİ EKLEME (YAZMA BAYRAĞI) ===
         // Yeni bir tahmin yapıldıysa (didMyGuessChange) VEYA 
         // sıra CPU'dan bize geldiyse (oldPlayerId === 'cpu'),
