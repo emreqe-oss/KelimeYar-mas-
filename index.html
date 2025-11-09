@@ -245,26 +245,34 @@
         </div>
 
 
-        <div id="profile-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h2 class="text-3xl font-bold mb-4">Profil & İstatistikler</h2>
-            <div class="bg-gray-700 p-3 rounded-lg mb-4 text-left">
-                <p class="text-sm"><strong class="text-gray-400">Kullanıcı Adı:</strong> <span id="profile-username"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Ad Soyad:</strong> <span id="profile-fullname"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">E-posta:</strong> <span id="profile-email"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Yaş:</strong> <span id="profile-age"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Şehir:</strong> <span id="profile-city"></span></p>
-            </div>
-            <hr class="border-gray-600 my-4">
-            <div class="grid grid-cols-4 gap-2 text-center mb-4">
-                <div> <p id="stats-played" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Oynanan</p> </div>
-                <div> <p id="stats-win-percentage" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Kazanma %</p> </div>
-                <div> <p id="stats-current-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Seri</p> </div>
-                <div> <p id="stats-max-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">En İyi Seri</p> </div>
-            </div>
-            <h3 class="text-xl font-bold mb-2">Tahmin Dağılımı</h3>
-            <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
-            <button id="close-profile-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kapat</button>
-        </div>
+        <div id="profile-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col">
+            <h2 class="text-3xl font-bold mb-4">İstatistikler</h2>
+            
+                        <div class="flex border-b border-gray-600 mb-4">
+                <button id="show-personal-stats-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Kişisel</button>
+                <button id="show-global-ranking-tab-btn" class="flex-1 py-2 text-center text-gray-400">Genel Sıralama</button>
+            </div>
+
+                        <div id="personal-stats-tab" class="flex-1 flex flex-col overflow-y-auto">
+                
+                                <div class="grid grid-cols-4 gap-2 text-center mb-4">
+                    <div> <p id="stats-played" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Oynanan</p> </div>
+                    <div> <p id="stats-win-percentage" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Kazanma %</p> </div>
+                    <div> <p id="stats-current-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Seri</p> </div>
+                    <div> <p id="stats-max-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">En İyi Seri</p> </div>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Tahmin Dağılımı</h3>
+                <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
+            </div>
+
+                        <div id="global-ranking-tab" class="hidden flex-1 overflow-y-auto">
+                <p id="global-ranking-loading" class="text-gray-400 mt-16">Sıralama yükleniyor...</p>
+                <div id="global-ranking-list" class="space-y-2 text-left">
+                </div>
+            </div>
+
+            <button id="close-profile-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex-shrink-0">Kapat</button>
+        </div>
 
         <div id="how-to-play-screen" class="hidden bg-gray-800 p-4 shadow-lg flex-1 flex flex-col text-left overflow-y-auto">
                     <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>

@@ -1,321 +1,434 @@
-// js/main.js - TAM DOSYA (YENİ TUR HATASI DÜZELTİLDİ)
+// js/main.js - TAM DOSYA (SÖZDİZİMİ HATALARI DÜZELTİLDİ)
 
 import { 
-    setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
-    getFriendsUnsubscribe, setFriendsUnsubscribe,
-    getMyGamesUnsubscribe, setMyGamesUnsubscribe,
-    getChallengedFriendId, setChallengedFriendId 
+    setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
+    getFriendsUnsubscribe, setFriendsUnsubscribe,
+    getMyGamesUnsubscribe, setMyGamesUnsubscribe,
+    getChallengedFriendId, setChallengedFriendId 
 } from './state.js';
 
 import { db, auth } from './firebase.js'; 
 import { onAuthStateChanged } from "firebase/auth"; 
-import { getDoc, doc } from "firebase/firestore"; 
+import { 
+    getDoc, doc, collection, query, orderBy, limit, getDocs 
+} from "firebase/firestore"; 
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
 import { 
-    searchUsers,
-    listenToFriendships,
-    listenToMyGames 
+    searchUsers,
+    listenToFriendships,
+    listenToMyGames 
 } from './friends.js';
 
 import { 
-    initUI, 
-    showScreen, 
-    displayStats, 
-    switchFriendTab, 
-    switchMyGamesTab,
-    loginBtn, registerBtn, logoutBtn, goToRegisterBtn, backToLoginBtn,
-    newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
-    howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
-    backToMainMenuBtn, backToMainMenuFromGamesBtn, backToMainFromFriendsBtn,
-    randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
-    dailyWordBtn,
-    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
-    showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
-    closeProfileBtn,
-    createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn, 
-    backToModeMultiBtn, backToModeBrBtn,
-    leaveGameButton, startGameBtn, copyGameIdBtn, shareGameBtn,
-    newRoundBtn, mainMenuBtn, shareResultsBtn,
-    jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
-
-    // === "Nasıl Oynanır" animasyon fonksiyonları ===
-    playTutorialAnimation,
-    stopTutorialAnimation
+    initUI, 
+    showScreen, 
+    displayStats, 
+    switchFriendTab, 
+    switchMyGamesTab,
+    loginBtn, registerBtn, logoutBtn, goToRegisterBtn, backToLoginBtn,
+    newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
+    howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
+    backToMainMenuBtn, 
+    backToMainMenuFromGamesBtn,
+    backToMainFromFriendsBtn,
+    randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
+    dailyWordBtn,
+    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
+    showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
+    closeProfileBtn,
+    createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn, 
+    backToModeMultiBtn, backToModeBrBtn,
+    leaveGameButton, startGameBtn, copyGameIdBtn, shareGameBtn,
+    newRoundBtn, mainMenuBtn, shareResultsBtn,
+    jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
+    playTutorialAnimation,
+    stopTutorialAnimation
 } from './ui.js';
 import { 
-    startNewGame, 
-    findOrCreateRandomGame, 
-    joinGame, 
-    createBRGame, 
-    joinBRGame, 
-    leaveGame, 
-    handleKeyPress, 
-    startGame, 
-    listenToGameUpdates, 
-    createGame,
-    usePresentJoker, 
-    useCorrectJoker, 
-    useRemoveJoker 
+    startNewGame, 
+    findOrCreateRandomGame, 
+    joinGame, 
+    createBRGame, 
+    joinBRGame, 
+    leaveGame, 
+    handleKeyPress, 
+    startGame, 
+    listenToGameUpdates, 
+    createGame,
+    usePresentJoker, 
+    useCorrectJoker, 
+    useRemoveJoker 
 } from './game.js';
 import { showToast } from './utils.js';
 
 // Uygulamayı başlatan ana fonksiyon
 function initApp() {
-    initUI();
-    addEventListeners();
-    initAuthListener();
-    initTheme();
+    initUI();
+    addEventListeners();
+    initAuthListener();
+    initTheme();
 }
 
 // Kullanıcı giriş/çıkış durumunu dinleyen fonksiyon
 function initAuthListener() {
-    onAuthStateChanged(auth, async (user) => { 
-        const authLoading = document.getElementById('auth-loading');
-        if (user) {
-            authLoading.classList.add('hidden');
-            setUserId(user.uid);
-            
-            const userRef = doc(db, "users", user.uid);
-            const userSnap = await getDoc(userRef);
-            
-            if (userSnap.exists()) {
-                const profileData = userSnap.data();
-                setCurrentUserProfile(profileData);
-                
-                document.getElementById('main-menu-username').textContent = profileData.username || 'Kullanıcı';
-                const stats = profileData.stats || { played: 0, wins: 0, currentStreak: 0 };
-                const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-                document.getElementById('main-menu-stats').textContent = `Başarı: %${winRate} | Seri: ${stats.currentStreak}`;
-                
-                const friendsUnsub = listenToFriendships();
-                const gamesUnsub = listenToMyGames();
-                setFriendsUnsubscribe(friendsUnsub);
-                setMyGamesUnsubscribe(gamesUnsub);
+    onAuthStateChanged(auth, async (user) => { 
+        const authLoading = document.getElementById('auth-loading');
+        if (user) {
+            authLoading.classList.add('hidden');
+            setUserId(user.uid);
+            
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            
+            if (userSnap.exists()) {
+                const profileData = userSnap.data();
+                setCurrentUserProfile(profileData);
+                
+                document.getElementById('main-menu-username').textContent = profileData.username || 'Kullanıcı';
+                const stats = profileData.stats || { played: 0, wins: 0, currentStreak: 0 };
+                const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+                document.getElementById('main-menu-stats').textContent = `Başarı: %${winRate} | Seri: ${stats.currentStreak}`;
+                
+                const friendsUnsub = listenToFriendships();
+                const gamesUnsub = listenToMyGames();
+                setFriendsUnsubscribe(friendsUnsub);
+                setMyGamesUnsubscribe(gamesUnsub);
 
-            } else {
-                console.warn("Kullanıcı profili bulunamadı.");
-                setCurrentUserProfile({ email: user.email });
-            }
-            
-            const activeGameId = localStorage.getItem('activeGameId');
-            if (activeGameId) {
-                try {
-                    const gameDoc = await getDoc(doc(db, "games", activeGameId));
-                    if (gameDoc.exists() && gameDoc.data().status !== 'finished') {
-                        showToast("Yarım kalan oyununa devam ediyorsun!");
-                        if (gameDoc.data().gameType === 'multiplayer-br') {
-                            await joinBRGame(activeGameId);
-                        } else {
-                            await joinGame(activeGameId);
-                        }
-                    } else {
-                        localStorage.removeItem('activeGameId');
-                        showScreen('main-menu-screen');
-                    }
-                } catch (error) {
-                    console.error("Yarım kalan oyuna girerken hata:", error);
-                    localStorage.removeItem('activeGameId');
-                    showScreen('main-menu-screen');
-                }
-            } else {
-                showScreen('main-menu-screen');
-            }
-            
-        } else {
-            authLoading.classList.add('hidden');
-            setUserId(null);
-            setCurrentUserProfile(null);
+            } else {
+                console.warn("Kullanıcı profili bulunamadı.");
+                setCurrentUserProfile({ email: user.email });
+            }
+            
+            const activeGameId = localStorage.getItem('activeGameId');
+            if (activeGameId) {
+                try {
+                    const gameDoc = await getDoc(doc(db, "games", activeGameId));
+                    if (gameDoc.exists() && gameDoc.data().status !== 'finished') {
+                        showToast("Yarım kalan oyununa devam ediyorsun!");
+                        if (gameDoc.data().gameType === 'multiplayer-br') {
+                            await joinBRGame(activeGameId);
+                        } else {
+                            await joinGame(activeGameId);
+                        }
+                    } else {
+                        localStorage.removeItem('activeGameId');
+                        showScreen('main-menu-screen');
+                    }
+                } catch (error) {
+                    console.error("Yarım kalan oyuna girerken hata:", error);
+                    localStorage.removeItem('activeGameId');
+                    showScreen('main-menu-screen');
+                }
+            } else {
+                showScreen('main-menu-screen');
+            }
+            
+        } else {
+            authLoading.classList.add('hidden');
+            setUserId(null);
+            setCurrentUserProfile(null);
 
-            if (getFriendsUnsubscribe()) getFriendsUnsubscribe()();
-            if (getMyGamesUnsubscribe()) getMyGamesUnsubscribe()();
-            setFriendsUnsubscribe(null);
-            setMyGamesUnsubscribe(null);
+            if (getFriendsUnsubscribe()) getFriendsUnsubscribe()();
+            if (getMyGamesUnsubscribe()) getMyGamesUnsubscribe()();
+            setFriendsUnsubscribe(null);
+            setMyGamesUnsubscribe(null);
 
-            showScreen('login-screen');
-        }
-    });
+            showScreen('login-screen');
+        }
+    });
 }
+
+// js/main.js dosyanızdaki fetchAndDisplayGlobalRanking fonksiyonunu
+// (yaklaşık 116. satırdan 172. satıra kadar) 
+// AŞAĞIDAKİ BU BLOK ile tamamen değiştirin:
+
+// js/main.js dosyanızdaki fetchAndDisplayGlobalRanking fonksiyonunun
+// (yaklaşık 116. satırdan 172. satıra kadar) 
+// AŞAĞIDAKİ BU BLOK ile tamamen değiştirin:
+
+// Global Sıralamayı çeken fonksiyon
+async function fetchAndDisplayGlobalRanking() {
+    const listElement = document.getElementById('global-ranking-list');
+    const loadingElement = document.getElementById('global-ranking-loading');
+    if (!listElement || !loadingElement) return;
+
+    // Sadece bir kez yüklenmişse tekrar yükleme
+    if (listElement.childElementCount > 0) {
+        // Eğer liste zaten doluysa, tekrar yüklememek için listeyi temizle.
+        // Bu, yeni verilerin (gerekirse) çekilmesini sağlar.
+        listElement.innerHTML = '';
+    }
+
+    loadingElement.classList.remove('hidden');
+
+    try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, 
+            orderBy("stats.wins", "desc"), // Ana sıralama: Kazanma sayısı (en çok)
+            orderBy("stats.played", "asc"), // Eşitlik bozucu: Oynanan (en az)
+            limit(20) // Sadece ilk 20 kişiyi göster
+        );
+
+        const querySnapshot = await getDocs(q);
+        let rank = 1;
+
+        if (querySnapshot.empty) {
+            loadingElement.textContent = "Henüz sıralamaya girecek kimse yok.";
+            return;
+        }
+
+        querySnapshot.forEach(doc => {
+            const user = doc.data();
+            const stats = user.stats || { played: 0, wins: 0 };
+            
+            // Sıralamada sadece en az 10 oyun oynamış kişileri göster (isteğe bağlı)
+            // (NOT: Test için bu satırı geçici olarak yorumluyorum, oyuncu sayınız azsa diye)
+            // if (stats.played < 10) return; 
+
+            const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+            const isMe = doc.id === getUserId();
+
+            const entry = document.createElement('div');
+            
+            // === GÜNCELLEME: İsteğiniz üzerine dikey boşluk 'py-1' (en ince) yapıldı ===
+            entry.className = `py-1 px-3 rounded-lg flex items-center gap-2 ${isMe ? 'bg-indigo-600' : 'bg-gray-700'}`;
+            
+            // === GÜNCELLEME: HTML yapısı tek satır ve kompakt liste olacak şekilde değiştirildi ===
+            entry.innerHTML = `
+                                <div class="font-bold text-md w-6 text-center ${isMe ? 'text-white' : 'text-amber-400'}">${rank}.</div>
+                
+                <div class="flex-1">
+                    <p class="font-bold text-md truncate">${user.username || 'Bilinmiyor'}</p>
+                </div>
+                
+                <div class="flex-shrink-0 flex gap-3 text-right">
+                    <p class="text-sm ${isMe ? 'text-white' : 'text-gray-300'}">Başarı: <strong class="font-bold">%${winRate}</strong></p>
+                    <p class="text-sm ${isMe ? 'text-white' : 'text-gray-300'}">Kazanma: <strong class="font-bold text-green-400">${stats.wins}</strong></p>
+                </div>
+            `;
+            // === GÜNCELLEME SONU ===
+            
+            listElement.appendChild(entry);
+            rank++;
+        });
+
+        loadingElement.classList.add('hidden');
+
+    } catch (error) {
+        console.error("Sıralama yüklenirken hata:", error);
+        loadingElement.textContent = "Sıralama yüklenemedi.";
+    }
+}
+
+// İstatistik ekranındaki sekmeleri (tab) yöneten fonksiyon
+function switchStatsTab(tabName) {
+    const personalTab = document.getElementById('personal-stats-tab');
+    const globalTab = document.getElementById('global-ranking-tab');
+    const personalBtn = document.getElementById('show-personal-stats-tab-btn');
+    const globalBtn = document.getElementById('show-global-ranking-tab-btn');
+
+    if (tabName === 'global') {
+        personalTab.classList.add('hidden');
+        globalTab.classList.remove('hidden');
+        personalBtn.classList.remove('text-white', 'border-indigo-500');
+        personalBtn.classList.add('text-gray-400');
+        globalBtn.classList.add('text-white', 'border-indigo-500');
+        globalBtn.classList.remove('text-gray-400');
+        fetchAndDisplayGlobalRanking();
+    } else { // 'personal'
+        personalTab.classList.remove('hidden');
+        globalTab.classList.add('hidden');
+        personalBtn.classList.add('text-white', 'border-indigo-500');
+        personalBtn.classList.remove('text-gray-400');
+        globalBtn.classList.remove('text-white', 'border-indigo-500');
+        globalBtn.classList.add('text-gray-400');
+    }
+}
+
 
 // Tüm butonlara tıklama olaylarını (event listener) ekleyen fonksiyon
 function addEventListeners() {
-    // Auth Ekranları
-    loginBtn.addEventListener('click', handleLogin);
-    logoutBtn.addEventListener('click', handleLogout);
-    registerBtn.addEventListener('click', handleRegister);
-    goToRegisterBtn.addEventListener('click', () => showScreen('register-screen'));
-    backToLoginBtn.addEventListener('click', () => showScreen('login-screen'));
+    // Auth Ekranları
+    loginBtn.addEventListener('click', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+    registerBtn.addEventListener('click', handleRegister);
+    goToRegisterBtn.addEventListener('click', () => showScreen('register-screen'));
+    backToLoginBtn.addEventListener('click', () => showScreen('login-screen'));
 
-    // Ana Menü
-    newGameBtn.addEventListener('click', () => showScreen('new-game-screen'));
-    myGamesBtn.addEventListener('click', () => showScreen('my-games-screen'));
-    friendsBtn.addEventListener('click', () => showScreen('friends-screen'));
-    statsBtn.addEventListener('click', () => {
-        displayStats(getCurrentUserProfile());
-        showScreen('profile-screen');
-    });
-    statsBtnMain.addEventListener('click', () => {
-        displayStats(getCurrentUserProfile());
-        showScreen('profile-screen');
-    });
+    // Ana Menü
+    newGameBtn.addEventListener('click', () => showScreen('new-game-screen'));
+    myGamesBtn.addEventListener('click', () => showScreen('my-games-screen'));
+    friendsBtn.addEventListener('click', () => showScreen('friends-screen'));
 
-    // === "Nasıl Oynanır" Animasyon Tetikleyicileri ===
-    howToPlayBtn.addEventListener('click', () => {
-        showScreen('how-to-play-screen');
-        playTutorialAnimation(); // Animasyonu başlat
-    });
-    closeHowToPlayBtn.addEventListener('click', () => {
-        showScreen('main-menu-screen');
-        stopTutorialAnimation(); // Animasyonu durdur ve temizle
-    });
-    // === Bitiş ===
+    // GÜNCELLENDİ: İstatistik Butonları (Kişisel Bilgiler TAMAMEN kaldırıldı)
+    const openStatsScreen = () => {
+        const profile = getCurrentUserProfile();
+        if (!profile) return; 
 
-    closeProfileBtn.addEventListener('click', () => showScreen('main-menu-screen'));
-
-    // Tema Butonları
-    themeLightBtn.addEventListener('click', () => switchTheme('light'));
-    themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
-
-    // Geri Butonları
-    backToMainMenuBtn.addEventListener('click', () => showScreen('main-menu-screen'));
-    backToMainMenuFromGamesBtn.addEventListener('click', () => showScreen('main-menu-screen'));
-    backToMainFromFriendsBtn.addEventListener('click', () => showScreen('main-menu-screen'));
-
-    // Oyun Modu Seçim
-    vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
-    dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
-    randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 43200, matchLength: 5, gameType: 'random_loose' }));
-    seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
-
-    // Online Oyun Kurma / Katılma
-    withFriendsBtn.addEventListener('click', () => {
-        showScreen('friends-screen');
-        switchFriendTab('friends'); 
-    });
-    
-    multiplayerBrBtn.addEventListener('click', () => showScreen('br-setup-screen'));
-    backToModeMultiBtn.addEventListener('click', () => showScreen('new-game-screen'));
-    backToModeBrBtn.addEventListener('click', () => showScreen('new-game-screen'));
-
-    // Online Multiplayer
-    createGameBtn.addEventListener('click', () => {
-        const friendId = getChallengedFriendId(); 
+        // 1. Sadece Kişisel İstatistikleri Doldur
+        displayStats(profile); 
         
-        if (!friendId) {
-            showToast("Lütfen önce 'Arkadaşlar' listesinden birini seçip 'Davet Et'e basın.", true);
-            showScreen('friends-screen'); 
-            return;
-        }
+        // 2. Kişisel Bilgileri Dolduran kodlar SİLİNDİ
 
-        createGame({ 
-            invitedFriendId: friendId,
-            timeLimit: parseInt(document.getElementById('time-select-multi').value, 10),
-            matchLength: parseInt(document.getElementById('match-length-select').value, 10),
-            isHardMode: document.getElementById('hard-mode-checkbox-multi').checked,
-            gameType: 'friend'
-        });
+        // 3. Ekranı aç ve varsayılan sekmeyi ayarla
+        showScreen('profile-screen');
+        switchStatsTab('personal'); 
+    };
+    statsBtn.addEventListener('click', openStatsScreen);
+    statsBtnMain.addEventListener('click', openStatsScreen);
 
-        setChallengedFriendId(null); 
-    });
-    
-    joinGameBtn.addEventListener('click', () => {
-        const gameId = document.getElementById('game-id-input').value.toUpperCase();
-        if (gameId) joinGame(gameId);
-    });
+    // YENİ EKLENDİ: İstatistik Sekme Butonları
+    document.getElementById('show-personal-stats-tab-btn').addEventListener('click', () => switchStatsTab('personal'));
+    document.getElementById('show-global-ranking-tab-btn').addEventListener('click', () => switchStatsTab('global'));
 
-    // Battle Royale
-    createBRGameBtn.addEventListener('click', () => createBRGame());
-    joinBRGameBtn.addEventListener('click', () => {
-        const gameId = document.getElementById('game-id-input-br').value.toUpperCase();
-        if (gameId) joinBRGame(gameId);
-    });
+    // === "Nasıl Oynanır" Animasyon Tetikleyicileri ===
+    howToPlayBtn.addEventListener('click', () => {
+        showScreen('how-to-play-screen');
+        playTutorialAnimation(); 
+    });
+    closeHowToPlayBtn.addEventListener('click', () => {
+        showScreen('main-menu-screen');
+        stopTutorialAnimation(); 
+    });
+    // === Bitiş ===
 
-    // Oyunlarım Sekmeleri
-    showActiveGamesTabBtn.addEventListener('click', () => switchMyGamesTab('active'));
-    showFinishedGamesTabBtn.addEventListener('click', () => switchMyGamesTab('finished'));
-    showInvitesTabBtn.addEventListener('click', () => switchMyGamesTab('invites'));
+    closeProfileBtn.addEventListener('click', () => showScreen('main-menu-screen'));
 
-    // Arkadaşlar Sekmeleri
-    showFriendsTabBtn.addEventListener('click', () => switchFriendTab('friends'));
-    showRequestsTabBtn.addEventListener('click', () => switchFriendTab('requests'));
-    showAddFriendTabBtn.addEventListener('click', () => switchFriendTab('add'));
-    searchFriendBtn.addEventListener('click', searchUsers);
-    
-    // Oyun İçi Butonlar
-    leaveGameButton.addEventListener('click', leaveGame);
-    startGameBtn.addEventListener('click', startGame);
+    // Tema Butonları
+    themeLightBtn.addEventListener('click', () => switchTheme('light'));
+    themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
 
-    // Skor Ekranı Butonları
-    
-    // === DÜZELTME: (SIRA SENDE HATASI) ===
-    // 'newRoundBtn' için olan 'addEventListener' kaldırıldı.
-    // Bu butonun mantığı artık tamamen game.js içindeki 'showScoreboard' tarafından .onclick = startNewRound;
-    // şeklinde yönetiliyor. Buradaki eski listener, o fonksiyonun çalışmasını engelliyordu.
-    // newRoundBtn.addEventListener('click', () => {
-    //     console.log("Yeni Tur butonu main.js'den tıklandı.");
-    // });
-    // === DÜZELTME SONU ===
-    
-    mainMenuBtn.addEventListener('click', leaveGame);
-    
-    // Kopyala & Paylaş
-    copyGameIdBtn.addEventListener('click', () => {
-        const gameId = document.getElementById('game-id-display').textContent;
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(gameId).then(() => {
-                showToast("Oyun ID kopyalandı!");
-            });
-        }
-    });
+    // Geri Butonları
+    backToMainMenuBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+    backToMainMenuFromGamesBtn.addEventListener('click', () => showScreen('main-menu-screen')); 
+    backToMainFromFriendsBtn.addEventListener('click', () => showScreen('main-menu-screen'));
 
-    shareGameBtn.addEventListener('click', () => {
-        const gameId = document.getElementById('game-id-display').textContent;
-        const text = `Kelime Yarışması'na gel! Oyun ID: ${gameId}`;
-        if (navigator.share) {
-            navigator.share({
-                title: 'Kelime Yarışması',
-                text: text,
-            }).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast("Davet linki kopyalandı!");
-            });
-        }
-    });
+    // Oyun Modu Seçim
+    vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
+    dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
+    randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 43200, matchLength: 5, gameType: 'random_loose' }));
+    seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
 
-    // JOKER BUTONLARI BAĞLANTILARI
-    if (jokerPresentBtn) jokerPresentBtn.addEventListener('click', usePresentJoker);
-    if (jokerCorrectBtn) jokerCorrectBtn.addEventListener('click', useCorrectJoker);
-    if (jokerRemoveBtn) jokerRemoveBtn.addEventListener('click', useRemoveJoker);
+    // Online Oyun Kurma / Katılma
+    withFriendsBtn.addEventListener('click', () => {
+        showScreen('friends-screen');
+        switchFriendTab('friends'); 
+    });
+    
+    multiplayerBrBtn.addEventListener('click', () => showScreen('br-setup-screen'));
+    backToModeMultiBtn.addEventListener('click', () => showScreen('new-game-screen'));
+    backToModeBrBtn.addEventListener('click', () => showScreen('new-game-screen'));
 
-    // Fiziksel Klavye Dinleyicisi
-    window.addEventListener('keydown', (e) => {
-        if (document.activeElement.tagName === 'INPUT') return;
-        if (document.getElementById('game-screen').classList.contains('hidden')) return;
+    // Online Multiplayer
+    createGameBtn.addEventListener('click', () => {
+        const friendId = getChallengedFriendId(); 
+        
+        if (!friendId) {
+            showToast("Lütfen önce 'Arkadaşlar' listesinden birini seçip 'Davet Et'e basın.", true);
+            showScreen('friends-screen'); 
+            return;
+        }
 
-        if (e.key === 'Enter') {
-            handleKeyPress('ENTER');
-        } else if (e.key === 'Backspace') {
-            handleKeyPress('⌫');
-        } else if (e.key.length === 1 && e.key.match(/[a-zçğıöşü]/i)) {
-            handleKeyPress(e.key);
-        }
-    });
+        createGame({ 
+            invitedFriendId: friendId,
+            timeLimit: parseInt(document.getElementById('time-select-multi').value, 10),
+            matchLength: parseInt(document.getElementById('match-length-select').value, 10),
+            isHardMode: document.getElementById('hard-mode-checkbox-multi').checked,
+            gameType: 'friend'
+        });
+
+        setChallengedFriendId(null); 
+    });
+    
+    joinGameBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-input').value.toUpperCase();
+        if (gameId) joinGame(gameId);
+    });
+
+    // Battle Royale
+    createBRGameBtn.addEventListener('click', () => createBRGame());
+    joinBRGameBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-input-br').value.toUpperCase();
+        if (gameId) joinBRGame(gameId);
+    });
+
+    // Oyunlarım Sekmeleri
+    showActiveGamesTabBtn.addEventListener('click', () => switchMyGamesTab('active'));
+    showFinishedGamesTabBtn.addEventListener('click', () => switchMyGamesTab('finished'));
+    showInvitesTabBtn.addEventListener('click', () => switchMyGamesTab('invites'));
+
+    // Arkadaşlar Sekmeleri
+    showFriendsTabBtn.addEventListener('click', () => switchFriendTab('friends'));
+    showRequestsTabBtn.addEventListener('click', () => switchFriendTab('requests'));
+    showAddFriendTabBtn.addEventListener('click', () => switchFriendTab('add'));
+    searchFriendBtn.addEventListener('click', searchUsers);
+    
+    // Oyun İçi Butonlar
+    leaveGameButton.addEventListener('click', leaveGame);
+    startGameBtn.addEventListener('click', startGame);
+
+    // Skor Ekranı Butonları
+    mainMenuBtn.addEventListener('click', leaveGame);
+    
+    // Kopyala & Paylaş
+    copyGameIdBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-display').textContent;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(gameId).then(() => {
+                showToast("Oyun ID kopyalandı!");
+            });
+        }
+    });
+
+    shareGameBtn.addEventListener('click', () => {
+        const gameId = document.getElementById('game-id-display').textContent;
+        const text = `Kelime Yarışması'na gel! Oyun ID: ${gameId}`;
+        if (navigator.share) {
+            navigator.share({
+                title: 'Kelime Yarışması',
+                text: text,
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Davet linki kopyalandı!");
+            });
+        }
+    });
+
+    // JOKER BUTONLARI BAĞLANTILARI
+    if (jokerPresentBtn) jokerPresentBtn.addEventListener('click', usePresentJoker);
+    if (jokerCorrectBtn) jokerCorrectBtn.addEventListener('click', useCorrectJoker);
+    if (jokerRemoveBtn) jokerRemoveBtn.addEventListener('click', useRemoveJoker);
+
+    // Fiziksel Klavye Dinleyicisi
+    window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'INPUT') return;
+        if (document.getElementById('game-screen').classList.contains('hidden')) return;
+
+        if (e.key === 'Enter') {
+            handleKeyPress('ENTER');
+        } else if (e.key === 'Backspace') {
+            handleKeyPress('⌫');
+        } else if (e.key.length === 1 && e.key.match(/[a-zçğıöşü]/i)) {
+            handleKeyPress(e.key);
+        }
+    });
 }
 
 // Tema Yönetimi
 function switchTheme(theme) {
-    if (theme === 'light') {
-        document.body.classList.add('theme-light');
-        localStorage.setItem('theme', 'light');
-    } else {
-        document.body.classList.remove('theme-light');
-        localStorage.setItem('theme', 'dark');
-    }
+    if (theme === 'light') {
+        document.body.classList.add('theme-light');
+        localStorage.setItem('theme', 'light');
+    } else {
+        document.body.classList.remove('theme-light');
+        localStorage.setItem('theme', 'dark');
+    }
 }
 
 function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    switchTheme(savedTheme);
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    switchTheme(savedTheme);
 }
 
 // Uygulamayı başlat
