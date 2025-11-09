@@ -1221,7 +1221,7 @@ function findBestCpuGuess() {
 
     // === YENİ CPU ZORLUK MANTIĞI ===
     // 4. tahmine kadar (index 0, 1, 2) CPU "kolay" modda oynar.
-    if (currentGuesses < 3) {
+    if (currentGuesses < 4) {
         // Eğer kazanmayan BAŞKA geçerli kelimeler varsa...
         if (otherPossibleWords.length > 0) {
             // ...KAZANMAYAN bir kelime seç. (Daha fazla ipucu toplamaya çalışsın)
@@ -1235,10 +1235,30 @@ function findBestCpuGuess() {
     // 4. tahmin ve sonrasında (index 3, 4, 5) CPU "zor" modda oynar
     // ve kazanmak için 'finalWords' listesinden (kazanan kelime dahil) seçim yapabilir.
     // === YENİ MANTIK SONU ===
+// ... (yaklaşık 1102. satır)
+    // === YENİ MANTIK SONU ===
 
+    // === YENİ ŞANS FAKTÖRÜ (ÇÖZÜM 2) BAŞLANGICI ===
+    // 'zor' moddayken (yani currentGuesses >= 3 ise)
+
+    // Eğer kazanma kelimesi listedeyse (winningWord) VE kazanmayan başka kelimeler de varsa
+    if (winningWord && otherPossibleWords.length > 0) {
+        
+        // %50 şansla "pas geç" ve kazanmayan bir kelime seç
+        // (Not: 0.5'i 0.7 yaparsanız %70 şansla pas geçer, daha da 'aptal' olur)
+        if (Math.random() < 0.5) { 
+             const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
+             return otherPossibleWords[randomIndex]; // Bilerek kazanmayan kelimeyi seç
+        }
+        // %50 şansla 'pas geçme' ve aşağıdaki 'finalWords' bloğuna düş (kazanabilir)
+    }
+    // === YENİ ŞANS FAKTÖRÜ SONU ===
+
+
+    // (Bu satır zaten kodunuzda var, bunun üstüne ekleyin)
     if (finalWords.length > 0) {
         const randomIndex = Math.floor(Math.random() * finalWords.length);
-        return finalWords[randomIndex]; // Burası artık "zor" mod (veya kolay modda tek seçenek kaldıysa)
+        return finalWords[randomIndex];
     } else {
         // (acil durum fallback'i - bu aynı kalır)
         const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
