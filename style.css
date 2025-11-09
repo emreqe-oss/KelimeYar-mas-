@@ -2,18 +2,19 @@
 
 /* *** DÜZELTME 1: "Ekrana Sığdır" çözümü *** */
 html {
-    height: 100vh; /* Ekran yüksekliğini 100vh olarak ayarla */
+    height: 100dvh; /* Ekran yüksekliğini 100dvh olarak ayarla */
 }
 body { 
     font-family: 'Inter', sans-serif; 
     touch-action: manipulation; 
     transition: background-color 0.3s, color 0.3s;
-    height: 100vh; /* Body'nin de 100vh olmasını garantile */
+    height: 100dvh; /* Body'nin de 100dvh olmasını garantile */
     overflow: hidden; /* Sayfanın kendisinin kaymasını engelle */
 }
 /* *** DÜZELTME 2: #app div'inin tam yüksekliği almasını sağla *** */
 #app {
     height: 100%;
+    overflow: hidden; /* EKLENDİ: #app'in dışarı taşmasını engeller */
 }
 /* *** DÜZELTME 3: OYUN EKRANI YÜKSEKLİK HESAPLAMASI *** */
 /* Klavye yüksekliği yaklaşık 205px'tir (4 satır * 48px yükseklik + 3 * 4px boşluk).
@@ -167,6 +168,7 @@ body.theme-light .back-button-hitbox:hover {
     align-items: center;
     gap: 16px; /* Butonlar arası boşluk */
     padding: 8px 0; /* Üstten ve alttan boşluk */
+    flex-shrink: 0; /* EKLENDİ: Bu konteynerin küçülmesini engelle */
 }
 
 /*
