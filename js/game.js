@@ -2090,72 +2090,78 @@ export async function rejectInvite(gameId) {
     }
 }
 
-// === "Oyunlarım" listesinden ayrılma fonksiyonu (GÜNCELLENDİ) ===
-export async function abandonGame(gameId, gameDivElement) { 
-    if (!gameId) return;
+// game.js (yaklaşık 1493. satır)
 
-    if (state.getCurrentGameId() === gameId) {
-        leaveGame();
-    }
+export async function abandonGame(gameId, gameDivElement) { 
+    if (!gameId) return;
 
-    const currentUserId = state.getUserId();
-    const gameRef = doc(db, "games", gameId);
+    if (state.getCurrentGameId() === gameId) {
+        leaveGame();
+    }
 
-    if (gameDivElement) {
-        gameDivElement.style.opacity = '0.5'; 
-        const leaveBtn = gameDivElement.querySelector('button');
-        if (leaveBtn) leaveBtn.disabled = true;
-    }
+    const currentUserId = state.getUserId();
+    const gameRef = doc(db, "games", gameId);
 
-    try {
-        const gameDoc = await getDoc(gameRef);
-        if (!gameDoc.exists()) {
-            if (gameDivElement) gameDivElement.remove(); 
-            return;
-        }
+    if (gameDivElement) {
+        gameDivElement.style.opacity = '0.5'; 
+        const leaveBtn = gameDivElement.querySelector('button');
+        if (leaveBtn) leaveBtn.disabled = true;
+    }
 
-        const gameData = gameDoc.data();
-        let updateData = {};
+    try {
+        const gameDoc = await getDoc(gameRef);
+        if (!gameDoc.exists()) {
+            if (gameDivElement) gameDivElement.remove(); 
+            return;
+        }
 
-        // === YENİ "GİZLEME" MANTIĞI ===
-        // Oyunu silmek yerine, 'hiddenFrom' dizisine ID'mizi ekliyoruz
-        updateData = {
-            hiddenFrom: arrayUnion(currentUserId)
-        };
-        
-        // 1. Durum: Oyun "waiting" (lobi) ise ve kurucu bizsek, oyunu sil.
-        if (gameData.status === 'waiting' && gameData.creatorId === currentUserId) {
-            await deleteDoc(gameRef);
-            showToast("Oyun lobisi kapatıldı.");
-        }
-        // 2. Durum: Sıralı oyunsa ve rakip varsa, rakibi kazanan yap.
-        else if (!isBattleRoyale(gameData.gameType) && gameData.playerIds.length > 1 && gameData.status !== 'finished') {
-            const opponentId = gameData.playerIds.find(id => id !== currentUserId);
-            updateData.status = 'finished';
-            updateData.roundWinner = opponentId;
-            updateData.matchWinnerId = opponentId;
-            await updateDoc(gameRef, updateData);
-            showToast("Oyundan çekildiniz. Rakibiniz kazandı.");
-        }
-        // 3. Durum: BR veya diğer tüm durumlar (sadece kendini gizle)
-        else {
-            await updateDoc(gameRef, updateData);
-            showToast("Oyun listeden gizlendi.");
-        }
-        
-        // Başarılı olursa UI'ı anında güncelle
-        if (gameDivElement) {
-            gameDivElement.remove();
-        }
+        const gameData = gameDoc.data();
+        let updateData = {
+            // Oyunu listeden gizlemeyi temel olarak alıyoruz
+            hiddenFrom: arrayUnion(currentUserId)
+        };
+        
+        // 1. Durum: Lobi kurucusu bizsek, oyunu tamamen sil.
+        if (gameData.status === 'waiting' && gameData.creatorId === currentUserId) {
+            await deleteDoc(gameRef);
+            showToast("Oyun lobisi kapatıldı.");
+        }
+        // 2. Durum: Sıralı oyunsa ve rakip varsa, rakibi kazanan yap ve bitir.
+        else if (!isBattleRoyale(gameData.gameType) && gameData.playerIds.length > 1 && gameData.status !== 'finished') {
+            const opponentId = gameData.playerIds.find(id => id !== currentUserId);
+            updateData.status = 'finished'; // BİTİR
+            updateData.roundWinner = opponentId;
+            updateData.matchWinnerId = opponentId;
+            await updateDoc(gameRef, updateData);
+            showToast("Oyundan çekildiniz. Rakibiniz kazandı.");
+        }
+        // 3. Durum (GÜNCELLENDİ): BR veya diğer tüm durumlar (lobi, tek kişilik)
+        else {
+            // Oyunu "bitmiş" olarak işaretle ki 'Biten Oyunlar'a gitsin
+            updateData.status = 'finished'; 
 
-    } catch (error) {
-        console.error("Oyundan ayrılırken hata:", error);
-        showToast("Oyundan ayrılırken bir hata oluştu.", true);
-        
-        if (gameDivElement) {
-            gameDivElement.style.opacity = '1';
-            const leaveBtn = gameDivElement.querySelector('button');
-            if (leaveBtn) leaveBtn.disabled = false;
-        }
-    }
+            // BR oyununda, terk eden oyuncuyu 'elendi' olarak da işaretleyebiliriz (opsiyonel ama iyi olur)
+            if (isBattleRoyale(gameData.gameType)) {
+                 updateData[`players.${currentUserId}.isEliminated`] = true;
+            }
+
+            await updateDoc(gameRef, updateData);
+            showToast("Oyun bitenlere taşındı.");
+        }
+        
+        // Başarılı olursa UI'ı anında güncelle
+        if (gameDivElement) {
+            gameDivElement.remove();
+        }
+
+    } catch (error) {
+        console.error("Oyundan ayrılırken hata:", error);
+        showToast("Oyundan ayrılırken bir hata oluştu.", true);
+        
+        if (gameDivElement) {
+            gameDivElement.style.opacity = '1';
+            const leaveBtn = gameDivElement.querySelector('button');
+            if (leaveBtn) leaveBtn.disabled = false;
+        }
+    }
 }
