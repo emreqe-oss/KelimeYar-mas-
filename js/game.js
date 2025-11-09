@@ -1980,10 +1980,22 @@ export async function useCorrectJoker() {
         return; 
     }
 
+    // js/game.js (yaklaşık 1428. satır)
+
     // === JOKER DÜZELTMESİ (Hard Mode Hatası) ===
+
+    // === YENİ DÜZELTME (JOKER HAFIZA HATASI) ===
+    // 1. Mevcut bilinen pozisyonları hafızadan al
+    const currentPositions = state.getKnownCorrectPositions();
+    // 2. Yeni bulduğumuz harfi bu hafızaya ekle
+    currentPositions[hintIndex] = hintLetter;
+    // 3. Güncellenmiş hafızayı kaydet
+    state.setKnownCorrectPositions(currentPositions);
+    // === YENİ DÜZELTME SONU ===
+
     // Harfi ızgaraya 'static' (ipucu) olarak ekle
     updateStaticTile(currentRow, hintIndex, hintLetter, 'correct');
-    // === DÜZELTME SONU ===
+    // === DÜZELTME SONU === (Bu yorum satırı sizde zaten vardı)
     
     const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
     if (keyButton) {
