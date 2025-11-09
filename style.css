@@ -784,3 +784,36 @@ body.theme-light .back-button-hitbox:hover {
     margin-top: 1rem; /* mt-6 (24px) yerine mt-4 (16px) */
     flex-shrink: 0; /* Butonun küçülmesini engelle */
 }
+
+/* ======================================================= */
+/* === YATAY EKRAN ("SQUASH" / YASSILAŞTIRMA) DÜZELTMESİ === */
+/* ======================================================= */
+
+/* Sadece ekran genişliği yüksekliğinden fazlaysa (yatay mod) çalışır */
+@media (orientation: landscape) {
+
+    /* * 1. Izgara konteynerine (guess-grid) esnek (flex) 
+     * atasının tüm yüksekliğini (kalan boşluğu) doldurmasını söylüyoruz.
+     */
+    #guess-grid {
+        height: 100%;
+        /* * 2. Izgaranın 6 satırını, genişliğe göre değil,
+         * bu yeni yüksekliğe göre 6 eşit parçaya bölmesini söylüyoruz.
+         * (1fr = 1 esnek parça)
+         */
+        grid-template-rows: repeat(6, 1fr);
+    }
+
+    /* * 3. Kutuların (tile) "kare" olmasını sağlayan
+     * padding-bottom hilesini kaldırıyoruz.
+     */
+    .tile {
+        padding-bottom: 0; /* padding-bottom: 100% hilesini iptal et */
+        height: 100%;      /* Satırın (1fr) tam yüksekliğini doldur */
+    }
+
+    /* * Not: .tile-inner (harfin olduğu katman) zaten 
+     * position:absolute olduğu için otomatik olarak 
+     * bu yeni yassılaşmış yüksekliğe uyum sağlayacaktır.
+     */
+}
