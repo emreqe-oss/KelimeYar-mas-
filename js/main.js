@@ -282,10 +282,9 @@ const openEditProfileScreen = () => {
     showScreen('edit-profile-screen');
 };
 
-// js/main.js dosyanızdaki mevcut addEventListeners fonksiyonunu bununla değiştirin
-
 // Tüm butonlara tıklama olaylarını (event listener) ekleyen fonksiyon
 function addEventListeners() {
+
 
     // ===================================================
     // === BAŞLANGIÇ: YENİ GERİ TUŞU DİNLEYİCİSİ ===
@@ -329,17 +328,14 @@ function addEventListeners() {
         showScreen('how-to-play-screen');
         playTutorialAnimation(); 
     });
-    // DÜZELTME: Artık history.back() kullanıyor
     closeHowToPlayBtn.addEventListener('click', () => {
-        history.back();
+        showScreenhistory.back();
         stopTutorialAnimation(); 
     });
 
     // Kapatma Butonları
-    // DÜZELTME: Artık history.back() kullanıyor
-    closeProfileBtn.addEventListener('click', () => history.back());
-    // DÜZELTME: Artık history.back() kullanıyor
-    document.getElementById('back-to-main-from-edit-profile-btn').addEventListener('click', () => history.back());
+    closeProfileBtn.addEventListener('click', () => showScreenhistory.back());
+    document.getElementById('back-to-main-from-edit-profile-btn').addEventListenerhistory.back();
 
 
     // Tema Butonları
@@ -347,18 +343,18 @@ function addEventListeners() {
     themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
 
     // Geri Butonları
-    // DÜZELTME: Artık history.back() kullanıyor
-    backToMainMenuBtn.addEventListener('click', () => history.back());
-    backToMainMenuFromGamesBtn.addEventListener('click', () => history.back()); 
-    backToMainFromFriendsBtn.addEventListener('click', () => history.back());
+    backToMainMenuBtn.addEventListener('click', () => showScreenhistory.back());
+    backToMainMenuFromGamesBtn.addEventListener('click', () => showScreenhistory.back());
+    backToMainFromFriendsBtn.addEventListener('click', () => showScreenhistory.back());
 
     // Oyun Modu Seçim
     vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
     dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
     
+    // GÜNCELLEME: "Gevşek Oyun" artık 1 tur (matchLength: 1)
     randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ 
         timeLimit: 43200, 
-        matchLength: 1,
+        matchLength: 1, // 5'ten 1'e düşürüldü
         gameType: 'random_loose' 
     }));
     
@@ -371,9 +367,8 @@ function addEventListeners() {
     });
     
     multiplayerBrBtn.addEventListener('click', () => showScreen('br-setup-screen'));
-    // DÜZELTME: Artık history.back() kullanıyor
-    backToModeMultiBtn.addEventListener('click', () => history.back());
-    backToModeBrBtn.addEventListener('click', () => history.back());
+    backToModeMultiBtn.addEventListener('click', () => showScreen('new-game-screen'));
+    backToModeBrBtn.addEventListener('click', () => showScreen('new-game-screen'));
 
     // Online Multiplayer
     createGameBtn.addEventListener('click', () => {
@@ -426,14 +421,13 @@ function addEventListeners() {
     startGameBtn.addEventListener('click', startGame);
 
     // Skor Ekranı Butonları
-    // NOT: Bu buton (mainMenuBtn) 'leaveGame' fonksiyonunu çağırmalıdır, history.back() değil.
     mainMenuBtn.addEventListener('click', leaveGame);
-
+// === YENİ EKLENEN RÖVANŞ BUTONU ===
     const newWordRematchBtn = document.getElementById('new-word-rematch-btn');
     if (newWordRematchBtn) {
         newWordRematchBtn.addEventListener('click', startRematch);
     }
-    
+    // === BİTİŞ ===    
     // Kopyala & Paylaş
     copyGameIdBtn.addEventListener('click', () => {
         const gameId = document.getElementById('game-id-display').textContent;

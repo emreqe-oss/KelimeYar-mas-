@@ -912,50 +912,101 @@ body.theme-light .back-button-hitbox:hover {
 }
 
 /* ============================================== */
-/* === GENEL SIRALAMA MEYDAN OKUMA STİLLERİ === */
+/* === GENEL SIRALAMA STİLLERİ (GÜNCELLENDİ) === */
+/* (Sağa kaydırmayı çözer ve istatistikleri alt alta dizer) */
 /* ============================================== */
 
-/* * 1. Satırın sağ tarafını (skor + buton) 
- * hizalamak için yeni bir sarmalayıcı (wrapper) 
- */
+/* 1. Ana Satır (.ranking-row) */
+.ranking-row {
+    display: flex;
+    align-items: center; /* Dikeyde ortala */
+    justify-content: space-between; /* İki uca yasla */
+    padding: 10px 10px; /* Dikey boşluğu biraz azalttık */
+    border-bottom: 1px solid #374151;
+    
+    /* YATAY KAYDIRMAYI ÖNLER */
+    overflow: hidden; 
+}
+.ranking-row:last-child { border-bottom: none; }
+
+/* 2. Sol Taraf (Sıra + İsim) */
+.rank-details {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    /* YATAY KAYDIRMAYI ÖNLER: Bu bölümün esnemesine izin ver */
+    flex: 1; 
+    min-width: 0; /* Flex-box'ın küçülme (truncate) için ihtiyaç duyduğu kural */
+}
+
+/* 3. Sıra Numarası (Aynı kaldı) */
+.rank-number {
+    font-weight: 900;
+    font-size: 1rem;
+    color: #9CA3AF;
+    width: 25px;
+    text-align: right;
+    flex-shrink: 0; /* Numara asla küçülmesin */
+}
+
+/* 4. Kullanıcı Adı (GÜNCELLENDİ) */
+.rank-username {
+    font-weight: 600;
+    
+    /* YATAY KAYDIRMAYI ÖNLER: Gerekirse kısalt (örn: hüso...) */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 5. Sağ Taraf (Skor + Buton) (GÜNCELLENDİ) */
 .rank-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* İçerikleri sağa yasla */
-    gap: 12px; /* Skor ile buton arası boşluk */
-    flex-shrink: 0; /* Küçülmesini engelle */
+    gap: 12px;
+    flex-shrink: 0; /* Bu alan asla küçülmesin */
 }
 
-/* 2. Mevcut skor yazısını sarmala (eski stil aynı) */
+/* 6. Skor Bölümü (GÜNCELLENDİ) */
 .rank-score {
+    display: flex;
+    flex-direction: column;  /* İsteğiniz: Başarı ve Kazanma'yı alt alta diz */
+    align-items: flex-end; /* Sağa hizala */
+    
     text-align: right;
-    font-size: 0.9rem;
+    font-size: 0.8rem; /* Sığması için biraz küçülttüm (12.8px) */
     color: #9CA3AF;
     white-space: nowrap; /* "Başarı: %64" yazısı bölünmesin */
 }
+/* Skor satırlarının arasını aç */
+.rank-score span:first-child {
+    margin-bottom: 2px;
+}
 
-/* 3. YENİ Meydan Oku Butonu */
+
+/* 7. Buton (Aynı kaldı) */
 .challenge-btn {
-    background-color: #3B82F6; /* Mavi (Tailwind blue-500) */
+    background-color: #3B82F6;
     color: white;
-    font-size: 0.75rem; /* 12px */
+    font-size: 0.75rem;
     font-weight: 600;
     padding: 6px 10px;
     border-radius: 6px;
     border: none;
     cursor: pointer;
     transition: background-color 0.2s;
-    flex-shrink: 0; /* Butonun küçülüp bozulmasını engelle */
+    flex-shrink: 0;
 }
+.challenge-btn:hover { background-color: #2563EB; }
 
-.challenge-btn:hover {
-    background-color: #2563EB; /* Mavi (Tailwind blue-600) */
-}
-
-/* Kendi satırımızdaki skorun hizalanması (buton yokken) */
-.ranking-row.current-user .rank-actions {
-    justify-content: flex-end;
-}
-.ranking-row.current-user .rank-score {
+/* 8. Vurgulama Stilleri (GÜNCELLENDİ) */
+.ranking-row.current-user {
+    background-color: #312E81;
+    border-radius: 8px;
     color: #FFFFFF;
+    font-weight: bold;
+    border-bottom: none; 
 }
+.ranking-row.current-user .rank-number { color: #f59e0b; }
+.ranking-row.current-user .rank-score { color: #FFFFFF; }
