@@ -141,24 +141,42 @@ export function initUI() {
     copyGameIdBtn = document.getElementById('copy-game-id-btn');
 }
 
-export function showScreen(screenId) {
-    const screens = [
-        'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
-        'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
-        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen', 'edit-profile-screen'
-    ];
-    screens.forEach(id => {
-        const screenElement = document.getElementById(id);
-        if (screenElement) {
-            screenElement.classList.add('hidden');
+// js/ui.js (yaklaşık 128. satır)
+
+// YENİ: Hangi ekranda olduğumuzu global olarak takip etmek için bu değişkeni ekleyin
+let currentScreen = '';
+
+export function showScreen(screenId, isBackNavigation = false) {
+    const screens = [
+        'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
+        'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
+        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
+        'edit-profile-screen'
+    ];
+    
+    // YENİ: Zaten o ekrandaysak hiçbir şey yapma
+    if (currentScreen === screenId) return;
+
+    screens.forEach(id => {
+        const screenElement = document.getElementById(id);
+        if (screenElement) {
+            screenElement.classList.add('hidden');
+        }
+    });
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.remove('hidden');
+        currentScreen = screenId; // Yeni mevcut ekranı ayarla
+
+        // YENİ: Eğer bu fonksiyon 'geri' tuşuyla çağrılmadıysa,
+        // tarayıcı geçmişine yeni bir kayıt ekle.
+        if (!isBackNavigation) {
+            // #screenId (örn: #main-menu-screen) URL'ye eklenecek
+            history.pushState({ screen: screenId }, '', `#${screenId}`);
         }
-    });
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) {
-        targetScreen.classList.remove('hidden');
-    } else {
-        console.error(`showScreen Fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
-    }
+    } else {
+        console.error(`showScreen Fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
+    }
 }
 
 export function createGrid(wordLength, GUESS_COUNT) {
