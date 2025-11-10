@@ -1,4 +1,4 @@
-// js/main.js - TAM DOSYA (Profil ekranı ayrıldı, 10 Kasım 2025)
+// js/main.js - TAM DOSYA (Meydan Oku butonu eklendi, Gevşek Oyun güncellendi, EKSİKSİZ)
 
 import { 
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
@@ -58,7 +58,8 @@ import {
     createGame,
     usePresentJoker, 
     useCorrectJoker, 
-    useRemoveJoker 
+    useRemoveJoker,
+    startRematch 
 } from './game.js';
 import { showToast } from './utils.js';
 
@@ -151,7 +152,7 @@ function initAuthListener() {
     });
 }
 
-// Global Sıralama (style.css ile çalışır)
+// Global Sıralama (MEYDAN OKUMA BUTONU EKLENDİ)
 async function fetchAndDisplayGlobalRanking() {
     const listElement = document.getElementById('global-ranking-list');
     const loadingElement = document.getElementById('global-ranking-loading');
@@ -200,11 +201,24 @@ async function fetchAndDisplayGlobalRanking() {
                     <span class="rank-number">${rank}.</span>
                     <span class="rank-username">${user.username}</span>
                 </div>
-                <div class="rank-score">
-                    <span>Başarı: <strong>%${winRate}</strong></span> | 
-                    <span>Kazanma: <strong>${wins}</strong></span>
+                <div class="rank-actions">
+                    <div class="rank-score">
+                        <span>Başarı: <strong>%${winRate}</strong></span> | 
+                        <span>Kazanma: <strong>${wins}</strong></span>
+                    </div>
                 </div>
             `;
+            
+            if (!isMe) {
+                const challengeButton = document.createElement('button');
+                challengeButton.className = 'challenge-btn';
+                challengeButton.textContent = 'Meydan Oku';
+                challengeButton.dataset.opponentId = doc.id;
+                challengeButton.dataset.opponentName = user.username;
+                challengeButton.addEventListener('click', handleChallengeClick);
+                
+                row.querySelector('.rank-actions').appendChild(challengeButton);
+            }
             
             listElement.appendChild(row);
             rank++;
@@ -254,7 +268,7 @@ const openStatsScreen = () => {
     switchStatsTab('personal');
 };
 
-// YENİ: Profili Düzenleme ekranını açan fonksiyon
+// Profili Düzenleme ekranını açan fonksiyon
 const openEditProfileScreen = () => {
     const profile = getCurrentUserProfile();
     if (!profile) return;
@@ -316,7 +330,14 @@ function addEventListeners() {
     // Oyun Modu Seçim
     vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
     dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
-    randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 43200, matchLength: 5, gameType: 'random_loose' }));
+    
+    // GÜNCELLEME: "Gevşek Oyun" artık 1 tur (matchLength: 1)
+    randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ 
+        timeLimit: 43200, 
+        matchLength: 1, // 5'ten 1'e düşürüldü
+        gameType: 'random_loose' 
+    }));
+    
     seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
 
     // Online Oyun Kurma / Katılma
@@ -381,7 +402,12 @@ function addEventListeners() {
 
     // Skor Ekranı Butonları
     mainMenuBtn.addEventListener('click', leaveGame);
-    
+// === YENİ EKLENEN RÖVANŞ BUTONU ===
+    const newWordRematchBtn = document.getElementById('new-word-rematch-btn');
+    if (newWordRematchBtn) {
+        newWordRematchBtn.addEventListener('click', startRematch);
+    }
+    // === BİTİŞ ===    
     // Kopyala & Paylaş
     copyGameIdBtn.addEventListener('click', () => {
         const gameId = document.getElementById('game-id-display').textContent;
@@ -414,16 +440,9 @@ function addEventListeners() {
 
     // === PROFİL VE AVATAR LISTENERS ===
     
-    // Ana menüdeki avatara tıklayınca profili aç
     document.getElementById('main-menu-avatar').addEventListener('click', openEditProfileScreen);
-
-    // "Değişiklikleri Kaydet" butonu
     document.getElementById('save-profile-btn').addEventListener('click', () => saveProfileChanges());
-
-    // "Avatar Değiştir" butonuna tıklayınca modalı aç
     document.getElementById('change-avatar-btn').addEventListener('click', openAvatarModal);
-
-    // Avatar modalını kapatma butonu
     document.getElementById('close-avatar-modal-btn').addEventListener('click', () => {
         document.getElementById('avatar-selection-modal').classList.add('hidden');
     });
@@ -464,6 +483,7 @@ function initTheme() {
 // ===================================================
 
 const AVATAR_LIST = [
+    // (Avatarları ertelediğimiz için varsayılan liste)
     'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar1&background=%236b7280',
     'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar2&background=%23ef4444',
     'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar3&background=%23f59e0b',
@@ -516,7 +536,6 @@ function openAvatarModal() {
     document.getElementById('avatar-selection-modal').classList.remove('hidden');
 }
 
-// "Kaydediliyor..." hatasını ve "PointerEvent" hatasını çözen fonksiyon
 async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
     const userId = getUserId();
     if (!userId) return;
@@ -535,15 +554,13 @@ async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
             const newUsername = document.getElementById('profile-username-input').value;
             if (!newUsername || newUsername.length < 3) {
                 showToast('Kullanıcı adı en az 3 karakter olmalıdır.', true);
-                return; // finally bloğuna git
+                return; 
             }
             dataToSave.username = newUsername;
         }
 
-        // Veritabanını güncelle
         await updateDoc(userRef, dataToSave);
 
-        // Yerel profili (state.js) ve başlığı güncelle
         const profile = getCurrentUserProfile();
         const newProfile = { ...profile, ...dataToSave };
         setCurrentUserProfile(newProfile);
@@ -562,6 +579,44 @@ async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
             saveButton.disabled = false;
             saveButton.textContent = 'Değişiklikleri Kaydet';
         }
+    }
+}
+
+// ===================================================
+// === YENİ: MEYDAN OKUMA FONKSİYONU ===
+// ===================================================
+async function handleChallengeClick(event) {
+    const button = event.currentTarget;
+    const opponentId = button.dataset.opponentId;
+    const opponentName = button.dataset.opponentName;
+
+    if (!opponentId) {
+        showToast("Rakip ID'si bulunamadı!", true);
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = '...';
+
+    try {
+        // "Gevşek Oyun" ayarları (12 saat, 1 tur)
+        await createGame({ 
+            invitedFriendId: opponentId,
+            timeLimit: 43200, // 12 Saat
+            matchLength: 1,   // 1 Tur
+            isHardMode: false,
+            gameType: 'friend'
+        });
+
+        showToast(`${opponentName} adlı oyuncuya meydan okundu!`);
+        showScreen('my-games-screen');
+        switchMyGamesTab('active'); 
+
+    } catch (error) {
+        console.error("Meydan okuma başarısız:", error);
+        showToast("Hata: " + error.message, true);
+        button.disabled = false;
+        button.textContent = 'Meydan Oku';
     }
 }
 

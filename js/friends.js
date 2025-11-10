@@ -247,8 +247,8 @@ export function listenToMyGames() {
                 invites.push(game);
             } else if (game.status === 'finished') {
                 finishedGames.push(game);
-            } else if (game.status === 'waiting' || game.status === 'playing') {
-                activeGames.push(game);
+            } else if (game.status === 'waiting' || game.status === 'playing' || (game.status === 'invited' && game.creatorId === currentUserId)) {
+  	activeGames.push(game);
             }
         });
 

@@ -910,3 +910,52 @@ body.theme-light .back-button-hitbox:hover {
     border-color: #10B981; /* Green-500 */
     transform: scale(1.1);
 }
+
+/* ============================================== */
+/* === GENEL SIRALAMA MEYDAN OKUMA STİLLERİ === */
+/* ============================================== */
+
+/* * 1. Satırın sağ tarafını (skor + buton) 
+ * hizalamak için yeni bir sarmalayıcı (wrapper) 
+ */
+.rank-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* İçerikleri sağa yasla */
+    gap: 12px; /* Skor ile buton arası boşluk */
+    flex-shrink: 0; /* Küçülmesini engelle */
+}
+
+/* 2. Mevcut skor yazısını sarmala (eski stil aynı) */
+.rank-score {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #9CA3AF;
+    white-space: nowrap; /* "Başarı: %64" yazısı bölünmesin */
+}
+
+/* 3. YENİ Meydan Oku Butonu */
+.challenge-btn {
+    background-color: #3B82F6; /* Mavi (Tailwind blue-500) */
+    color: white;
+    font-size: 0.75rem; /* 12px */
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex-shrink: 0; /* Butonun küçülüp bozulmasını engelle */
+}
+
+.challenge-btn:hover {
+    background-color: #2563EB; /* Mavi (Tailwind blue-600) */
+}
+
+/* Kendi satırımızdaki skorun hizalanması (buton yokken) */
+.ranking-row.current-user .rank-actions {
+    justify-content: flex-end;
+}
+.ranking-row.current-user .rank-score {
+    color: #FFFFFF;
+}

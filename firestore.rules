@@ -2,32 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===================================================
-    // === BAŞLANGIÇ: KESİN DÜZELTİLMİŞ KULLANICI KURALLARI ===
-    // ===================================================
+    // --- Kullanıcılar İçin Kurallar ---
+    // (Burası doğruydu, değişiklik yok)
     match /users/{userId} {
-      // Okuma: Herkes okuyabilir (Aynı kaldı)
       allow read: if request.auth != null;
-
-      // Create: Kullanıcı sadece kendi hesabını, geçerli veriyle oluşturabilir (Aynı kaldı)
       allow create: if request.auth.uid == userId && hasValidCreateData();
-
-      // Update: KULLANICI GÜNCELLEME HATASINI ÇÖZEN KOD
       allow update: if request.auth.uid == userId &&
                      (
-                       // DURUM 1: Kullanıcı SADECE 'username' güncelliyor
-                       (isUpdatingUsername())
-                       ||
-                       // DURUM 2: Kullanıcı SADECE 'avatarUrl' güncelliyor
-                       (isUpdatingAvatar())
-                       ||
-                       // DURUM 3: Sunucu SADECE 'stats' güncelliyor
+                       (isUpdatingUsername()) ||
+                       (isUpdatingAvatar()) ||
                        (isUpdatingStats())
                      );
     
-      // --- Fonksiyonlar ---
-
-      // Create (Kayıt) fonksiyonu (Aynı kaldı)
       function hasValidCreateData() {
         let data = request.resource.data;
         return data.username is string && data.username.size() > 2 && data.username.size() < 15
@@ -40,7 +26,6 @@ service cloud.firestore {
                && hasValidStatsData(data.stats);
       }
       
-      // Stats doğrulama (Aynı kaldı)
       function hasValidStatsData(stats) {
         return stats.played is number && stats.played >= 0
                && stats.wins is number && stats.wins >= 0
@@ -51,7 +36,6 @@ service cloud.firestore {
                && stats.guessDistribution['5'] is number && stats.guessDistribution['6'] is number;
       }
       
-      // YENİ: Sadece 'username' güncelleme kuralı
       function isUpdatingUsername() {
         let diff = request.resource.data.diff(resource.data);
         return diff.affectedKeys().hasOnly(['username'])
@@ -60,7 +44,6 @@ service cloud.firestore {
                && request.resource.data.username.size() < 15;
       }
       
-      // YENİ: Sadece 'avatarUrl' güncelleme kuralı
       function isUpdatingAvatar() {
         let diff = request.resource.data.diff(resource.data);
         return diff.affectedKeys().hasOnly(['avatarUrl'])
@@ -68,38 +51,65 @@ service cloud.firestore {
                && request.resource.data.avatarUrl.matches('https?://.*');
       }
       
-      // YENİ: Sadece 'stats' güncelleme kuralı
       function isUpdatingStats() {
          let diff = request.resource.data.diff(resource.data);
          return diff.affectedKeys().hasOnly(['stats'])
                 && hasValidStatsData(request.resource.data.stats);
       }
     }
-    // ===================================================
-    // === BİTİŞ: KESİN DÜZELTİLMİŞ KULLANICI KURALLARI ===
-    // ===================================================
 
-
-    // --- Oyunlar İçin Kurallar (Dokunulmadı) ---
+    // ===================================================
+    // === BAŞLANGIÇ: DÜZELTİLMİŞ OYUN KURALLARI ===
+    // ===================================================
     match /games/{gameId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null
-                      && isGameCreator() 
-                      && hasValidNewGameData();
-      allow update: if isFunctionsCall()
-                      || isJoiningWaitingGame()
-                      || isUpdatingAllowedFields();
+      allow create: if request.auth != null && isGameCreator() && hasValidNewGameData();
+      
+      allow update: if request.auth != null && 
+                     ( 
+                       isJoiningGame() ||
+                       isLeavingGame() ||
+                       isStartingGameByCreator()
+                     );
+
       allow delete: if request.auth.uid == resource.data.creatorId && resource.data.status != 'playing'; 
       
-      function isFunctionsCall() {
-        return request.auth == null 
-               && request.resource.data.size() < 1000;
+      // --- Fonksiyonlar ---
+      
+      // DÜZELTİLDİ: 'if' ve 'let' kaldırıldı
+      function isJoiningGame() {
+        // Tüm koşullar '&&' ile birleştirildi
+        return !(request.auth.uid in resource.data.players) // 1. Zaten oyuncu olmamalı
+               &&
+               ( // 2. Katılma izni olmalı
+                 (resource.data.status == 'waiting') || 
+                 (resource.data.status == 'invited' && request.auth.uid == resource.data.invitedPlayerId)
+               )
+               &&
+               ( // 3. Sadece izin verilen alanlar güncellenmeli
+                 request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['playerIds', 'players', 'status', 'invitedPlayerId', 'turnStartTime'])
+               );
       }
-      function isUpdatingAllowedFields() {
-        return (isPlayerInGame() || isInvitedPlayer())
-               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'status', 'invitedPlayerId'])
-               && !request.resource.data.keys().hasAny(['secretWord', 'currentRound', 'roundWinner', 'currentPlayerId', 'players.*.score', 'players.*.isEliminated', 'players.*.isWinner']);
+
+      // DÜZELTİLDİ: 'if' ve 'let' kaldırıldı
+      function isLeavingGame() {
+        return (request.auth.uid in resource.data.players) // 1. Oyuncu olmalı
+               &&
+               ( // 2. Sadece izin verilen alanlar değişmeli
+                 request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['status', 'roundWinner', 'matchWinnerId', 'hiddenFrom', 'players'])
+               );
       }
+
+      // (Kalan fonksiyonlar aynı)
+      function isStartingGameByCreator() {
+        return request.auth.uid == resource.data.creatorId
+               && resource.data.status == 'waiting'
+               && request.resource.data.status == 'playing'
+               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'turnStartTime']);
+      }
+
       function isGameCreator() {
         return request.auth.uid == request.resource.data.creatorId;
       }
@@ -111,18 +121,12 @@ service cloud.firestore {
                && data.status is string && (data.status == 'waiting' || data.status == 'invited')
                && data.players[request.auth.uid].username is string;
       }
-      function isPlayerInGame() {
-        return request.auth.uid in resource.data.players;
-      }
-      function isJoiningWaitingGame() {
-        return resource.data.status == 'waiting' && !(request.auth.uid in resource.data.players);
-      }
-      function isInvitedPlayer() {
-        return request.auth.uid == resource.data.invitedPlayerId;
-      }
     }
+    // ===================================================
+    // === BİTİŞ: DÜZELTİLMİŞ OYUN KURALLARI ===
+    // ===================================================
 
-    // --- Arkadaşlıklar İçin Kurallar (Dokunulmadı) ---
+    // --- Arkadaşlıklar İçin Kurallar (Aynı Kaldı) ---
     match /friendships/{friendshipId} {
       allow read, update, delete: if request.auth.uid in resource.data.users;
       allow create: if request.auth != null
