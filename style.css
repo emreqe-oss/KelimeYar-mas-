@@ -817,3 +817,72 @@ body.theme-light .back-button-hitbox:hover {
      * bu yeni yassılaşmış yüksekliğe uyum sağlayacaktır.
      */
 }
+
+/* ============================================== */
+/* === GENEL SIRALAMA LİSTESİ STİLLERİ (FİNAL) === */
+/* ============================================== */
+
+/* 1. Her bir satırın temel yapısı */
+.ranking-row {
+    display: flex; /* !! EN ÖNEMLİ KURAL: İçerikleri yan yana diz. */
+    align-items: center; /* Dikey olarak ortala */
+    justify-content: space-between; /* İki uca yasla (isim ve skor) */
+    
+    /* İnce görünüm için iç boşluk */
+    padding: 12px 10px; 
+    
+    /* Ayırıcı çizgi */
+    border-bottom: 1px solid #374151; /* Tailwind gray-700 */
+    
+    font-size: 0.95rem;
+    color: #D1D5DB; /* Tailwind gray-300 */
+}
+
+/* Listenin son elemanının alt çizgisini kaldırır */
+.ranking-row:last-child {
+    border-bottom: none;
+}
+
+/* 2. Mevcut Kullanıcı Vurgulaması */
+.ranking-row.current-user {
+    background-color: #312E81; /* Tailwind indigo-800 */
+    border-radius: 8px; /* Köşeleri yuvarlat */
+    color: #FFFFFF; /* Beyaz yazı */
+    font-weight: bold;
+    border-bottom: none; /* Vurgulu satırda çizgi olmasın */
+}
+
+/* 3. Satır içi elemanlar için yardımcı sınıflar */
+.rank-details {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Sıra no ve kullanıcı adı arası boşluk */
+}
+
+.rank-number {
+    font-weight: 900;
+    font-size: 1rem;
+    color: #9CA3AF; /* Tailwind gray-400 */
+    width: 25px; /* Numaraların hizalı durması için genişlik */
+    text-align: right;
+}
+
+/* Vurgulu satırın sıra numarasını sarı yap */
+.ranking-row.current-user .rank-number {
+    color: #f59e0b; /* Tailwind amber-500 */
+}
+
+.rank-username {
+    font-weight: 600;
+}
+
+.rank-score {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #9CA3AF; /* Tailwind gray-400 */
+}
+
+/* Vurgulu satırın skor yazısını beyaz yap */
+.ranking-row.current-user .rank-score {
+    color: #FFFFFF;
+}

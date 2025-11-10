@@ -1,4 +1,4 @@
-// js/main.js - TAM DOSYA (SÖZDİZİMİ HATALARI DÜZELTİLDİ)
+// js/main.js - TAM VE TEMİZLENMİŞ DOSYA (10 Kasım 2025 Düzeltmesi)
 
 import { 
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
@@ -10,7 +10,7 @@ import {
 import { db, auth } from './firebase.js'; 
 import { onAuthStateChanged } from "firebase/auth"; 
 import { 
-    getDoc, doc, collection, query, orderBy, limit, getDocs 
+    getDoc, doc, collection, query, orderBy, limit, getDocs 
 } from "firebase/firestore"; 
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
 import { 
@@ -29,8 +29,8 @@ import {
     newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
     howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
     backToMainMenuBtn, 
-    backToMainMenuFromGamesBtn,
-    backToMainFromFriendsBtn,
+    backToMainMenuFromGamesBtn,
+    backToMainFromFriendsBtn,
     randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
     dailyWordBtn,
     showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
@@ -104,24 +104,24 @@ function initAuthListener() {
                 try {
                     const gameDoc = await getDoc(doc(db, "games", activeGameId));
                     if (gameDoc.exists() && gameDoc.data().status !== 'finished') {
-                        showToast("Yarım kalan oyununa devam ediyorsun!");
-                        if (gameDoc.data().gameType === 'multiplayer-br') {
-                            await joinBRGame(activeGameId);
+                          showToast("Yarım kalan oyununa devam ediyorsun!");
+                          if (gameDoc.data().gameType === 'multiplayer-br') {
+                                await joinBRGame(activeGameId);
+                            } else {
+                                await joinGame(activeGameId);
+                            }
                         } else {
-                            await joinGame(activeGameId);
+                            localStorage.removeItem('activeGameId');
+                            showScreen('main-menu-screen');
                         }
-                    } else {
+                    } catch (error) {
+                        console.error("Yarım kalan oyuna girerken hata:", error);
                         localStorage.removeItem('activeGameId');
                         showScreen('main-menu-screen');
                     }
-                } catch (error) {
-                    console.error("Yarım kalan oyuna girerken hata:", error);
-                    localStorage.removeItem('activeGameId');
+                } else {
                     showScreen('main-menu-screen');
                 }
-            } else {
-                showScreen('main-menu-screen');
-            }
             
         } else {
             authLoading.classList.add('hidden');
@@ -138,87 +138,83 @@ function initAuthListener() {
     });
 }
 
-// js/main.js dosyanızdaki fetchAndDisplayGlobalRanking fonksiyonunu
-// (yaklaşık 116. satırdan 172. satıra kadar) 
-// AŞAĞIDAKİ BU BLOK ile tamamen değiştirin:
-
-// js/main.js dosyanızdaki fetchAndDisplayGlobalRanking fonksiyonunun
-// (yaklaşık 116. satırdan 172. satıra kadar) 
-// AŞAĞIDAKİ BU BLOK ile tamamen değiştirin:
-
-// Global Sıralamayı çeken fonksiyon
+// ========================================================================
+// === BAŞLANGIÇ: 'fetchAndDisplayGlobalRanking' (SADECE CSS SINIFI KULLANAN) ===
+// ========================================================================
 async function fetchAndDisplayGlobalRanking() {
-    const listElement = document.getElementById('global-ranking-list');
-    const loadingElement = document.getElementById('global-ranking-loading');
-    if (!listElement || !loadingElement) return;
+    const listElement = document.getElementById('global-ranking-list');
+    const loadingElement = document.getElementById('global-ranking-loading');
+    if (!listElement || !loadingElement) return;
 
-    // Sadece bir kez yüklenmişse tekrar yükleme
-    if (listElement.childElementCount > 0) {
-        // Eğer liste zaten doluysa, tekrar yüklememek için listeyi temizle.
-        // Bu, yeni verilerin (gerekirse) çekilmesini sağlar.
-        listElement.innerHTML = '';
-    }
+    // Listeyi her zaman temizle ve "yükleniyor" metnini göster
+    listElement.innerHTML = '';
+    loadingElement.classList.remove('hidden');
+    loadingElement.textContent = "Sıralama yükleniyor..."; 
 
-    loadingElement.classList.remove('hidden');
+    try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, 
+            orderBy("stats.wins", "desc"), 
+            orderBy("stats.played", "asc"),
+            limit(20) 
+        );
 
-    try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, 
-            orderBy("stats.wins", "desc"), // Ana sıralama: Kazanma sayısı (en çok)
-            orderBy("stats.played", "asc"), // Eşitlik bozucu: Oynanan (en az)
-            limit(20) // Sadece ilk 20 kişiyi göster
-        );
+        const querySnapshot = await getDocs(q);
+        let rank = 1;
+        const currentUserId = getUserId(); 
 
-        const querySnapshot = await getDocs(q);
-        let rank = 1;
+        if (querySnapshot.empty) {
+            loadingElement.textContent = "Henüz sıralamaya girecek kimse yok.";
+            return;
+        }
 
-        if (querySnapshot.empty) {
-            loadingElement.textContent = "Henüz sıralamaya girecek kimse yok.";
-            return;
-        }
-
-        querySnapshot.forEach(doc => {
-            const user = doc.data();
-            const stats = user.stats || { played: 0, wins: 0 };
+        querySnapshot.forEach(doc => {
+            const user = doc.data();
+            const stats = user.stats || { played: 0, wins: 0 };
             
-            // Sıralamada sadece en az 10 oyun oynamış kişileri göster (isteğe bağlı)
-            // (NOT: Test için bu satırı geçici olarak yorumluyorum, oyuncu sayınız azsa diye)
-            // if (stats.played < 10) return; 
+            if (!user.username) return; // Bozuk veriyi atla
 
-            const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-            const isMe = doc.id === getUserId();
+            // 1. Ana satırı oluştur ve 'ranking-row' sınıfını ver
+            const row = document.createElement('div');
+            row.className = 'ranking-row'; 
+            
+            // 2. Vurgulama için 'current-user' sınıfını ekle
+            const isMe = doc.id === currentUserId;
+            if (isMe) {
+                row.classList.add('current-user'); 
+            }
 
-            const entry = document.createElement('div');
-            
-            // === GÜNCELLEME: İsteğiniz üzerine dikey boşluk 'py-1' (en ince) yapıldı ===
-            entry.className = `py-1 px-3 rounded-lg flex items-center gap-2 ${isMe ? 'bg-indigo-600' : 'bg-gray-700'}`;
-            
-            // === GÜNCELLEME: HTML yapısı tek satır ve kompakt liste olacak şekilde değiştirildi ===
-            entry.innerHTML = `
-                                <div class="font-bold text-md w-6 text-center ${isMe ? 'text-white' : 'text-amber-400'}">${rank}.</div>
-                
-                <div class="flex-1">
-                    <p class="font-bold text-md truncate">${user.username || 'Bilinmiyor'}</p>
-                </div>
-                
-                <div class="flex-shrink-0 flex gap-3 text-right">
-                    <p class="text-sm ${isMe ? 'text-white' : 'text-gray-300'}">Başarı: <strong class="font-bold">%${winRate}</strong></p>
-                    <p class="text-sm ${isMe ? 'text-white' : 'text-gray-300'}">Kazanma: <strong class="font-bold text-green-400">${stats.wins}</strong></p>
+            // 3. İç HTML'i, style.css'teki sınıflara göre oluştur
+            const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+            const wins = stats.wins || 0;
+
+            row.innerHTML = `
+                <div class="rank-details">
+                    <span class="rank-number">${rank}.</span>
+                    <span class="rank-username">${user.username}</span>
                 </div>
-            `;
-            // === GÜNCELLEME SONU ===
+                <div class="rank-score">
+                    <span>Başarı: <strong>%${winRate}</strong></span> | 
+                    <span>Kazanma: <strong>${wins}</strong></span>
+                </div>
+            `;
             
-            listElement.appendChild(entry);
-            rank++;
-        });
+            // 4. Listeye ekle
+            listElement.appendChild(row);
+            rank++;
+        });
 
-        loadingElement.classList.add('hidden');
+        loadingElement.classList.add('hidden');
 
-    } catch (error) {
-        console.error("Sıralama yüklenirken hata:", error);
-        loadingElement.textContent = "Sıralama yüklenemedi.";
-    }
+    } catch (error) {
+        console.error("Sıralama yüklenirken hata:", error);
+        loadingElement.textContent = "Sıralama yüklenemedi.";
+    }
 }
+// ======================================================================
+// === BİTİŞ: YENİ 'fetchAndDisplayGlobalRanking' FONKSİYONU ===
+// ======================================================================
+
 
 // İstatistik ekranındaki sekmeleri (tab) yöneten fonksiyon
 function switchStatsTab(tabName) {
@@ -234,7 +230,8 @@ function switchStatsTab(tabName) {
         personalBtn.classList.add('text-gray-400');
         globalBtn.classList.add('text-white', 'border-indigo-500');
         globalBtn.classList.remove('text-gray-400');
-        fetchAndDisplayGlobalRanking();
+        // Sekmeye tıklandığında veriyi YENİDEN (veya İLK KEZ) yükle
+        fetchAndDisplayGlobalRanking(); 
     } else { // 'personal'
         personalTab.classList.remove('hidden');
         globalTab.classList.add('hidden');
@@ -260,24 +257,22 @@ function addEventListeners() {
     myGamesBtn.addEventListener('click', () => showScreen('my-games-screen'));
     friendsBtn.addEventListener('click', () => showScreen('friends-screen'));
 
-    // GÜNCELLENDİ: İstatistik Butonları (Kişisel Bilgiler TAMAMEN kaldırıldı)
+    // İstatistik Butonları
     const openStatsScreen = () => {
         const profile = getCurrentUserProfile();
         if (!profile) return; 
 
-        // 1. Sadece Kişisel İstatistikleri Doldur
+        // 1. Sadece Kişisel İstatistikleri Doldur
         displayStats(profile); 
-        
-        // 2. Kişisel Bilgileri Dolduran kodlar SİLİNDİ
-
-        // 3. Ekranı aç ve varsayılan sekmeyi ayarla
+        
+        // 2. Ekranı aç ve varsayılan sekmeyi ayarla
         showScreen('profile-screen');
-        switchStatsTab('personal'); 
+        switchStatsTab('personal'); // Varsayılan olarak 'Kişisel'i göster
     };
     statsBtn.addEventListener('click', openStatsScreen);
     statsBtnMain.addEventListener('click', openStatsScreen);
 
-    // YENİ EKLENDİ: İstatistik Sekme Butonları
+    // İstatistik Sekme Butonları
     document.getElementById('show-personal-stats-tab-btn').addEventListener('click', () => switchStatsTab('personal'));
     document.getElementById('show-global-ranking-tab-btn').addEventListener('click', () => switchStatsTab('global'));
 
@@ -361,7 +356,9 @@ function addEventListeners() {
     showFriendsTabBtn.addEventListener('click', () => switchFriendTab('friends'));
     showRequestsTabBtn.addEventListener('click', () => switchFriendTab('requests'));
     showAddFriendTabBtn.addEventListener('click', () => switchFriendTab('add'));
-    searchFriendBtn.addEventListener('click', searchUsers);
+    if (searchFriendBtn) { // ui.js'den 'searchFriendBtn' olarak geldiğinden emin ol
+        searchFriendBtn.addEventListener('click', searchUsers);
+    }
     
     // Oyun İçi Butonlar
     leaveGameButton.addEventListener('click', leaveGame);
@@ -409,8 +406,8 @@ function addEventListeners() {
             handleKeyPress('ENTER');
         } else if (e.key === 'Backspace') {
             handleKeyPress('⌫');
-        } else if (e.key.length === 1 && e.key.match(/[a-zçğıöşü]/i)) {
-            handleKeyPress(e.key);
+        } else if (e.key.length === 1 && e.key.match(/[a-zA-ZçğıöşüÇĞİÖŞÜ]/i)) {
+            handleKeyPress(e.key.toLocaleUpperCase('TR'));
         }
     });
 }
@@ -418,7 +415,7 @@ function addEventListeners() {
 // Tema Yönetimi
 function switchTheme(theme) {
     if (theme === 'light') {
-        document.body.classList.add('theme-light');
+        document.body.classList.add('theme-light');
         localStorage.setItem('theme', 'light');
     } else {
         document.body.classList.remove('theme-light');
