@@ -33,7 +33,7 @@
         <div id="main-menu-screen" class="hidden flex-1 flex flex-col p-2 space-y-4">
             <header class="flex justify-between items-center bg-gray-800 p-3 rounded-lg shadow">
                 <div class="flex items-center gap-3">
-                    <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full border-2 border-gray-600">
+                    <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full border-2 border-gray-600 cursor-pointer">
                     <div>
                         <p id="main-menu-username" class="font-extrabold text-lg">kullanici_adi</p>
                         <p id="main-menu-stats" class="text-xs text-gray-400">Başarı: %0 | Seri: 0</p>
@@ -115,22 +115,22 @@
         </div>
 
         <div id="register-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
-            <h1 class="text-3xl font-bold text-center mb-4">Yeni Hesap Oluştur</h1>
-            <div class="space-y-3">
-                <input type="text" id="register-fullname" placeholder="Ad Soyad" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                <input type="text" id="register-username" placeholder="Kullanıcı Adı" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white" maxlength="12">
-                <input type="email" id="register-email" placeholder="E-posta Adresi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                
-                                <input type="tel" id="register-phone" placeholder="Telefon Numarası" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                                <input type="password" id="register-password" placeholder="Şifre (en az 6 karakter)" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                <div class="flex gap-2">
-                    <input type="number" id="register-age" placeholder="Yaş" class="w-1/2 p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                    <input type="text" id="register-city" placeholder="Şehir" class="w-1/2 p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
-                </div>
-                <button id="register-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kaydı Tamamla</button>
-                <button id="back-to-login-btn" class="text-sm text-gray-400 hover:text-white mt-2">Zaten hesabım var</button>
-            </div>
-        </div>
+            <h1 class="text-3xl font-bold text-center mb-4">Yeni Hesap Oluştur</h1>
+            <div class="space-y-3">
+                <input type="text" id="register-fullname" placeholder="Ad Soyad" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
+                <input type="text" id="register-username" placeholder="Kullanıcı Adı" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white" maxlength="12">
+                <input type="email" id="register-email" placeholder="E-posta Adresi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
+                
+                <input type="tel" id="register-phone" placeholder="Telefon Numarası" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
+                <input type="password" id="register-password" placeholder="Şifre (en az 6 karakter)" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
+                <div class="flex gap-2">
+                    <input type="number" id="register-age" placeholder="Yaş" class="w-1/2 p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
+                    <input type="text" id="register-city" placeholder="Şehir" class="w-1/2 p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
+                </div>
+                <button id="register-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Kaydı Tamamla</button>
+                <button id="back-to-login-btn" class="text-sm text-gray-400 hover:text-white mt-2">Zaten hesabım var</button>
+            </div>
+        </div>
 
         <div id="friends-screen" class="hidden bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col">
             <header class="flex items-center mb-4">
@@ -246,37 +246,81 @@
 
 
         <div id="profile-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col">
-            <h2 class="text-3xl font-bold mb-4">İstatistikler</h2>
-            
-                        <div class="flex border-b border-gray-600 mb-4">
-                <button id="show-personal-stats-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Kişisel</button>
-                <button id="show-global-ranking-tab-btn" class="flex-1 py-2 text-center text-gray-400">Genel Sıralama</button>
-            </div>
+            <h2 class="text-3xl font-bold mb-4">İstatistikler</h2>
+            
+            <div class="flex border-b border-gray-600 mb-4">
+                <button id="show-personal-stats-tab-btn" class="flex-1 py-2 text-center text-white border-b-2 border-indigo-500">Kişisel</button>
+                <button id="show-global-ranking-tab-btn" class="flex-1 py-2 text-center text-gray-400">Genel Sıralama</button>
+            </div>
 
-                        <div id="personal-stats-tab" class="flex-1 flex flex-col overflow-y-auto">
-                
-                                <div class="grid grid-cols-4 gap-2 text-center mb-4">
-                    <div> <p id="stats-played" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Oynanan</p> </div>
-                    <div> <p id="stats-win-percentage" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Kazanma %</p> </div>
-                    <div> <p id="stats-current-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Seri</p> </div>
-                    <div> <p id="stats-max-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">En İyi Seri</p> </div>
-                </div>
-                <h3 class="text-xl font-bold mb-2">Tahmin Dağılımı</h3>
-                <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
-            </div>
+            <div id="personal-stats-tab" class="flex-1 flex flex-col overflow-y-auto">
+                <div class="grid grid-cols-4 gap-2 text-center mb-4">
+                    <div> <p id="stats-played" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Oynanan</p> </div>
+                    <div> <p id="stats-win-percentage" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Kazanma %</p> </div>
+                    <div> <p id="stats-current-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">Seri</p> </div>
+                    <div> <p id="stats-max-streak" class="text-2xl font-bold">0</p> <p class="text-xs text-gray-400">En İyi Seri</p> </div>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Tahmin Dağılımı</h3>
+                <div id="stats-guess-distribution" class="w-full max-w-xs mx-auto space-y-1 text-xs text-left"></div>
+            </div>
 
-                        <div id="global-ranking-tab" class="hidden flex-1 overflow-y-auto">
-                <p id="global-ranking-loading" class="text-gray-400 mt-16">Sıralama yükleniyor...</p>
-                <div id="global-ranking-list" class="text-left">
-                </div>
-            </div>
+            <div id="global-ranking-tab" class="hidden flex-1 overflow-y-auto">
+                <p id="global-ranking-loading" class="text-gray-400 mt-16">Sıralama yükleniyor...</p>
+                <div id="global-ranking-list" class="text-left">
+                </div>
+            </div>
 
-            <button id="close-profile-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex-shrink-0">Kapat</button>
-        </div>
+            <button id="close-profile-btn" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex-shrink-0">Kapat</button>
+        </div>
+        
+        <div id="edit-profile-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-800">
+            <header class="flex items-center mb-4">
+                <button id="back-to-main-from-edit-profile-btn" class="back-button-hitbox">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                </button>
+                <h1 class="text-2xl font-bold text-center flex-grow -ml-10">Profili Düzenle</h1>
+            </header>
+
+            <div class="flex-1 flex flex-col items-center overflow-y-auto">
+                <div class="mb-6 flex flex-col items-center">
+                    <div class="relative mb-3">
+                        <img id="profile-avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" 
+                             class="w-24 h-24 rounded-full border-4 border-gray-600">
+                        <button id="change-avatar-btn" class="absolute -bottom-2 -right-2 bg-indigo-600 hover:bg-indigo-700 p-2 rounded-full border-2 border-gray-800">
+                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="w-full max-w-xs space-y-3">
+                    
+                    <div>
+                        <label for="profile-username-input" class="block text-sm font-medium text-gray-400 text-left mb-1">Kullanıcı Adı (Değiştirilebilir)</label>
+                        <input type="text" id="profile-username-input" placeholder="Kullanıcı Adı" 
+                               class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white" maxlength="12">
+                    </div>
+
+                    <button id="save-profile-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-md">
+                        Değişiklikleri Kaydet
+                    </button>
+                    
+                    <hr class="border-gray-600">
+
+                    <div>
+                        <label for="profile-fullname-display" class="block text-sm font-medium text-gray-400 text-left mb-1">Ad Soyad</label>
+                        <input type="text" id="profile-fullname-display" class="w-full p-2 border rounded-md bg-gray-600 border-gray-500 text-center text-gray-400" disabled>
+                    </div>
+                    <div>
+                        <label for="profile-email-display" class="block text-sm font-medium text-gray-400 text-left mb-1">E-posta</label>
+                        <input type="email" id="profile-email-display" class="w-full p-2 border rounded-md bg-gray-600 border-gray-500 text-center text-gray-400" disabled>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div id="how-to-play-screen" class="hidden bg-gray-800 p-4 shadow-lg flex-1 flex flex-col text-left overflow-y-auto">
-                    <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
-                    <p class="text-center mb-4">Gizli kelimeyi 6 tahminde bulun.</p>
+                <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
+                <p class="text-center mb-4">Gizli kelimeyi 6 tahminde bulun.</p>
 
             <div class="tutorial-container">
                 
@@ -476,8 +520,19 @@
             </div>
         </div>
         
+    </div> <div id="avatar-selection-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-2xl font-bold text-white mb-4">Avatar Seç</h3>
+            
+            <div id="avatar-grid" class="grid grid-cols-4 gap-4 mb-4">
+                </div>
+            
+            <button id="close-avatar-modal-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
+                Kapat
+            </button>
+        </div>
     </div>
-    
+
     <div id="toast" class="toast"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
