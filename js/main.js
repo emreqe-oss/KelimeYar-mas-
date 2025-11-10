@@ -1,4 +1,4 @@
-// js/main.js - TAM DOSYA (Meydan Oku butonu eklendi, Gevşek Oyun güncellendi, EKSİKSİZ)
+// js/main.js - TAM DOSYA (Tüm düzeltmeler ve özellikler dahil - 10.11.2025)
 
 import { 
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
@@ -59,7 +59,7 @@ import {
     usePresentJoker, 
     useCorrectJoker, 
     useRemoveJoker,
-    startRematch 
+    startRematch // Rövanş için eklendi
 } from './game.js';
 import { showToast } from './utils.js';
 
@@ -93,7 +93,7 @@ function initAuthListener() {
                 document.getElementById('main-menu-username').textContent = username;
                 document.getElementById('main-menu-avatar').src = avatarUrl;
                 
-                // 2. YENİ Profil DÜZENLEME Ekranındaki Alanları Doldur
+                // 2. Profil DÜZENLEME Ekranındaki Alanları Doldur
                 document.getElementById('profile-username-input').value = username;
                 document.getElementById('profile-avatar-img').src = avatarUrl;
                 document.getElementById('profile-fullname-display').value = profileData.fullname || '...';
@@ -127,14 +127,19 @@ function initAuthListener() {
                     } else {
                         localStorage.removeItem('activeGameId');
                         showScreen('main-menu-screen');
+                        // Geri tuşu için ana menüyü ayarla
+                        history.replaceState({ screen: 'main-menu-screen' }, 'Ana Menü', '#main-menu-screen');
                     }
                 } catch (error) {
                     console.error("Yarım kalan oyuna girerken hata:", error);
                     localStorage.removeItem('activeGameId');
                     showScreen('main-menu-screen');
+                    // Geri tuşu için ana menüyü ayarla
+                    history.replaceState({ screen: 'main-menu-screen' }, 'Ana Menü', '#main-menu-screen');
                 }
             } else {
-                showScreen('main-menu-screen');// YENİ: Ana menüyü "Geri" tuşu için temel (en alt) olarak ayarla
+                showScreen('main-menu-screen');
+                // Geri tuşu için ana menüyü ayarla
                 history.replaceState({ screen: 'main-menu-screen' }, 'Ana Menü', '#main-menu-screen');
             }
             
@@ -153,7 +158,7 @@ function initAuthListener() {
     });
 }
 
-// Global Sıralama (MEYDAN OKUMA BUTONU EKLENDİ)
+// Global Sıralama (Meydan Oku Butonlu)
 async function fetchAndDisplayGlobalRanking() {
     const listElement = document.getElementById('global-ranking-list');
     const loadingElement = document.getElementById('global-ranking-loading');
@@ -204,7 +209,7 @@ async function fetchAndDisplayGlobalRanking() {
                 </div>
                 <div class="rank-actions">
                     <div class="rank-score">
-                        <span>Başarı: <strong>%${winRate}</strong></span> | 
+                        <span>Başarı: <strong>%${winRate}</strong></span>
                         <span>Kazanma: <strong>${wins}</strong></span>
                     </div>
                 </div>
@@ -285,30 +290,21 @@ const openEditProfileScreen = () => {
 // Tüm butonlara tıklama olaylarını (event listener) ekleyen fonksiyon
 function addEventListeners() {
 
-
-    // ===================================================
-    // === BAŞLANGIÇ: YENİ GERİ TUŞU DİNLEYİCİSİ ===
-    // ===================================================
+    // Geri Tuşu Dinleyicisi
     window.addEventListener('popstate', (event) => {
         if (event.state && event.state.screen) {
-            // Tarayıcı geri geldiğinde, 'showScreen'i 'isBackNavigation = true'
-            // parametresiyle çağırarak history'ye tekrar eklemesini engelle.
             showScreen(event.state.screen, true);
         } else {
-            // Eğer history'de bir state yoksa (ilk sayfa), ana menüyü göster
             showScreen('main-menu-screen', true);
         }
     });
-    // ===================================================
-    // === BİTİŞ: YENİ GERİ TUŞU DİNLEYİCİSİ ===
-    // ===================================================
 
     // Auth Ekranları
     loginBtn.addEventListener('click', handleLogin);
     logoutBtn.addEventListener('click', handleLogout);
     registerBtn.addEventListener('click', handleRegister);
     goToRegisterBtn.addEventListener('click', () => showScreen('register-screen'));
-    backToLoginBtn.addEventListener('click', () => showScreen('login-screen'));
+    backToLoginBtn.addEventListener('click', () => showScreen('login-screen')); // Bu Geri Tuşu değil, normal link
 
     // Ana Menü
     newGameBtn.addEventListener('click', () => showScreen('new-game-screen'));
@@ -329,35 +325,35 @@ function addEventListeners() {
         playTutorialAnimation(); 
     });
     closeHowToPlayBtn.addEventListener('click', () => {
-        showScreenhistory.back();
+        history.back();
         stopTutorialAnimation(); 
     });
 
-    // Kapatma Butonları
-    closeProfileBtn.addEventListener('click', () => showScreenhistory.back());
-    document.getElementById('back-to-main-from-edit-profile-btn').addEventListenerhistory.back();
-
+    // Kapatma Butonları (history.back() kullanır)
+    closeProfileBtn.addEventListener('click', () => history.back());
+    document.getElementById('back-to-main-from-edit-profile-btn').addEventListener('click', () => history.back());
 
     // Tema Butonları
     themeLightBtn.addEventListener('click', () => switchTheme('light'));
     themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
 
-    // Geri Butonları
-    backToMainMenuBtn.addEventListener('click', () => showScreenhistory.back());
-    backToMainMenuFromGamesBtn.addEventListener('click', () => showScreenhistory.back());
-    backToMainFromFriendsBtn.addEventListener('click', () => showScreenhistory.back());
+    // Geri Butonları (history.back() kullanır)
+    backToMainMenuBtn.addEventListener('click', () => history.back());
+    backToMainMenuFromGamesBtn.addEventListener('click', () => history.back()); 
+    backToMainFromFriendsBtn.addEventListener('click', () => history.back());
 
     // Oyun Modu Seçim
     vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
     dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
     
-    // GÜNCELLEME: "Gevşek Oyun" artık 1 tur (matchLength: 1)
+    // Gevşek Oyun (1 Tur)
     randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ 
         timeLimit: 43200, 
-        matchLength: 1, // 5'ten 1'e düşürüldü
+        matchLength: 1,
         gameType: 'random_loose' 
     }));
     
+    // Seri Oyun (5 Tur)
     seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
 
     // Online Oyun Kurma / Katılma
@@ -367,8 +363,8 @@ function addEventListeners() {
     });
     
     multiplayerBrBtn.addEventListener('click', () => showScreen('br-setup-screen'));
-    backToModeMultiBtn.addEventListener('click', () => showScreen('new-game-screen'));
-    backToModeBrBtn.addEventListener('click', () => showScreen('new-game-screen'));
+    backToModeMultiBtn.addEventListener('click', () => history.back());
+    backToModeBrBtn.addEventListener('click', () => history.back());
 
     // Online Multiplayer
     createGameBtn.addEventListener('click', () => {
@@ -422,12 +418,12 @@ function addEventListeners() {
 
     // Skor Ekranı Butonları
     mainMenuBtn.addEventListener('click', leaveGame);
-// === YENİ EKLENEN RÖVANŞ BUTONU ===
+
     const newWordRematchBtn = document.getElementById('new-word-rematch-btn');
     if (newWordRematchBtn) {
         newWordRematchBtn.addEventListener('click', startRematch);
     }
-    // === BİTİŞ ===    
+    
     // Kopyala & Paylaş
     copyGameIdBtn.addEventListener('click', () => {
         const gameId = document.getElementById('game-id-display').textContent;
@@ -556,6 +552,7 @@ function openAvatarModal() {
     document.getElementById('avatar-selection-modal').classList.remove('hidden');
 }
 
+// "Kaydediliyor..." ve "PointerEvent" hatalarını çözen fonksiyon
 async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
     const userId = getUserId();
     if (!userId) return;
@@ -603,7 +600,7 @@ async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
 }
 
 // ===================================================
-// === YENİ: MEYDAN OKUMA FONKSİYONU ===
+// === MEYDAN OKUMA FONKSİYONU ===
 // ===================================================
 async function handleChallengeClick(event) {
     const button = event.currentTarget;
