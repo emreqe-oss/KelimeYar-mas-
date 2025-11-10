@@ -43,6 +43,7 @@ import {
 
 import { default as allWordList } from '../functions/kelimeler.json'; 
 
+let localMeanings = null;
 // ===================================================
 // === BAŞLANGIÇ: showScoreboard (HATAYI ÇÖZMEK İÇİN BAŞA TAŞINDI) ===
 // ===================================================
@@ -216,47 +217,55 @@ export async function showScoreboard(gameData) {
     meaningDisplay.textContent = meaning;
     matchWinnerDisplay.textContent = '';
     
-    if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
+    // js/game.js (showScoreboard fonksiyonu içinde, 1280. satır civarı)
+// BU BLOĞUN TAMAMINI DEĞİŞTİRİN
+
+    if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
         
-        // 1 Turluk Gevşek Oyun Beraberlik Durumu
-        if (gameData.matchLength === 1 && gameData.roundWinner === null && gameMode === 'multiplayer') {
-            roundWinnerDisplay.textContent = "BERABERE! Kimse bulamadı.";
-            newWordRematchBtn.classList.remove('hidden');
-            newRoundBtn.classList.add('hidden');
-        } 
-        // Çok turlu oyun (Seri Oyun / vsCPU) ve tur bitmedi
-        else if (gameData.currentRound < gameData.matchLength) {
-            newRoundBtn.textContent = 'Sonraki Kelime';
-            newRoundBtn.onclick = startNewRound;
-            newRoundBtn.classList.remove('hidden');
-        } 
-        // Çok turlu oyun VEYA 1 turluk Gevşek oyun (kazanan/kaybeden var) bitti
-        else {
-            if (gameData.matchLength === 1) {
-                newRoundBtn.textContent = 'Ana Menü';
-                newRoundBtn.onclick = leaveGame;
-            } else {
-                newRoundBtn.textContent = 'Yeniden Oyna';
-                newRoundBtn.onclick = () => startNewGame({ mode: gameMode }); 
+        // YENİ MANTIK: 1 Turluk Gevşek Oyun bittiyse (kazanan, kaybeden veya berabere fark etmez)
+        if (gameData.matchLength === 1 && gameMode === 'multiplayer') {
+            
+            // Beraberlik mesajını (gerekirse) ayarla
+            if (gameData.roundWinner === null) {
+                roundWinnerDisplay.textContent = "BERABERE! Kimse bulamadı.";
             }
+            
+            // "Yeni Kelime (Rövanş)" butonunu göster
+            newWordRematchBtn.classList.remove('hidden'); 
+            newRoundBtn.classList.add('hidden'); // Diğer butonu gizle
+        } 
+        
+        // ESKİ MANTIK: Çok turlu oyun (Seri Oyun / vsCPU) ve tur bitmedi
+        else if (gameData.currentRound < gameData.matchLength) {
+            newRoundBtn.textContent = 'Sonraki Kelime';
+            newRoundBtn.onclick = startNewRound;
+            newRoundBtn.classList.remove('hidden');
+        } 
+        
+        // ESKİ MANTIK: Çok turlu oyun bitti
+        else {
+            newRoundBtn.textContent = 'Yeniden Oyna';
+            newRoundBtn.onclick = () => startNewGame({ mode: gameMode }); 
             newRoundBtn.classList.remove('hidden');
 
-            if (showScores && gameData.matchLength > 1) {
-                const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
-                if (sortedPlayers.length > 1 && sortedPlayers[0].score > sortedPlayers[1].score) {
-                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[0].username} KAZANDI!`;
-                } else if (sortedPlayers.length > 1 && sortedPlayers[0].score < sortedPlayers[1].score) {
-                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[1].username} KAZANDI!`;
-                } else if (sortedPlayers.length > 1) {
-                    matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
-                }
-            }
-        }
-    } else {
-        newRoundBtn.textContent = 'Yeni Günün Kelimesi'; 
-        newRoundBtn.onclick = () => startNewGame({ mode: gameMode });
+            // Çok turlu oyun bittiyse Maç Sonucunu göster
+            if (showScores && gameData.matchLength > 1) {
+                const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
+                if (sortedPlayers.length > 1 && sortedPlayers[0].score > sortedPlayers[1].score) {
+                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[0].username} KAZANDI!`;
+                } else if (sortedPlayers.length > 1 && sortedPlayers[0].score < sortedPlayers[1].score) {
+                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[1].username} KAZANDI!`;
+                } else if (sortedPlayers.length > 1) {
+                    matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
+                }
+            }
+        }
+    } else {
+        newRoundBtn.textContent = 'Yeni Günün Kelimesi'; 
+        newRoundBtn.onclick = () => startNewGame({ mode: gameMode });
         newRoundBtn.classList.remove('hidden');
-    }
+    }
+// DEĞİŞTİRİLECEK BLOĞUN SONU
 }
 // ===================================================
 // === BİTİŞ: showScoreboard ===
