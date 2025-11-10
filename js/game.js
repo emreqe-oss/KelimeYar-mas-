@@ -43,9 +43,8 @@ import {
 
 import { default as allWordList } from '../functions/kelimeler.json'; 
 
-let localMeanings = null;
 // ===================================================
-// === BAŞLANGIÇ: showScoreboard (HATAYI ÇÖZMEK İÇİN BAŞA TAŞINDI) ===
+// === BAŞLANGIÇ: "showScoreboard is not defined" HATASINI ÇÖZMEK İÇİN BAŞA TAŞINDI ===
 // ===================================================
 export async function showScoreboard(gameData) {
     stopTurnTimer();
@@ -62,7 +61,7 @@ export async function showScoreboard(gameData) {
     const defaultWordDisplayContainer = document.getElementById('default-word-display-container');
     const defaultRoundButtons = document.getElementById('default-round-buttons');
     
-    // YENİ: Rövanş butonunu seç
+    // Rövanş butonunu seç
     const newWordRematchBtn = document.getElementById('new-word-rematch-btn');
     if (!roundWinnerDisplay || !correctWordDisplay || !finalScores || !matchWinnerDisplay || !meaningDisplay || !newRoundBtn || !dailyStatsContainer || !defaultWordDisplayContainer || !defaultRoundButtons || !newWordRematchBtn) return;
 
@@ -100,7 +99,7 @@ export async function showScoreboard(gameData) {
              matchWinnerDisplay.textContent = isMatchEndWithWinner ? `OYUN SONU: ${matchWinnerName.toLocaleUpperCase('tr-TR')}` : 'OYUN SONU: BERABERE';
              newRoundBtn.textContent = 'Ana Menü';
              newRoundBtn.onclick = leaveGame;
-             newRoundBtn.classList.remove('hidden'); // Düzeltme: Butonu göster
+             newRoundBtn.classList.remove('hidden');
         } else {
              matchWinnerDisplay.style.display = 'none';
              newRoundBtn.textContent = 'Sonraki Kelime'; 
@@ -110,7 +109,7 @@ export async function showScoreboard(gameData) {
                  showToast("Yeni tur başlatılıyor...", false); 
                  startNewRound();
              };
-            newRoundBtn.classList.remove('hidden'); // Düzeltme: Butonu göster
+            newRoundBtn.classList.remove('hidden');
         }
         playSound(gameData.matchWinnerId === currentUserId ? 'win' : (gameData.roundWinner === currentUserId ? 'win' : 'lose')); 
         const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => {
@@ -217,70 +216,53 @@ export async function showScoreboard(gameData) {
     meaningDisplay.textContent = meaning;
     matchWinnerDisplay.textContent = '';
     
-    // js/game.js (showScoreboard fonksiyonu içinde, 1280. satır civarı)
-// BU BLOĞUN TAMAMINI DEĞİŞTİRİN
-
-    if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
+    if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
         
-        // YENİ MANTIK: 1 Turluk Gevşek Oyun bittiyse (kazanan, kaybeden veya berabere fark etmez)
+        // 1 Turluk Gevşek Oyun (Meydan Oku)
         if (gameData.matchLength === 1 && gameMode === 'multiplayer') {
-            
-            // Beraberlik mesajını (gerekirse) ayarla
+            // Beraberlik mesajı
             if (gameData.roundWinner === null) {
                 roundWinnerDisplay.textContent = "BERABERE! Kimse bulamadı.";
             }
-            
-            // "Yeni Kelime (Rövanş)" butonunu göster
+            // Kazanan veya kaybeden fark etmez, rövanş butonu
             newWordRematchBtn.classList.remove('hidden'); 
-            newRoundBtn.classList.add('hidden'); // Diğer butonu gizle
+            newRoundBtn.classList.add('hidden');
         } 
-        
-        // ESKİ MANTIK: Çok turlu oyun (Seri Oyun / vsCPU) ve tur bitmedi
+        // Çok turlu oyun (Seri Oyun / vsCPU) ve tur bitmedi
         else if (gameData.currentRound < gameData.matchLength) {
-            newRoundBtn.textContent = 'Sonraki Kelime';
-            newRoundBtn.onclick = startNewRound;
+            newRoundBtn.textContent = 'Sonraki Kelime';
+            newRoundBtn.onclick = startNewRound;
             newRoundBtn.classList.remove('hidden');
-        } 
-        
-        // ESKİ MANTIK: Çok turlu oyun bitti
+        } 
+        // Çok turlu oyun bitti
         else {
-            newRoundBtn.textContent = 'Yeniden Oyna';
-            newRoundBtn.onclick = () => startNewGame({ mode: gameMode }); 
+            newRoundBtn.textContent = 'Yeniden Oyna';
+            newRoundBtn.onclick = () => startNewGame({ mode: gameMode }); 
             newRoundBtn.classList.remove('hidden');
 
-            // Çok turlu oyun bittiyse Maç Sonucunu göster
-            if (showScores && gameData.matchLength > 1) {
-                const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
-                if (sortedPlayers.length > 1 && sortedPlayers[0].score > sortedPlayers[1].score) {
-                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[0].username} KAZANDI!`;
-                } else if (sortedPlayers.length > 1 && sortedPlayers[0].score < sortedPlayers[1].score) {
-                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[1].username} KAZANDI!`;
-                } else if (sortedPlayers.length > 1) {
-                    matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
-                }
-            }
-        }
-    } else {
-        newRoundBtn.textContent = 'Yeni Günün Kelimesi'; 
-        newRoundBtn.onclick = () => startNewGame({ mode: gameMode });
+            if (showScores && gameData.matchLength > 1) {
+                const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
+                if (sortedPlayers.length > 1 && sortedPlayers[0].score > sortedPlayers[1].score) {
+                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[0].username} KAZANDI!`;
+                } else if (sortedPlayers.length > 1 && sortedPlayers[0].score < sortedPlayers[1].score) {
+                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[1].username} KAZANDI!`;
+                } else if (sortedPlayers.length > 1) {
+                    matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
+                }
+            }
+        }
+    } else {
+        newRoundBtn.textContent = 'Yeni Günün Kelimesi'; 
+        newRoundBtn.onclick = () => startNewGame({ mode: gameMode });
         newRoundBtn.classList.remove('hidden');
-    }
-// DEĞİŞTİRİLECEK BLOĞUN SONU
+    }
 }
 // ===================================================
 // === BİTİŞ: showScoreboard ===
 // ===================================================
 
-
 // Anlamları bir kez yükleyip hafızada tutmak için:
-// (Bu blok, fonksiyonun başa taşınmasıyla gereksiz oldu,
-// ancak dosyanın geri kalanını yapıştıracağınız için burada bırakıyorum)
-// let localMeanings = null; ... (bu zaten dosyanın en başında var)
-
-
-// ... (Dosyanızın geri kalan tüm fonksiyonları) ...
-// (getLocalMeanings, initializeGameUI, updateTurnDisplay, vb.)
-// ...
+let localMeanings = null;
 
 async function getLocalMeanings() {
     if (localMeanings) {
@@ -301,7 +283,7 @@ async function getLocalMeanings() {
 }
 
 // ===================================================
-// === BAŞLANGIÇ: EKSİK KODU BURAYA YAPIŞTIRIN ===
+// === EKSİK OLAN KOD BLOĞU ===
 // ===================================================
 const GUESS_COUNT = 6;
 const MAX_BR_PLAYERS = 4;
@@ -325,12 +307,11 @@ function getDaysSinceEpoch() {
     return Math.floor((startOfTodayTRT - epoch) / (1000 * 60 * 60 * 24));
 }
 // ===================================================
-// === BİTİŞ: EKSİK KOD ===
+// === EKSİK KODUN SONU ===
 // ===================================================
 
 
 // *** Modül İçi Yardımcı Fonksiyonlar ***
-
 
 export function initializeGameUI(gameData) {
     wordLength = gameData.wordLength;
@@ -401,6 +382,7 @@ export function updateTurnDisplay(gameData) {
         return;
     }
     
+    // SIRALI VE DİĞER MODLAR
     if (!turnDisplay || !timerDisplay) return; 
 
     if (gameMode === 'daily') return;
@@ -605,7 +587,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         updateJokerUI(playerJokers, isMyTurn, gameData.status);
     }
 }
-
 
 export async function fetchWordMeaning(word) {
     try {
