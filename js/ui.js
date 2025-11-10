@@ -145,7 +145,7 @@ export function showScreen(screenId) {
     const screens = [
         'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
         'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
-        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen'
+        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen', 'edit-profile-screen'
     ];
     screens.forEach(id => {
         const screenElement = document.getElementById(id);
