@@ -2102,59 +2102,65 @@ export async function startRematch() {
     const gameData = state.getLocalGameData();
     const currentUserId = state.getUserId();
     
-    if (!gameData || gameData.matchLength !== 1) {
+    if (!gameData) {
+         showToast("Oyun verisi bulunamadı.", true);
+         return;
+    }
+
+    // 1. Sadece 1 turluk oyunlar rövanş yapabilir
+    if (gameData.matchLength !== 1) {
         showToast("Rövanş sadece 1 turluk oyunlarda geçerlidir.", true);
         return;
     }
 
-    // Butonu devre dışı bırak
+    // 2. Sadece 2 kişilik 'multiplayer' oyunlar (friend veya random_loose) rövanş yapabilir
+    // (vsCPU veya BR buraya girmemeli)
+    if (gameData.gameType !== 'friend' && gameData.gameType !== 'random_loose') {
+         showToast("Bu oyun modu için rövanş geçerli değildir.", true);
+         return;
+    }
+
+    // 3. Rakibin ID'sini bul (hem 'friend' hem 'random_loose' için çalışır)
+    const opponentId = gameData.playerIds.find(id => id !== currentUserId);
+    if (!opponentId) {
+        showToast("Rövanş için rakip bulunamadı.", true);
+        return;
+    }
+
+    // 4. Butonu devre dışı bırak
     const rematchButton = document.getElementById('new-word-rematch-btn');
     if (rematchButton) {
         rematchButton.disabled = true;
-        rematchButton.textContent = "Yeni oyun oluşturuluyor...";
+        rematchButton.textContent = "Davet gönderiliyor...";
     }
 
-    // Eski oyunu sil (artık bitti)
+    // 5. Eski oyunu sil (artık bitti)
     try {
-        await deleteDoc(doc(db, "games", state.getCurrentGameId()));
+        const gameId = state.getCurrentGameId();
+        if (gameId) {
+            await deleteDoc(doc(db, "games", gameId));
+        }
     } catch (e) {
         console.error("Eski oyun silinirken hata:", e);
     }
     
-    // === YENİ KONTROL ===
-    // Oyun tipine göre doğru fonksiyonu çağır
+    // 6. YENİ BİRLEŞTİRİLMİŞ MANTIK:
+    // İster 'friend' ister 'random_loose' olsun,
+    // rakibe 12 saatlik (gevşek) 1 turluk yeni bir davet gönder.
     try {
-        if (gameData.gameType === 'friend') {
-            // 1. DURUM: ARKADAŞ OYUNU
-            // Rakibin ID'sini bul ve ona yeni bir davet gönder
-            const opponentId = gameData.playerIds.find(id => id !== currentUserId);
-            if (!opponentId) {
-                throw new Error("Rövanş için rakip bulunamadı.");
-            }
-            await createGame({ 
-                invitedFriendId: opponentId,
-                timeLimit: 43200, // 12 Saat (Gevşek oyun ayarı)
-                matchLength: 1,   // 1 Tur
-                gameType: 'friend'
-            });
-
-        } else if (gameData.gameType === 'random_loose') {
-            // 2. DURUM: RASTGELE GEVŞEK OYUN
-            // Yeni bir rastgele gevşek oyun lobisine katıl
-            await findOrCreateRandomGame({ 
-                timeLimit: 43200, 
-                matchLength: 1,
-                gameType: 'random_loose' 
-            });
-
-        } else {
-            // 3. DURUM: BEKLENMEDİK (Örn: vsCPU, BR)
-            // Bu butonun burada görünmemesi gerekir, ama görünürse ana menüye at.
-            throw new Error("Bu oyun modu rövanşı desteklemiyor.");
-        }
+        await createGame({ 
+            invitedFriendId: opponentId, // Kilit nokta: Rakibe davet gönder
+            timeLimit: 43200, // 12 Saat (Gevşek oyun ayarı)
+            matchLength: 1,   // 1 Tur
+            gameType: 'friend' // Yeni oyunun tipi her zaman 'friend' (davet) olmalı
+        });
+        
+        // createGame fonksiyonu zaten state'i güncelleyip
+        // 'game-screen'e yönlendiriyor ve mevcut oyuncu için beklemeyi başlatıyor.
+        
     } catch (error) {
         // Hata durumunda butonu geri aç ve kullanıcıyı bilgilendir
-        console.error("Rövanş oyunu oluşturulamadı:", error);
+        console.error("Rövanş daveti oluşturulamadı:", error);
         showToast("Hata: " + error.message, true);
         if (rematchButton) {
             rematchButton.disabled = false;

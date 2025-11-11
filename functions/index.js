@@ -106,206 +106,253 @@ exports.getWordMeaning = functions.https.onRequest((request, response) => {
 // 4. Çoklu Oyuncu Tahmini Gönderme
 // functions/index.js içindeki fonksiyonun tamamını bununla değiştirin
 
-// 4. Çoklu Oyuncu Tahmini Gönderme (PUANLAMA EKLENDİ)
+// functions/index.js
+
+// ... (calculateColors, getNewSecretWordFromLocal, getNewSecretWord, checkWordValidity, getWordMeaning fonksiyonları aynı kalacak)
+
+
+// 4. Çoklu Oyuncu Tahmini Gönderme (TAMAMI DÜZELTİLDİ)
 exports.submitMultiplayerGuess = functions.https.onRequest((request, response) => {
-    corsHandler(request, response, async () => {
-        if (request.method !== 'POST') {
-            return response.status(405).send({ error: 'Method Not Allowed' });
-        }
-        
-        const { gameId, word, userId, isBR } = request.body;
-        if (!gameId || !word || !userId) {
-            return response.status(400).send({ error: 'Eksik parametreler: gameId, word ve userId gereklidir.' });
-        }
-        
-        const gameRef = admin.firestore().collection('games').doc(gameId);
-        
-        try {
-            const result = await admin.firestore().runTransaction(async (transaction) => {
-                const gameDoc = await transaction.get(gameRef);
-                if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
-                
-                const gameData = gameDoc.data();
-                const secretWord = gameData.secretWord;
-                const wordLength = gameData.wordLength;
-                
-                if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
-                if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
+    corsHandler(request, response, async () => {
+        if (request.method !== 'POST') {
+            return response.status(405).send({ error: 'Method Not Allowed' });
+        }
+        
+        const { gameId, word, userId, isBR } = request.body;
+        if (!gameId || !word || !userId) {
+            return response.status(400).send({ error: 'Eksik parametreler: gameId, word ve userId gereklidir.' });
+        }
+        
+        const gameRef = admin.firestore().collection('games').doc(gameId);
+        
+        try {
+            const result = await admin.firestore().runTransaction(async (transaction) => {
+                const gameDoc = await transaction.get(gameRef);
+                if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
+                
+                const gameData = gameDoc.data();
+                const secretWord = gameData.secretWord;
+                const wordLength = gameData.wordLength;
+                
+                if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
+                if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
 
-                const playerState = gameData.players[userId];
-                const currentRow = playerState.guesses ? playerState.guesses.length : 0;
-                
-                if (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || currentRow >= GUESS_COUNT) {
-                    throw new Error("Tahmin hakkınız kalmamış veya elenmiş/çözmüşsünüz.");
-                }
+                const playerState = gameData.players[userId];
+                const currentRow = playerState.guesses ? playerState.guesses.length : 0;
+                
+                if (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || currentRow >= GUESS_COUNT) {
+                    throw new Error("Tahmin hakkınız kalmamış.");
+                }
 
-                if (!isBR && gameData.currentPlayerId !== userId) {
-                    throw new Error("Sıra sizde değil!");
-                }
-                
-                if (word.length !== wordLength) throw new Error(`Kelime uzunluğu ${wordLength} olmalıdır.`);
-                
-                const colors = calculateColors(word, secretWord, wordLength);
-                const newGuess = { word: word, colors: colors };
-                const playerGuesses = [...(playerState.guesses || []), newGuess];
-                
-                const updates = { [`players.${userId}.guesses`]: playerGuesses };
-                let isWinner = (word === secretWord);
-                
-                if (isBR) {
-                    // ... (Mevcut BR Puanlama/Durum Mantığı - Değişiklik Yok)
-                    if (isWinner) {
-                        updates[`players.${userId}.hasSolved`] = true;
-                        updates[`players.${userId}.isWinner`] = true;
-                    } else if (playerGuesses.length >= GUESS_COUNT) {
-                        updates[`players.${userId}.hasFailed`] = true; 
-                    }
-                    
-                    // ... (Mevcut BR Kalan Oyuncu Kontrolü - Değişiklik Yok)
-                    const currentPlayers = Object.entries(gameData.players).map(([id, p]) => {
-                        let tempP = {...p, id};
-                        if (id === userId) {
-                            tempP.guesses = playerGuesses;
-                            tempP.isEliminated = p.isEliminated; 
-                            tempP.hasSolved = updates[`players.${userId}.hasSolved`] || p.hasSolved;
-                            tempP.isWinner = updates[`players.${userId}.isWinner`] || p.isWinner;
-                            tempP.hasFailed = updates[`players.${userId}.hasFailed`] || p.hasFailed; 
-                        }
-                        return tempP;
-                    });
-        
-                    const activePlayers = currentPlayers.filter(p => !p.isEliminated && !p.hasSolved && !p.hasFailed);
-                    
-                    if (activePlayers.length === 0) { 
-                        updates.status = 'finished';
-                        const solvedPlayers = currentPlayers.filter(p => p.hasSolved);
-                        
-                        if (solvedPlayers.length > 0) {
-                            updates.roundWinner = solvedPlayers[0].id; 
-                        } else {
-                            updates.roundWinner = null; 
-                        }
-                    } 
-                } 
-                else { 
-                    // === BAŞLANGIÇ: SERİ OYUN (SEQUENTIAL) MANTIĞI ===
-                    const playerIds = Object.keys(gameData.players);
-                    const myIndex = playerIds.indexOf(userId);
-                    const nextPlayerIndex = (myIndex + 1) % playerIds.length;
-                    updates.currentPlayerId = playerIds[nextPlayerIndex];
-                    updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp(); 
+                if (!isBR && gameData.currentPlayerId !== userId) {
+                    throw new Error("Sıra sizde değil!");
+                }
+                
+                if (word.length !== wordLength) throw new Error(`Kelime uzunluğu ${wordLength} olmalıdır.`);
+                
+                const colors = calculateColors(word, secretWord, wordLength);
+                const newGuess = { word: word, colors: colors };
+                const playerGuesses = [...(playerState.guesses || []), newGuess];
+                
+                const updates = { [`players.${userId}.guesses`]: playerGuesses };
+                let isWinner = (word === secretWord);
+                
+                if (isBR) {
+                    // ... (BR Mantığı - Burası doğruydu)
+                    if (isWinner) {
+                        updates[`players.${userId}.hasSolved`] = true;
+                        updates[`players.${userId}.isWinner`] = true;
+                    } else if (playerGuesses.length >= GUESS_COUNT) {
+                        updates[`players.${userId}.hasFailed`] = true; 
+                    }
+                    
+                    // ... (BR tur bitiş kontrolü... )
+                    const currentPlayers = Object.entries(gameData.players).map(([id, p]) => {
+                        let tempP = {...p, id};
+                        if (id === userId) {
+                            tempP.guesses = playerGuesses;
+                            tempP.isEliminated = p.isEliminated; 
+                            tempP.hasSolved = updates[`players.${userId}.hasSolved`] || p.hasSolved;
+                            tempP.isWinner = updates[`players.${userId}.isWinner`] || p.isWinner;
+                            tempP.hasFailed = updates[`players.${userId}.hasFailed`] || p.hasFailed; 
+                        }
+                        return tempP;
+                    });
+        
+                    const activePlayers = currentPlayers.filter(p => !p.isEliminated && !p.hasSolved && !p.hasFailed);
+                    
+                    if (activePlayers.length === 0) { 
+                        updates.status = 'finished';
+                        const solvedPlayers = currentPlayers.filter(p => p.hasSolved);
+                        
+                        if (solvedPlayers.length > 0) {
+                            updates.roundWinner = solvedPlayers[0].id; 
+                        } else {
+                            updates.roundWinner = null; 
+                        }
+                    } 
+                } 
+                else { 
+                    // === BAŞLANGIÇ: SERİ OYUN (SEQUENTIAL) MANTIĞI DÜZELTMESİ ===
+                    
+                    // 1. Kazanan var mı?
+                    if (isWinner) {
+                        updates.status = 'finished';
+                        updates.roundWinner = userId;
+                        
+                        // --- Puanlama Mantığı ---
+                        const guessesCount = playerGuesses.length;
+                        const roundScore = SCORE_POINTS[guessesCount - 1] || 0; 
+                        const currentScore = playerState.score || 0;
+                        updates[`players.${userId}.score`] = currentScore + roundScore;
+                    } else {
+                        // 2. Kazanan yoksa, tur bitti mi diye KONTROL ET
+                        
+                        // Tüm oyuncuların güncel durumunu (bu tahmini de içerecek şekilde) al
+                        const allPlayerIds = Object.keys(gameData.players);
+                        let allGuessed = true; // Varsayılan olarak tur bitti de
 
-                    if (isWinner) {
-                        updates.status = 'finished';
-                        updates.roundWinner = userId;
-                        
-                        // --- YENİ EKLENEN PUANLAMA MANTIĞI ---
-                        const guessesCount = playerGuesses.length; // (Örn: 1. tahminde 1)
-                        // 'SCORE_POINTS' dizisinden puanı al (diziler 0'dan başlar)
-                        const roundScore = SCORE_POINTS[guessesCount - 1] || 0; 
-                        const currentScore = playerState.score || 0; // Mevcut puanı al
-                        updates[`players.${userId}.score`] = currentScore + roundScore; // Yeni puanı güncelle
-                        // --- PUANLAMA MANTIĞI SONU ---
+                        for (const pid of allPlayerIds) {
+                            const pState = gameData.players[pid];
+                            let pGuessesCount = (pState.guesses || []).length;
 
-                    } else {
-                        const allPlayers = Object.values(gameData.players);
-                        allPlayers[myIndex].guesses = playerGuesses; 
-                        const allGuessed = allPlayers.every(p => (p.guesses || []).length >= GUESS_COUNT || p.isWinner);
-                        if(allGuessed) {
-                            updates.status = 'finished';
-                            updates.roundWinner = null;
-                        }
-                    }
-                    // === BİTİŞ: SERİ OYUN (SEQUENTIAL) MANTIĞI ===
-                }
-                
-                transaction.update(gameRef, updates);
-                return { isWinner, newGuess };
-            });
-            
-            return response.status(200).send({ 
-                success: true, 
-                message: "Tahmin başarıyla işlendi.",
-                isWinner: result.isWinner,
-                newGuess: result.newGuess
-            });
-        } catch (error) {
-            console.error(`Oyun ${gameId} için tahmin işlenirken hata:`, error);
-            return response.status(500).send({ error: error.message || "Tahmin işlenirken bir hata oluştu." });
-        }
-    });
+                            if (pid === userId) {
+                                // Bu, bizim şu anki tahminimiz
+                                pGuessesCount = playerGuesses.length; 
+                            }
+
+                            // BİRİSİ KAZANMADIYSA VE HAKKI VARSA (6'dan az), tur bitmemiştir.
+                            // (pState.isWinner, başka bir oyuncunun kazanıp kazanmadığını kontrol eder)
+                            if (!pState.isWinner && pGuessesCount < GUESS_COUNT) {
+                                allGuessed = false;
+                                break; // Kontrolü bırak, tur devam ediyor.
+                            }
+                        }
+
+                        if (allGuessed) {
+                    f      // Herkesin hakkı bittiyse ve kazanan yoksa tur biter (Berabere)
+                            updates.status = 'finished';
+                            updates.roundWinner = null;
+                        } else {
+                            // Tur devam ediyor, sıradaki oyuncuyu belirle
+                            const playerIds = Object.keys(gameData.players);
+                            const myIndex = playerIds.indexOf(userId);
+                            const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+                            updates.currentPlayerId = playerIds[nextPlayerIndex];
+                            updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp(); 
+                        }
+                    }
+                    // === BİTİŞ: SERİ OYUN (SEQUENTIAL) MANTIĞI DÜZELTMESİ ===
+                }
+                
+                transaction.update(gameRef, updates);
+                return { isWinner, newGuess };
+            });
+            
+            return response.status(200).send({ 
+                success: true, 
+                message: "Tahmin başarıyla işlendi.",
+                isWinner: result.isWinner,
+                newGuess: result.newGuess
+            });
+        } catch (error) {
+            console.error(`Oyun ${gameId} için tahmin işlenirken hata:`, error);
+            return response.status(500).send({ error: error.message || "Tahmin işlenirken bir hata oluştu." });
+        }
+    });
 });
 
-// 5. Çoklu Oyuncu Turunu/Süresini Sonlandırma
+// 5. Çoklu Oyuncu Turunu/Süresini Sonlandırma (TAMAMI DÜZELTİLDİ)
 exports.failMultiplayerTurn = functions.https.onRequest((request, response) => {
-    corsHandler(request, response, async () => {
-        if (request.method !== 'POST') {
-            return response.status(405).send({ error: 'Method Not Allowed' });
-        }
-        const { gameId, userId } = request.body;
-        if (!gameId || !userId) {
-            return response.status(400).send({ error: 'Eksik parametreler: gameId ve userId gereklidir.' });
-        }
-        const gameRef = admin.firestore().collection('games').doc(gameId);
-        try {
-            await admin.firestore().runTransaction(async (transaction) => {
-                const gameDoc = await transaction.get(gameRef);
-                if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
-                
-                const gameData = gameDoc.data();
-                
-                if (gameData.status === 'finished') return; 
-                if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
-                if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
-                
-                const isBR = gameData.gameType.includes('br');
-                const updates = {};
-                
-                if (isBR) {
-                    
-                    updates.status = 'finished';
-                    updates.roundWinner = null; 
-                    
-                    const solvedPlayers = Object.entries(gameData.players).filter(([id, p]) => p.hasSolved);
-                    
-                    if (solvedPlayers.length > 0) {
-                        updates.roundWinner = solvedPlayers[0][0];
-                    } 
-                    
-                } 
-                else if (gameData.currentPlayerId === userId) {
-                    const playerState = gameData.players[userId];
-                    const wordLength = gameData.wordLength;
-                    
-                    const failedWord = "".padEnd(wordLength, ' ');
-                    const failedColors = Array(wordLength).fill('failed');
-                    const newGuess = { word: failedWord, colors: failedColors };
-                    const playerGuesses = [...(playerState.guesses || []), newGuess];
-                    updates[`players.${userId}.guesses`] = playerGuesses;
-                    
-                    const playerIds = Object.keys(gameData.players);
-                    const myIndex = playerIds.indexOf(userId);
-                    const nextPlayerIndex = (myIndex + 1) % playerIds.length;
-                    updates.currentPlayerId = playerIds[nextPlayerIndex];
-                    updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp();
-                    
-                    const allGuessed = Object.values(gameData.players).every(p => (p.guesses || []).length >= GUESS_COUNT);
-                    if (allGuessed) {
-                        updates.status = 'finished';
-                        updates.roundWinner = null;
-                    }
-                } else {
-                    throw new Error("Sadece süresi dolan oyuncunun turu sonlandırılabilir.");
-                }
-                
-                transaction.update(gameRef, updates);
-            });
-            return response.status(200).send({ success: true, message: "Tur/Oyun başarıyla sonlandırıldı." });
-        } catch (error) {
-            console.error(`Oyun ${gameId} için tur sonlandırılırken hata:`, error);
-            return response.status(500).send({ error: error.message || "Tur/Oyun sonlandırılırken bir hata oluştu." });
-        }
-    });
+    corsHandler(request, response, async () => {
+        if (request.method !== 'POST') {
+            return response.status(405).send({ error: 'Method Not Allowed' });
+        }
+        const { gameId, userId } = request.body;
+        if (!gameId || !userId) {
+            return response.status(400).send({ error: 'Eksik parametreler: gameId ve userId gereklidir.' });
+A        }
+        const gameRef = admin.firestore().collection('games').doc(gameId);
+        try {
+            await admin.firestore().runTransaction(async (transaction) => {
+                const gameDoc = await transaction.get(gameRef);
+                if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
+                
+                const gameData = gameDoc.data();
+                
+                if (gameData.status === 'finished') return; 
+                if (gameData.status !== 'playing') throw new Error("Oyun şu anda oynanabilir durumda değil.");
+                if (!(userId in gameData.players)) throw new Error("Kullanıcı oyunda değil.");
+                
+                const isBR = gameData.gameType.includes('br');
+                const updates = {};
+                
+                if (isBR) {
+                    // ... (BR Mantığı - Burası doğruydu)
+                    updates.status = 'finished';
+                    updates.roundWinner = null; 
+                    
+                    const solvedPlayers = Object.entries(gameData.players).filter(([id, p]) => p.hasSolved);
+                    
+                    if (solvedPlayers.length > 0) {
+                        updates.roundWinner = solvedPlayers[0][0];
+                    } 
+                } 
+                else if (gameData.currentPlayerId === userId) {
+                    // === BAŞLANGIÇ: SERİ OYUN (SEQUENTIAL) MANTIĞI DÜZELTMESİ ===
+                    const playerState = gameData.players[userId];
+                    const wordLength = gameData.wordLength;
+                    
+                    // 1. Başarısız (Süresi Dolmuş) tahmini ekle
+                    const failedWord = "".padEnd(wordLength, ' ');
+                    const failedColors = Array(wordLength).fill('failed');
+                    const newGuess = { word: failedWord, colors: failedColors };
+                    const playerGuesses = [...(playerState.guesses || []), newGuess];
+                    updates[`players.${userId}.guesses`] = playerGuesses;
+                    
+                    // 2. Tur bitti mi diye KONTROL ET
+                    const allPlayerIds = Object.keys(gameData.players);
+                    let allGuessed = true; 
+
+                    for (const pid of allPlayerIds) {
+                        const pState = gameData.players[pid];
+                        let pGuessesCount = (pState.guesses || []).length;
+
+                        if (pid === userId) {
+                            // Bu, bizim şu anki (başarısız) tahminimiz
+                            pGuessesCount = playerGuesses.length; 
+                        }
+                        if (!pState.isWinner && pGuessesCount < GUESS_COUNT) {
+                            allGuessed = false;
+                            break; 
+                        }
+                    }
+
+                    if (allGuessed) {
+                        // Herkesin hakkı bittiyse tur biter
+                        updates.status = 'finished';
+                        updates.roundWinner = null;
+                    } else {
+                        // Tur devam ediyor, sıradaki oyuncuyu belirle
+                        const playerIds = Object.keys(gameData.players);
+                        const myIndex = playerIds.indexOf(userId);
+                        const nextPlayerIndex = (myIndex + 1) % playerIds.length;
+                        updates.currentPlayerId = playerIds[nextPlayerIndex];
+                        updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp();
+                    }
+                    // === BİTİŞ: SERİ OYUN (SEQUENTIAL) MANTIĞI DÜZELTMESİ ===
+                } else {
+                    throw new Error("Sadece süresi dolan oyuncunun turu sonlandırılabilir.");
+                }
+                
+                transaction.update(gameRef, updates);
+            });
+            return response.status(200).send({ success: true, message: "Tur/Oyun başarıyla sonlandırıldı." });
+        } catch (error) {
+            console.error(`Oyun ${gameId} için tur sonlandırılırken hata:`, error);
+            return response.status(500).send({ error: error.message || "Tur/Oyun sonlandırılırken bir hata oluştu." });
+        }
+    });
 });
 
 // 6. Battle Royale Sonraki Turu Başlatma/Maçı Bitirme
