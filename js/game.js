@@ -603,7 +603,7 @@ export async function fetchWordMeaning(word) {
 }
 
 function updateKnownPositions(playerGuesses) {
-    const newPositions =state.getKnownCorrectPositions() || {};
+    const newPositions = {};
     if (playerGuesses) {
         playerGuesses.forEach(guess => {
             guess.colors.forEach((color, index) => {
@@ -2096,56 +2096,70 @@ export async function abandonGame(gameId, gameDivElement) {
     }
 }
 
-// ===================================================
-// === YENİ: RÖVANŞ (REMATCH) FONKSİYONU ===
-// ===================================================
+// public/js/game.js (TAMAMINI DEĞİŞTİRİN)
+
 export async function startRematch() {
-    const gameData = state.getLocalGameData();
-    const currentUserId = state.getUserId();
-    
-    if (!gameData || gameData.gameType !== 'friend' || gameData.matchLength !== 1) {
-        showToast("Rövanş sadece 1 turluk arkadaş oyunlarında geçerlidir.", true);
-        return;
-    }
+    const gameData = state.getLocalGameData();
+    const currentUserId = state.getUserId();
+    
+    if (!gameData || gameData.matchLength !== 1) {
+        showToast("Rövanş sadece 1 turluk oyunlarda geçerlidir.", true);
+        return;
+    }
 
-    // Rakibin ID'sini bul
-    const opponentId = gameData.playerIds.find(id => id !== currentUserId);
-    if (!opponentId) {
-        showToast("Rövanş için rakip bulunamadı.", true);
-        return;
-    }
+    // Butonu devre dışı bırak
+    const rematchButton = document.getElementById('new-word-rematch-btn');
+    if (rematchButton) {
+        rematchButton.disabled = true;
+        rematchButton.textContent = "Yeni oyun oluşturuluyor...";
+    }
 
-    // Butonu devre dışı bırak
-    const rematchButton = document.getElementById('new-word-rematch-btn');
-    if (rematchButton) {
-        rematchButton.disabled = true;
-        rematchButton.textContent = "Yeni oyun oluşturuluyor...";
-    }
+    // Eski oyunu sil (artık bitti)
+    try {
+        await deleteDoc(doc(db, "games", state.getCurrentGameId()));
+    } catch (e) {
+        console.error("Eski oyun silinirken hata:", e);
+    }
+    
+    // === YENİ KONTROL ===
+    // Oyun tipine göre doğru fonksiyonu çağır
+    try {
+        if (gameData.gameType === 'friend') {
+            // 1. DURUM: ARKADAŞ OYUNU
+            // Rakibin ID'sini bul ve ona yeni bir davet gönder
+            const opponentId = gameData.playerIds.find(id => id !== currentUserId);
+            if (!opponentId) {
+                throw new Error("Rövanş için rakip bulunamadı.");
+            }
+            await createGame({ 
+                invitedFriendId: opponentId,
+                timeLimit: 43200, // 12 Saat (Gevşek oyun ayarı)
+                matchLength: 1,   // 1 Tur
+                gameType: 'friend'
+            });
 
-    // Eski oyunu sil
-    try {
-        await deleteDoc(doc(db, "games", state.getCurrentGameId()));
-    } catch (e) {
-        console.error("Eski oyun silinirken hata:", e);
-    }
-    
-    // Yeni oyunu oluştur
-    try {
-        // "Meydan Oku" ile aynı ayarları kullan (12 saat, 1 tur)
-        await createGame({ 
-            invitedFriendId: opponentId,
-            timeLimit: 43200, // 12 Saat
-            matchLength: 1,   // 1 Tur
-            isHardMode: false,
-            gameType: 'friend'
-        });
-        
-    } catch (error) {
-        console.error("Rövanş oyunu oluşturulamadı:", error);
-        showToast("Hata: " + error.message, true);
-        if (rematchButton) {
-            rematchButton.disabled = false;
-            rematchButton.textContent = 'Yeni Kelime (Rövanş)';
-        }
-    }
+        } else if (gameData.gameType === 'random_loose') {
+            // 2. DURUM: RASTGELE GEVŞEK OYUN
+            // Yeni bir rastgele gevşek oyun lobisine katıl
+            await findOrCreateRandomGame({ 
+                timeLimit: 43200, 
+                matchLength: 1,
+                gameType: 'random_loose' 
+            });
+
+        } else {
+            // 3. DURUM: BEKLENMEDİK (Örn: vsCPU, BR)
+            // Bu butonun burada görünmemesi gerekir, ama görünürse ana menüye at.
+            throw new Error("Bu oyun modu rövanşı desteklemiyor.");
+        }
+    } catch (error) {
+        // Hata durumunda butonu geri aç ve kullanıcıyı bilgilendir
+        console.error("Rövanş oyunu oluşturulamadı:", error);
+        showToast("Hata: " + error.message, true);
+        if (rematchButton) {
+            rematchButton.disabled = false;
+            rematchButton.textContent = 'Yeni Kelime (Rövanş)';
+        }
+        leaveGame(); // Hata olursa ana menüye dön
+    }
 }
