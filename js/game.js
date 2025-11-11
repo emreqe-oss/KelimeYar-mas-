@@ -881,12 +881,34 @@ export async function startNewGame(config) {
             return;
     }
     if (!secretWord) {
-        secretWord = await getNewSecretWord(gameSettings.wordLength);
-    }
-    if (!secretWord) {
-        showToast("Oyun için kelime alınamadı.", true);
-        return;
-    }
+        secretWord = await getNewSecretWord(gameSettings.wordLength);
+    }
+    if (!secretWord) {
+        showToast("Oyun için kelime alınamadı.", true);
+        return;
+    }
+
+    // ================================================
+    // === YENİ GÜVENLİK KONTROLÜ (SENKRONİZASYON) ===
+    // ================================================
+    // Sunucudan dönen kelimenin uzunluğu, bizim istediğimiz uzunlukla eşleşiyor mu?
+    // Bu, "fidan" hatası gibi nadir sunucu hatalarını yakalar.
+    if (secretWord.length !== gameSettings.wordLength) {
+        
+        // Hatanın nedenini kullanıcıya bildir (opsiyonel)
+        console.error(`Senkronizasyon Hatası: ${gameSettings.wordLength} harfli istendi, ${secretWord.length} harfli alındı.`);
+        showToast("Sunucu hatası. Oyun yeniden başlatılıyor...", true);
+        
+        // Hatalı oyunu başlatmak yerine, 1 saniye sonra oyunu tekrar başlatmayı dene
+        setTimeout(() => startNewGame(config), 1000); 
+        
+        // Bu hatalı oyunu burada durdur
+        return; 
+    }
+    // ================================================
+    // === KONTROL SONU ===
+    // ================================================
+
     const gameData = {
         wordLength: gameSettings.wordLength, secretWord: secretWord, timeLimit: gameSettings.timeLimit,
         isHardMode: gameSettings.isHardMode, currentRound: 1, matchLength: gameSettings.matchLength,
