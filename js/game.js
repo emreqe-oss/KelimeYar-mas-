@@ -565,15 +565,32 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     
     updateKeyboard(gameData);
     
-    if (gameData.status === 'playing') {
-        if (isBR && !playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) startBRTimer();
-        else if (gameMode === 'multiplayer' && gameData.currentPlayerId === currentUserId) startTurnTimer();
-        else if (gameMode === 'vsCPU' && gameData.currentPlayerId === 'cpu') {
-            setTimeout(cpuTurn, 1500);
-        }
-    } else {
-        stopTurnTimer();
-    }
+    // ... (renderGameState içi)
+
+    // === DÜZELTİLMİŞ ZAMANLAYICI MANTIĞI ===
+    if (gameData.status === 'playing') {
+        if (isBR && (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed)) {
+            // BR zamanlayıcısı (değişiklik yok)
+            startBRTimer(); 
+        } else if (gameMode === 'multiplayer') {
+            // YENİ: Sıra kimde olursa olsun zamanlayıcıyı başlat
+            startTurnTimer(); 
+        } else if (gameMode === 'vsCPU') {
+            // vsCPU modunda, sıra bizdeyse zamanlayıcıyı başlat
+            if (gameData.currentPlayerId === currentUserId) {
+                startTurnTimer();
+            } else {
+                // Sıra CPU'daysa zamanlayıcıyı durdur ve CPU'yu çalıştır
+                stopTurnTimer();
+                setTimeout(cpuTurn, 1500);
+            }
+        }
+    } else {
+        // Oyun bittiyse (finished) veya bekliyorsa (waiting) tüm zamanlayıcıları durdur
+        stopTurnTimer(); 
+    }
+    // === DÜZELTME SONU ===
+// ...
 
     const isMyTurn = isBR ? 
         (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
