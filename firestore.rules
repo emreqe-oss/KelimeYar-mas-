@@ -3,7 +3,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Kullanıcılar İçin Kurallar ---
-    // (Burası doğruydu, değişiklik yok)
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth.uid == userId && hasValidCreateData();
@@ -58,9 +57,7 @@ service cloud.firestore {
       }
     }
 
-    // ===================================================
-    // === BAŞLANGIÇ: DÜZELTİLMİŞ OYUN KURALLARI ===
-    // ===================================================
+    // --- Oyun Kuralları ---
     match /games/{gameId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && isGameCreator() && hasValidNewGameData();
@@ -69,45 +66,51 @@ service cloud.firestore {
                      ( 
                        isJoiningGame() ||
                        isLeavingGame() ||
-                       isStartingGameByCreator()
+                       isStartingGameByCreator() ||
+                       isStartingNextRound()
                      );
 
-      allow delete: if request.auth.uid == resource.data.creatorId && resource.data.status != 'playing'; 
+      allow delete: if (request.auth.uid == resource.data.creatorId && resource.data.status != 'playing') ||
+                     (request.auth.uid == resource.data.invitedPlayerId && resource.data.status == 'invited');
+      
       
       // --- Fonksiyonlar ---
-      
-      // DÜZELTİLDİ: 'if' ve 'let' kaldırıldı
       function isJoiningGame() {
-        // Tüm koşullar '&&' ile birleştirildi
-        return !(request.auth.uid in resource.data.players) // 1. Zaten oyuncu olmamalı
+        return !(request.auth.uid in resource.data.players)
                &&
-               ( // 2. Katılma izni olmalı
+               ( 
                  (resource.data.status == 'waiting') || 
                  (resource.data.status == 'invited' && request.auth.uid == resource.data.invitedPlayerId)
                )
                &&
-               ( // 3. Sadece izin verilen alanlar güncellenmeli
+               (
                  request.resource.data.diff(resource.data).affectedKeys()
                    .hasOnly(['playerIds', 'players', 'status', 'invitedPlayerId', 'turnStartTime'])
                );
       }
 
-      // DÜZELTİLDİ: 'if' ve 'let' kaldırıldı
       function isLeavingGame() {
-        return (request.auth.uid in resource.data.players) // 1. Oyuncu olmalı
+        return (request.auth.uid in resource.data.players)
                &&
-               ( // 2. Sadece izin verilen alanlar değişmeli
+               (
                  request.resource.data.diff(resource.data).affectedKeys()
                    .hasOnly(['status', 'roundWinner', 'matchWinnerId', 'hiddenFrom', 'players'])
                );
       }
 
-      // (Kalan fonksiyonlar aynı)
       function isStartingGameByCreator() {
         return request.auth.uid == resource.data.creatorId
                && resource.data.status == 'waiting'
                && request.resource.data.status == 'playing'
                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'turnStartTime']);
+      }
+
+      function isStartingNextRound() {
+        return (request.auth.uid in resource.data.players)
+               && resource.data.status == 'finished'
+               && request.resource.data.status == 'playing'
+               && request.resource.data.diff(resource.data).affectedKeys()
+                    .hasOnly(['wordLength', 'secretWord', 'status', 'currentRound', 'currentPlayerId', 'roundWinner', 'turnStartTime', 'players']);
       }
 
       function isGameCreator() {
@@ -122,16 +125,29 @@ service cloud.firestore {
                && data.players[request.auth.uid].username is string;
       }
     }
-    // ===================================================
-    // === BİTİŞ: DÜZELTİLMİŞ OYUN KURALLARI ===
-    // ===================================================
 
-    // --- Arkadaşlıklar İçin Kurallar (Aynı Kaldı) ---
+    // --- Arkadaşlıklar İçin Kurallar ---
     match /friendships/{friendshipId} {
       allow read, update, delete: if request.auth.uid in resource.data.users;
       allow create: if request.auth != null
                       && request.resource.data.senderId == request.auth.uid 
                       && request.resource.data.status == 'pending';
     }
+
+    // ===================================================
+    // === YENİ: GÜNÜN KELİMESİ LİDER TABLOSU KURALLARI ===
+    // ===================================================
+    match /daily_leaderboard/{docId} {
+      // Herkes (giriş yapmış) günlük skorları okuyabilir
+      allow read: if request.auth != null;
+      
+      // Oyuncular sadece kendi skorlarını (kendi userId'leri ile)
+      // oluşturabilir (setDoc) ve değiştiremez (update).
+      allow create: if request.auth != null 
+                     && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Kimse skorunu güncelleyemez/silemez
+    }
+    // ===================================================
+
   }
 }
