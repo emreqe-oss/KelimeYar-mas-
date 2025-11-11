@@ -445,151 +445,151 @@ async function handleMeaningIconClick(word) {
     alert(`${word.toLocaleUpperCase('tr-TR')}:\n\n${meaning}`);
 }
 
-export async function renderGameState(gameData, didMyGuessChange = false) { 
-    const currentUserId = state.getUserId();
-    
-    const oldGameData = state.getLocalGameData();
-    const oldPlayerId = oldGameData?.currentPlayerId;
-    const isMyTurnNow = gameData.currentPlayerId === currentUserId;
+export async function renderGameState(gameData, didMyGuessChange = false) { 
+    const currentUserId = state.getUserId();
+    
+    const oldGameData = state.getLocalGameData();
+    const oldPlayerId = oldGameData?.currentPlayerId;
+    const isMyTurnNow = gameData.currentPlayerId === currentUserId;
 
-    if (oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
-        playSound('turn');
-    }
-    
-    if (!gameData) return;
-    const gameMode = state.getGameMode();
-    const isBR = isBattleRoyale(gameMode);
-    
-    const sequentialGameInfo = document.getElementById('sequential-game-info');
-    const gameInfoBar = document.getElementById('game-info-bar');
-    const jokerContainer = document.getElementById('joker-container');
-    const copyBtn = document.getElementById('copy-game-id-btn');
-    const shareBtn = document.getElementById('share-game-btn');
-    
-    updateMultiplayerScoreBoard(gameData); 
+    if (oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
+        playSound('turn');
+    }
+    
+    if (!gameData) return;
+    const gameMode = state.getGameMode();
+    const isBR = isBattleRoyale(gameMode);
+    
+    const sequentialGameInfo = document.getElementById('sequential-game-info');
+    const gameInfoBar = document.getElementById('game-info-bar');
+    const jokerContainer = document.getElementById('joker-container');
+    const copyBtn = document.getElementById('copy-game-id-btn');
+    const shareBtn = document.getElementById('share-game-btn');
+    
+    updateMultiplayerScoreBoard(gameData); 
 
-    if (gameMode === 'daily') {
-        if (sequentialGameInfo) {
-            sequentialGameInfo.classList.remove('hidden');
-            document.getElementById('player1-score').innerHTML = '';
-            document.getElementById('player2-score').innerHTML = '';
-            if (turnDisplay) turnDisplay.textContent = 'Günün Kelimesi'; 
-            if (roundCounter) roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
-            if (timerDisplay) timerDisplay.textContent = ''; 
-        }
+    if (gameMode === 'daily') {
+        if (sequentialGameInfo) {
+            sequentialGameInfo.classList.remove('hidden');
+            document.getElementById('player1-score').innerHTML = '';
+            document.getElementById('player2-score').innerHTML = '';
+            if (turnDisplay) turnDisplay.textContent = 'Günün Kelimesi'; 
+            if (roundCounter) roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
+            if (timerDisplay) timerDisplay.textContent = ''; 
+        }
 
-        if (gameInfoBar) {
-            gameInfoBar.style.display = 'flex'; 
-            if (gameIdDisplay) gameIdDisplay.textContent = ''; 
-            if (copyBtn) copyBtn.style.display = 'none';
-            if (shareBtn) shareBtn.style.display = 'none';
-        }
+        if (gameInfoBar) {
+            gameInfoBar.style.display = 'flex'; 
+            if (gameIdDisplay) gameIdDisplay.textContent = ''; 
+            if (copyBtn) copyBtn.style.display = 'none';
+            if (shareBtn) shareBtn.style.display = 'none';
+        }
 
-        if (jokerContainer) {
-            jokerContainer.style.display = 'none'; 
-        }
+        if (jokerContainer) {
+            jokerContainer.style.display = 'none'; 
+        }
 
-    } else {
-        if (jokerContainer) {
-            jokerContainer.style.display = 'flex'; 
-        }
-        
-        if (gameInfoBar) {
-            gameInfoBar.style.display = 'flex';
-            if (gameIdDisplay) gameIdDisplay.textContent = gameData.gameId || '';
-            if (copyBtn) copyBtn.style.display = 'block'; 
-        }
-        
-        if (isBR) {
-            if (brRoundCounter) brRoundCounter.textContent = `Tur ${gameData.currentRound || 1}`;
-        } else {
-            if (roundCounter) roundCounter.textContent = (gameMode === 'multiplayer' || gameMode === 'vsCPU') ? `Tur ${gameData.currentRound}/${gameData.matchLength}` : '';
-        }
-    }
-    
-    timeLimit = gameData.timeLimit || 45;
-    
-    const playerState = gameData.players[currentUserId] || {};
-    if (isBR && (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed)) {
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-    } else {
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
-    }
+    } else {
+        if (jokerContainer) {
+            jokerContainer.style.display = 'flex'; 
+        }
+        
+        if (gameInfoBar) {
+            gameInfoBar.style.display = 'flex';
+            if (gameIdDisplay) gameIdDisplay.textContent = gameData.gameId || '';
+            if (copyBtn) copyBtn.style.display = 'block'; 
+        }
+        
+        if (isBR) {
+            if (brRoundCounter) brRoundCounter.textContent = `Tur ${gameData.currentRound || 1}`;
+        } else {
+            if (roundCounter) roundCounter.textContent = (gameMode === 'multiplayer' || gameMode === 'vsCPU') ? `Tur ${gameData.currentRound}/${gameData.matchLength}` : '';
+        }
+    }
+    
+    timeLimit = gameData.timeLimit || 45;
+    
+    const playerState = gameData.players[currentUserId] || {};
+    if (isBR && (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed)) {
+        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+    } else {
+        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+    }
 
-    updateTurnDisplay(gameData);
+    updateTurnDisplay(gameData);
 
-    const firstTile = document.getElementById(`tile-0-0`);
-    const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
-    const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
-    if (didMyGuessChange || isGridPristine) {
-        const playerGuesses = gameData.players[currentUserId]?.guesses || [];
-        const currentRow = playerGuesses.length;
-        for (let i = 0; i < GUESS_COUNT; i++) {
-            for (let j = 0; j < wordLength; j++) {
-                const tile = document.getElementById(`tile-${i}-${j}`);
-                if (!tile) continue;
-                const front = tile.querySelector('.front');
-                const back = tile.querySelector('.back');
-                const oldIcon = back.querySelector('.meaning-icon');
-                if (oldIcon) { oldIcon.remove(); }
-                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
-                if (i !== currentRow) {
-                    front.textContent = '';
-                    back.textContent = '';
-                }
-                if (playerGuesses[i]) {
-                    const guess = playerGuesses[i];
-                    front.textContent = guess.word[j];
-                    back.textContent = guess.word[j];
-                    const isLastRow = i === playerGuesses.length - 1;
-                    if (didMyGuessChange && isLastRow) { 
-                        setTimeout(() => {
-                            tile.classList.add(guess.colors[j]);
-                            tile.classList.add('flip');
-                        }, j * 250);
-                    } else {
-                        tile.classList.add(guess.colors[j]);
-                        tile.classList.add('flip');
-                    }
-                } 
-                else if (i === currentRow && gameData.status === 'playing') {
-                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR;
-                    if (isMyTurn) {
-                        const knownPositions = getKnownCorrectPositions();
-                        if (knownPositions[j]) {
-                            updateStaticTile(i, j, knownPositions[j], 'correct');
-                        }
-                    }
-                }
-            } 
-            if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
-                const guessWord = playerGuesses[i].word;
-                const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
-                if (lastTileInRow) {
-                    const backFace = lastTileInRow.querySelector('.back');
-                    const meaningIcon = createElement('button', {
-                        className: 'meaning-icon', 
-                        innerHTML: '?',
-                        onclick: (e) => { e.stopPropagation(); handleMeaningIconClick(guessWord); }
-                    });
-                    Object.assign(meaningIcon.style, {
-                        position: 'absolute', right: '2px', top: '2px',
-                        width: '22px', height: '22px', backgroundColor: '#ef4444',
-                        color: 'white', borderRadius: '50%', border: '1px solid white',
-                        fontSize: '15px', fontWeight: 'bold', cursor: 'pointer',
-                        zIndex: '10', padding: '0', lineHeight: '21px'
-                    });
-                    if(backFace) { backFace.appendChild(meaningIcon); }
-                }
-            }
-        } 
-    }
-    
-    updateKeyboard(gameData);
-    
-    // ... (renderGameState içi)
-
-    // === DÜZELTİLMİŞ ZAMANLAYICI MANTIĞI ===
+    const firstTile = document.getElementById(`tile-0-0`);
+    const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
+    const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
+    if (didMyGuessChange || isGridPristine) {
+        const playerGuesses = gameData.players[currentUserId]?.guesses || [];
+        const currentRow = playerGuesses.length;
+        for (let i = 0; i < GUESS_COUNT; i++) {
+            for (let j = 0; j < wordLength; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                if (!tile) continue;
+                const front = tile.querySelector('.front');
+                const back = tile.querySelector('.back');
+                const oldIcon = back.querySelector('.meaning-icon');
+                if (oldIcon) { oldIcon.remove(); }
+                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
+                if (i !== currentRow) {
+                    front.textContent = '';
+                    back.textContent = '';
+                }
+                if (playerGuesses[i]) {
+                    const guess = playerGuesses[i];
+                    front.textContent = guess.word[j];
+                    back.textContent = guess.word[j];
+                    const isLastRow = i === playerGuesses.length - 1;
+                    if (didMyGuessChange && isLastRow) { 
+                        setTimeout(() => {
+                            tile.classList.add(guess.colors[j]);
+                            tile.classList.add('flip');
+                        }, j * 250);
+                    } else {
+                        tile.classList.add(guess.colors[j]);
+                        tile.classList.add('flip');
+                    }
+                } 
+                else if (i === currentRow && gameData.status === 'playing') {
+                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR;
+                    if (isMyTurn) {
+                        const knownPositions = getKnownCorrectPositions();
+                        if (knownPositions[j]) {
+                            updateStaticTile(i, j, knownPositions[j], 'correct');
+                        }
+                    }
+                }
+            } 
+            if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
+                const guessWord = playerGuesses[i].word;
+                const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
+                if (lastTileInRow) {
+                    const backFace = lastTileInRow.querySelector('.back');
+                    const meaningIcon = createElement('button', {
+                        className: 'meaning-icon', 
+                        innerHTML: '?',
+                        onclick: (e) => { e.stopPropagation(); handleMeaningIconClick(guessWord); }
+                    });
+                    Object.assign(meaningIcon.style, {
+                        position: 'absolute', right: '2px', top: '2px',
+                        width: '22px', height: '22px', backgroundColor: '#ef4444',
+                        color: 'white', borderRadius: '50%', border: '1px solid white',
+                        fontSize: '15px', fontWeight: 'bold', cursor: 'pointer',
+                        zIndex: '10', padding: '0', lineHeight: '21px'
+                    });
+                    if(backFace) { backFace.appendChild(meaningIcon); }
+                }
+            }
+        } 
+    }
+    
+    updateKeyboard(gameData);
+    
+    // ================================================
+    // === BAŞLANGIÇ: RAKİP SÜRESİ GÖSTERİM DÜZELTMESİ ===
+    // ================================================
     if (gameData.status === 'playing') {
         if (isBR && (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed)) {
             // BR zamanlayıcısı (değişiklik yok)
@@ -611,20 +611,21 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         // Oyun bittiyse (finished) veya bekliyorsa (waiting) tüm zamanlayıcıları durdur
         stopTurnTimer(); 
     }
-    // === DÜZELTME SONU ===
-// ...
+    // ================================================
+    // === BİTİŞ: RAKİP SÜRESİ GÖSTERİM DÜZELTMESİ ===
+    // ================================================
 
-    const isMyTurn = isBR ? 
-        (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
-        (gameData.currentPlayerId === currentUserId);
-    
-    const playerJokers = gameData.players[currentUserId]?.jokersUsed || {};
-    
-    if (gameMode === 'daily') {
-        updateJokerUI({}, false, 'finished'); 
-    } else {
-        updateJokerUI(playerJokers, isMyTurn, gameData.status);
-    }
+    const isMyTurn = isBR ? 
+        (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
+        (gameData.currentPlayerId === currentUserId);
+    
+    const playerJokers = gameData.players[currentUserId]?.jokersUsed || {};
+    
+    if (gameMode === 'daily') {
+        updateJokerUI({}, false, 'finished'); 
+    } else {
+        updateJokerUI(playerJokers, isMyTurn, gameData.status);
+    }
 }
 
 export async function fetchWordMeaning(word) {
@@ -1578,84 +1579,109 @@ export async function getDailyLeaderboardStats(currentUserId, secretWord) {
     }
 }
 
-export async function startNewRound() {
-    state.resetKnownCorrectPositions();
-    state.resetHasUserStartedTyping();
+// public/js/game.js (TAM FONKSİYON GÜNCELLEMESİ)
 
-    const gameMode = state.getGameMode();
-    const localGameData = state.getLocalGameData();
-    if (gameMode === 'daily') {
-        leaveGame();
-        return;
-    }
-    if (!localGameData) return;
-    if (isBattleRoyale(gameMode) && localGameData.status === 'finished') {
-        if (localGameData.matchWinnerId !== undefined) { 
-            leaveGame();
-            return;
-        }
-        try {
-            const result = await startNextBRRound(state.getCurrentGameId(), state.getUserId());
-            if (result.success) {
-                showScreen('game-screen'); 
-                return;
-            } else {
-                showToast(result.error || "Sonraki tur başlatılırken bilinmeyen bir hata oluştu.", true);
-                leaveGame();
-            }
-        } catch (error) {
-             showToast("Tur başlatılırken bir hata oluştu: " + error.message, true);
-             leaveGame();
-        }
-        return; 
-    }
-    if (localGameData.currentRound >= localGameData.matchLength && !isBattleRoyale(gameMode)) {
-        if (gameMode === 'multiplayer') {
-            leaveGame();
-        } else {
-            startNewGame({ mode: gameMode });
-        }
-        return;
-    }
-    if (gameMode === 'vsCPU') {
-        const newWordLength = getRandomWordLength();
-        const newSecretWord = await getNewSecretWord(newWordLength);
-        if (!newSecretWord) return showToast("Yeni kelime alınamadı.", true);
-        const updates = {
-            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
-            currentRound: (localGameData.currentRound || 0) + 1, 
-            currentPlayerId: state.getUserId(), 
-            roundWinner: null, turnStartTime: new Date(), 
-            players: { ...localGameData.players },
-        };
-        for (const pid in updates.players) {
-            updates.players[pid].guesses = [];
-            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
-        }
-        Object.assign(localGameData, updates);
-        state.setLocalGameData(localGameData);
-        showScreen('game-screen');
-        initializeGameUI(localGameData);
-        await renderGameState(localGameData);
-    } else if (gameMode === 'multiplayer') {
-        const newWordLength = getRandomWordLength();
-        const newSecretWord = await getNewSecretWord(newWordLength);
-        if (!newSecretWord) return showToast("Yeni kelime alınamadı.", true);
-        const updates = {
-            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
-            currentRound: (localGameData.currentRound || 0) + 1, 
-            currentPlayerId: localGameData.creatorId, 
-            roundWinner: null, turnStartTime: serverTimestamp(), 
-            players: { ...localGameData.players },
-        };
-        for (const pid in updates.players) {
-            updates.players[pid].guesses = [];
-            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
-        }
-         await updateDoc(doc(db, 'games', state.getCurrentGameId()), updates);
-    } else {
-        startNewGame({ mode: gameMode });
-    }
+export async function startNewRound() {
+    state.resetKnownCorrectPositions();
+    state.resetHasUserStartedTyping();
+
+    const gameMode = state.getGameMode();
+    const localGameData = state.getLocalGameData();
+    if (gameMode === 'daily') {
+        leaveGame();
+        return;
+    }
+    if (!localGameData) return;
+    if (isBattleRoyale(gameMode) && localGameData.status === 'finished') {
+        if (localGameData.matchWinnerId !== undefined) { 
+            leaveGame();
+            return;
+        }
+        try {
+            const result = await startNextBRRound(state.getCurrentGameId(), state.getUserId());
+            if (result.success) {
+                showScreen('game-screen'); 
+                return;
+            } else {
+                showToast(result.error || "Sonraki tur başlatılırken bilinmeyen bir hata oluştu.", true);
+                leaveGame();
+            }
+        } catch (error) {
+             showToast("Tur başlatılırken bir hata oluştu: " + error.message, true);
+             leaveGame();
+        }
+        return; 
+    }
+
+    // Maç bitiş kontrolü (Yeniden Oyna butonu)
+    if (localGameData.currentRound >= localGameData.matchLength && !isBattleRoyale(gameMode)) {
+        if (gameMode === 'multiplayer') {
+            // Bu kısım showScoreboard'da hallediliyor, ama yedek olarak bırakıldı
+            leaveGame();
+        } else {
+            startNewGame({ mode: gameMode });
+        }
+        return;
+    }
+
+    // === BAŞLANGIÇ: DÖNÜŞÜMLÜ OYUNCU MANTIĞI ===
+
+    const newWordLength = getRandomWordLength();
+    const newSecretWord = await getNewSecretWord(newWordLength);
+    if (!newSecretWord) return showToast("Yeni kelime alınamadı.", true);
+
+    // 1. Yeni tur numarasını hesapla
+    const newRoundNumber = (localGameData.currentRound || 0) + 1;
+
+    if (gameMode === 'vsCPU') {
+        // 2. vsCPU için sıradaki oyuncuyu belirle
+        const humanPlayerId = state.getUserId();
+        const cpuPlayerId = 'cpu';
+        // Tek turlar (1, 3, 5...) İnsan, Çift turlar (2, 4, 6...) CPU başlar
+        const nextPlayerId = (newRoundNumber % 2 === 1) ? humanPlayerId : cpuPlayerId;
+
+        const updates = {
+            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
+            currentRound: newRoundNumber, 
+            currentPlayerId: nextPlayerId, // <-- GÜNCELLENDİ
+            roundWinner: null, turnStartTime: new Date(), 
+            players: { ...localGameData.players },
+        };
+        for (const pid in updates.players) {
+            updates.players[pid].guesses = [];
+            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
+        }
+        Object.assign(localGameData, updates);
+        state.setLocalGameData(localGameData);
+        showScreen('game-screen');
+        initializeGameUI(localGameData);
+        await renderGameState(localGameData);
+
+    } else if (gameMode === 'multiplayer') {
+        // 2. Multiplayer için sıradaki oyuncuyu belirle
+        const creatorId = localGameData.creatorId;
+        const opponentId = localGameData.playerIds.find(id => id !== creatorId);
+
+        // Tek turlar (1, 3, 5...) Oyunu Kuran, Çift turlar (2, 4, 6...) Rakip başlar
+        // (Eğer rakip yoksa, her zaman kuran başlar)
+        const nextPlayerId = (newRoundNumber % 2 === 1) ? creatorId : (opponentId || creatorId);
+        
+        const updates = {
+            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
+            currentRound: newRoundNumber, 
+            currentPlayerId: nextPlayerId, // <-- GÜNCELLENDİ
+            roundWinner: null, turnStartTime: serverTimestamp(), 
+            players: { ...localGameData.players },
+        };
+        for (const pid in updates.players) {
+            updates.players[pid].guesses = [];
+            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
+        }
+         await updateDoc(doc(db, 'games', state.getCurrentGameId()), updates);
+    } else {
+        startNewGame({ mode: gameMode });
+    }
+    // === BİTİŞ: DÖNÜŞÜMLÜ OYUNCU MANTIĞI ===
 }
 
 export function startTurnTimer() {
