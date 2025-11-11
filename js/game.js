@@ -410,7 +410,7 @@ export function updateTurnDisplay(gameData) {
     if (gameMode === 'daily') return;
 
     if (gameData.status === 'waiting') {
-        stopTurnTimer();
+        //stopTurnTimer();//
         turnDisplay.textContent = "Rakip bekleniyor...";
         startGameBtn.classList.add('hidden');
         shareGameBtn.classList.remove('hidden');
@@ -444,6 +444,8 @@ async function handleMeaningIconClick(word) {
     const meaning = await fetchWordMeaning(word);
     alert(`${word.toLocaleUpperCase('tr-TR')}:\n\n${meaning}`);
 }
+
+// public/js/game.js (TAM FONKSİYON GÜNCELLEMESİ)
 
 export async function renderGameState(gameData, didMyGuessChange = false) { 
     const currentUserId = state.getUserId();
@@ -507,7 +509,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) { 
         }
     }
     
-    timeLimit = gameData.timeLimit || 45;
+    timeLimit = gameData.timeLimit || 45; // timeLimit'i burada ayarla
     
     const playerState = gameData.players[currentUserId] || {};
     if (isBR && (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed)) {
@@ -516,8 +518,16 @@ export async function renderGameState(gameData, didMyGuessChange = false) { 
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
     }
 
+    // Bu fonksiyon artık SADECE metinleri günceller, zamanlayıcıyı durdurmaz.
     updateTurnDisplay(gameData);
 
+    // ... (Izgara (grid) oluşturma kodunuz burada başlar... 
+    // ... [Satır 485 - 533 arası] ...
+    // ... Izgara (grid) oluşturma kodunuz burada biter) ...
+    
+    // (Bu bloğu kopyalamayı unutmayın: tile-0-0'dan... ...meaningIcon);)
+    // Kopyalayamıyorsanız, sadece bu dosyadaki if/else bloğunu (Adım 2) güncelleyin.
+    // === Izgara Kodu Başlangıcı (ÖNCEKİ KODUNUZDAN ALIN) ===
     const firstTile = document.getElementById(`tile-0-0`);
     const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
     const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
@@ -584,6 +594,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) { 
             }
         } 
     }
+    // === Izgara Kodu Bitişi ===
     
     updateKeyboard(gameData);
     
@@ -591,14 +602,15 @@ export async function renderGameState(gameData, didMyGuessChange = false) { 
     // === BAŞLANGIÇ: RAKİP SÜRESİ GÖSTERİM DÜZELTMESİ ===
     // ================================================
     if (gameData.status === 'playing') {
+        const playerState = gameData.players[currentUserId] || {};
         if (isBR && (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed)) {
-            // BR zamanlayıcısı (değişiklik yok)
+            // BR zamanlayıcısı
             startBRTimer(); 
         } else if (gameMode === 'multiplayer') {
-            // YENİ: Sıra kimde olursa olsun zamanlayıcıyı başlat
+            // Multiplayer (Seri Oyun): Sıra kimde olursa olsun zamanlayıcıyı başlat
             startTurnTimer(); 
         } else if (gameMode === 'vsCPU') {
-            // vsCPU modunda, sıra bizdeyse zamanlayıcıyı başlat
+            // vsCPU: Sadece sıra bizdeyse başlat
             if (gameData.currentPlayerId === currentUserId) {
                 startTurnTimer();
             } else {
@@ -1684,30 +1696,60 @@ export async function startNewRound() {
     // === BİTİŞ: DÖNÜŞÜMLÜ OYUNCU MANTIĞI ===
 }
 
+// ===================================================
+// 1. BU FONKSİYONU DEĞİŞTİRİN
+// ===================================================
 export function startTurnTimer() {
-    const gameMode = state.getGameMode();
-    const localGameData = state.getLocalGameData();
-    if (isBattleRoyale(gameMode) || gameMode === 'daily') return;
-    stopTurnTimer();
-    if (localGameData.status !== 'playing' || localGameData.currentPlayerId !== state.getUserId()) return;
-    let turnStartTime = (localGameData.turnStartTime?.toDate) ? localGameData.turnStartTime.toDate() : new Date();
-    const interval = setInterval(async () => {
-        let now = new Date();
-        let elapsed = Math.floor((now - turnStartTime) / 1000);
-        let timeLeft = timeLimit - elapsed;
-        if (timerDisplay) { 
-            timerDisplay.textContent = timeLeft > 0 ? timeLeft : 0;
-            if (timeLeft <= 5) timerDisplay.classList.add('text-red-500');
-            else timerDisplay.classList.remove('text-red-500');
-        }
-        if (timeLeft <= 0) {
-            stopTurnTimer();
-            await failTurn('');
-        }
-    }, 1000);
-    state.setTurnTimerInterval(interval);
-}
+    const gameMode = state.getGameMode();
+    const localGameData = state.getLocalGameData();
+    const currentUserId = state.getUserId(); // Kendi ID'mizi al
 
+    // Bu modlar bu zamanlayıcıyı kullanmaz
+    if (isBattleRoyale(gameMode) || gameMode === 'daily') return;
+    
+    stopTurnTimer(); // Önceki zamanlayıcıyı daima temizle
+
+    // Zamanlayıcıyı sadece oyun 'oynanıyor' durumundaysa başlat
+    if (localGameData.status !== 'playing') return;
+    
+    // === KONTROL ===
+    // Zamanlayıcının otomatik tur bitirmesi gereken kişi biz miyiz?
+    const isMyTurn = localGameData.currentPlayerId === currentUserId; 
+    
+    // Sunucudan gelen başlangıç zamanını al
+    let turnStartTime = (localGameData.turnStartTime?.toDate) ? localGameData.turnStartTime.toDate() : new Date();
+    
+    const interval = setInterval(async () => {
+        let now = new Date();
+        let elapsed = Math.floor((now - turnStartTime) / 1000);
+        let timeLeft = timeLimit - elapsed; // timeLimit, renderGameState içinde ayarlanır
+    
+        // Zamanlayıcıyı her zaman göster (rakibin zamanı olsa bile)
+        if (timerDisplay) { 
+            timerDisplay.textContent = timeLeft > 0 ? timeLeft : 0;
+            
+            // === KONTROL ===
+            // Yazıyı SADECE sıra bizdeyse ve süre azsa kırmızı yap
+            if (timeLeft <= 5 && isMyTurn) {
+                timerDisplay.classList.add('text-red-500');
+            } else {
+                timerDisplay.classList.remove('text-red-500');
+            }
+        }
+        
+        // === KONTROL ===
+        // Turu SADECE sıra bizdeyse ve süre bittiyse bitir
+        if (timeLeft <= 0) {
+            stopTurnTimer();
+            if (isMyTurn) {
+                // Süremiz doldu, turu bitir
+                await failTurn(''); 
+            }
+            // (Eğer sıra rakipteyse, hiçbir şey yapma.)
+        }
+    }, 1000);
+    state.setTurnTimerInterval(interval);
+}
 function startBRTimer() {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
@@ -1730,11 +1772,24 @@ function startBRTimer() {
     state.setTurnTimerInterval(interval);
 }
 
+// ===================================================
+// 3. BU FONKSİYONU DEĞİŞTİRİN
+// ===================================================
 export function stopTurnTimer() {
-    clearInterval(state.getTurnTimerInterval());
-    state.setTurnTimerInterval(null);
-    if (timerDisplay) timerDisplay.textContent = '';
-    if (brTimerDisplay) brTimerDisplay.textContent = '';
+    clearInterval(state.getTurnTimerInterval());
+    state.setTurnTimerInterval(null);
+    
+    // Yazıyı temizle VE kırmızı rengi kaldır
+    if (timerDisplay) {
+        timerDisplay.textContent = '';
+        timerDisplay.classList.remove('text-red-500');
+    }
+    
+    // BR zamanlayıcısı için de aynısını yap
+    if (brTimerDisplay) {
+        brTimerDisplay.textContent = '';
+        brTimerDisplay.classList.remove('text-red-500');
+    }
 }
 
 export function leaveGame() {
