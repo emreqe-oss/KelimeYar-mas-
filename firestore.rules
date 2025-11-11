@@ -2,115 +2,132 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Kullanıcılar İçin Kurallar ---
+    // --- Kullanıcılar İçin Kurallar (SÖZ DİZİMİ DÜZELTİLDİ) ---
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth.uid == userId && hasValidCreateData();
-      allow update: if request.auth.uid == userId &&
-                     (
-                       (isUpdatingUsername()) ||
-                       (isUpdatingAvatar()) ||
-                       (isUpdatingStats())
-                     );
-    
-      function hasValidCreateData() {
-        let data = request.resource.data;
-        return data.username is string && data.username.size() > 2 && data.username.size() < 15
-               && data.fullname is string && data.fullname.size() > 2
-               && data.email is string && data.email.matches('.+@.+\\..+')
-               && data.age is number && data.age > 0
-               && data.city is string
-               && data.createdAt == request.time
-               && (!('avatarUrl' in data) || data.avatarUrl is string) 
-               && hasValidStatsData(data.stats);
-      }
-      
-      function hasValidStatsData(stats) {
-        return stats.played is number && stats.played >= 0
-               && stats.wins is number && stats.wins >= 0
-               && stats.currentStreak is number && stats.currentStreak >= 0
-               && stats.maxStreak is number && stats.maxStreak >= 0
-               && stats.guessDistribution['1'] is number && stats.guessDistribution['2'] is number
-               && stats.guessDistribution['3'] is number && stats.guessDistribution['4'] is number
-               && stats.guessDistribution['5'] is number && stats.guessDistribution['6'] is number;
-      }
-      
-      function isUpdatingUsername() {
-        let diff = request.resource.data.diff(resource.data);
-        return diff.affectedKeys().hasOnly(['username'])
-               && request.resource.data.username is string
-               && request.resource.data.username.size() > 2
-               && request.resource.data.username.size() < 15;
-      }
-      
-      function isUpdatingAvatar() {
-        let diff = request.resource.data.diff(resource.data);
-        return diff.affectedKeys().hasOnly(['avatarUrl'])
-               && request.resource.data.avatarUrl is string
-               && request.resource.data.avatarUrl.matches('https?://.*');
-      }
-      
-      function isUpdatingStats() {
-         let diff = request.resource.data.diff(resource.data);
-         return diff.affectedKeys().hasOnly(['stats'])
-                && hasValidStatsData(request.resource.data.stats);
-      }
-    }
+      allow update: if request.auth.uid == userId && isValidUpdate();
 
-    // --- Oyun Kuralları ---
+      // --- Fonksiyonlar ---
+
+      // 'guessDistribution' için daha esnek hale getirildi
+      function hasValidStatsData(stats) {
+        return stats is map
+          && stats.played is number && stats.played >= 0
+          && stats.wins is number && stats.wins >= 0
+          && stats.currentStreak is number && stats.currentStreak >= 0
+          && stats.maxStreak is number && stats.maxStreak >= 0
+          // Kural: Ya 'guessDistribution' hiç yoktur (create anı)
+          // YA DA vardır ve içindeki tüm alanlar sayıdır (update anı)
+          && (
+            !('guessDistribution' in stats)
+            || 
+            (
+              stats.guessDistribution is map
+              && stats.guessDistribution['1'] is number
+              && stats.guessDistribution['2'] is number
+              && stats.guessDistribution['3'] is number
+              && stats.guessDistribution['4'] is number
+              && stats.guessDistribution['5'] is number
+              && stats.guessDistribution['6'] is number
+            )
+          );
+      }
+
+      // 'hasValidCreateData' artık düzeltilmiş 'hasValidStatsData'yı kullanıyor
+      function hasValidCreateData() {
+        let data = request.resource.data; // 'let' burada, fonksiyon başında geçerlidir.
+        return data.username is string && data.username.size() > 2 && data.username.size() < 15
+            && data.fullname is string && data.fullname.size() > 2
+            && data.email is string && data.email.matches('.+@.+\\..+')
+            && data.age is number && data.age > 0
+            && data.city is string
+            && data.createdAt == request.time
+            && (!('avatarUrl' in data) || data.avatarUrl is string) 
+            && hasValidStatsData(data.stats); 
+      }
+
+      // 'isValidUpdate' tek bir return bloğuna dönüştürüldü
+      function isValidUpdate() {
+        let data = request.resource.data;
+        let oldData = resource.data;
+        let diff = data.diff(oldData);
+
+        // Kural: İzin verilmeyen alanlar DEĞİŞMEMİŞ OLMALI
+        return !diff.affectedKeys().hasAny(['email', 'fullname', 'age', 'city', 'createdAt'])
+          // Kural: 'username' değişiyorsa, formatı DOĞRU OLMALI
+          && (
+               !diff.affectedKeys().has('username')
+               || (data.username is string && data.username.size() > 2 && data.username.size() < 15)
+             )
+          // Kural: 'avatarUrl' değişiyorsa, formatı DOĞRU OLMALI
+          && (
+               !diff.affectedKeys().has('avatarUrl')
+               || (data.avatarUrl is string && data.avatarUrl.matches('https?://.*'))
+             )
+          // Kural: 'stats' değişiyorsa, formatı DOĞRU OLMALI
+          && (
+               !diff.affectedKeys().has('stats')
+               || hasValidStatsData(data.stats)
+             );
+      }
+    } // --- /users/{userId} bloğunun sonu ---
+
+
+    // --- Oyun Kuralları (Değişiklik Yok) ---
     match /games/{gameId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && isGameCreator() && hasValidNewGameData();
       
       allow update: if request.auth != null && 
-                     ( 
-                       isJoiningGame() ||
-                       isLeavingGame() ||
-                       isStartingGameByCreator() ||
-                       isStartingNextRound()
-                     );
+                      ( 
+                        isJoiningGame() ||
+                        isLeavingGame() ||
+                        isStartingGameByCreator() ||
+                        isStartingNextRound()
+                      );
 
       allow delete: if (request.auth.uid == resource.data.creatorId && resource.data.status != 'playing') ||
-                     (request.auth.uid == resource.data.invitedPlayerId && resource.data.status == 'invited');
+                        (request.auth.uid == resource.data.invitedPlayerId && resource.data.status == 'invited');
       
       
       // --- Fonksiyonlar ---
       function isJoiningGame() {
         return !(request.auth.uid in resource.data.players)
-               &&
-               ( 
-                 (resource.data.status == 'waiting') || 
-                 (resource.data.status == 'invited' && request.auth.uid == resource.data.invitedPlayerId)
-               )
-               &&
-               (
-                 request.resource.data.diff(resource.data).affectedKeys()
-                   .hasOnly(['playerIds', 'players', 'status', 'invitedPlayerId', 'turnStartTime'])
-               );
+              &&
+              ( 
+                (resource.data.status == 'waiting') || 
+                (resource.data.status == 'invited' && request.auth.uid == resource.data.invitedPlayerId)
+              )
+              &&
+              (
+                request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['playerIds', 'players', 'status', 'invitedPlayerId', 'turnStartTime'])
+              );
       }
 
       function isLeavingGame() {
         return (request.auth.uid in resource.data.players)
-               &&
-               (
-                 request.resource.data.diff(resource.data).affectedKeys()
-                   .hasOnly(['status', 'roundWinner', 'matchWinnerId', 'hiddenFrom', 'players'])
-               );
+              &&
+              (
+                request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['status', 'roundWinner', 'matchWinnerId', 'hiddenFrom', 'players'])
+              );
       }
 
       function isStartingGameByCreator() {
         return request.auth.uid == resource.data.creatorId
-               && resource.data.status == 'waiting'
-               && request.resource.data.status == 'playing'
-               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'turnStartTime']);
+              && resource.data.status == 'waiting'
+              && request.resource.data.status == 'playing'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'turnStartTime']);
       }
 
       function isStartingNextRound() {
         return (request.auth.uid in resource.data.players)
-               && resource.data.status == 'finished'
-               && request.resource.data.status == 'playing'
-               && request.resource.data.diff(resource.data).affectedKeys()
-                    .hasOnly(['wordLength', 'secretWord', 'status', 'currentRound', 'currentPlayerId', 'roundWinner', 'turnStartTime', 'players']);
+              && resource.data.status == 'finished'
+              && request.resource.data.status == 'playing'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['wordLength', 'secretWord', 'status', 'currentRound', 'currentPlayerId', 'roundWinner', 'turnStartTime', 'players']);
       }
 
       function isGameCreator() {
@@ -119,35 +136,28 @@ service cloud.firestore {
       function hasValidNewGameData() {
         let data = request.resource.data;
         return data.wordLength is number && (data.wordLength == 4 || data.wordLength == 5 || data.wordLength == 6)
-               && data.timeLimit is number && data.timeLimit >= 30 
-               && data.isHardMode is bool
-               && data.status is string && (data.status == 'waiting' || data.status == 'invited')
-               && data.players[request.auth.uid].username is string;
+              && data.timeLimit is number && data.timeLimit >= 30 
+              && data.isHardMode is bool
+              && data.status is string && (data.status == 'waiting' || data.status == 'invited')
+              && data.players[request.auth.uid].username is string;
       }
     }
 
-    // --- Arkadaşlıklar İçin Kurallar ---
+    // --- Arkadaşlıklar İçin Kurallar (Değişiklik Yok) ---
     match /friendships/{friendshipId} {
       allow read, update, delete: if request.auth.uid in resource.data.users;
       allow create: if request.auth != null
-                      && request.resource.data.senderId == request.auth.uid 
-                      && request.resource.data.status == 'pending';
+                        && request.resource.data.senderId == request.auth.uid 
+                        && request.resource.data.status == 'pending';
     }
 
-    // ===================================================
-    // === YENİ: GÜNÜN KELİMESİ LİDER TABLOSU KURALLARI ===
-    // ===================================================
+    // --- Günlük Lider Tablosu Kuralları (Değişiklik Yok) ---
     match /daily_leaderboard/{docId} {
-      // Herkes (giriş yapmış) günlük skorları okuyabilir
       allow read: if request.auth != null;
-      
-      // Oyuncular sadece kendi skorlarını (kendi userId'leri ile)
-      // oluşturabilir (setDoc) ve değiştiremez (update).
       allow create: if request.auth != null 
-                     && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false; // Kimse skorunu güncelleyemez/silemez
+                        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
     }
-    // ===================================================
 
   }
 }
