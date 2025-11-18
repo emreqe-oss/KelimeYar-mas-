@@ -511,6 +511,8 @@ export function switchMyGamesTab(tabName) {
     }
 }
 
+// js/ui.js dosyasında renderMyGamesLists fonksiyonunu bul ve bununla değiştir:
+
 export function renderMyGamesLists(activeGames, finishedGames, invites) {
     const activeTab = document.getElementById('active-games-tab');
     const finishedTab = document.getElementById('finished-games-tab');
@@ -522,11 +524,24 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
 
     const createPlaceholder = (text) => `<p class="text-center text-gray-400 mt-16">${text}</p>`;
 
+    // --- YARDIMCI FONKSİYON: Oyun Tipini Metne Çevir ---
+    const getGameTypeLabel = (game) => {
+        if (game.gameType === 'multiplayer-br') return '👑 Battle Royale';
+        if (game.gameType === 'random_series') return '🏆 Seri Oyun (Rastgele)';
+        if (game.gameType === 'random_loose') return '🎲 Gevşek Oyun';
+        if (game.gameType === 'friend') {
+            return game.matchLength > 1 ? '🆚 Seri Oyun (Arkadaş)' : '⚔️ Meydan Okuma';
+        }
+        return 'Oyun';
+    };
+    // ----------------------------------------------------
+
     // Aktif Oyunları Render Et
     if (activeGames.length > 0) {
         activeGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
             const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Rakip bekleniyor';
+            
             let statusText = game.status === 'waiting' ? 'Rakip bekleniyor...' : `Sıra: ${game.players[game.currentPlayerId]?.username || '...'}`;
             if (game.currentPlayerId === state.getUserId()) statusText = "Sıra sende!";
 
@@ -534,35 +549,49 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                 statusText = game.status === 'waiting' ? `Lobi (${game.playerIds.length}/${game.maxPlayers || 4})` : `Oynanıyor (Tur ${game.currentRound})`;
             }
 
+            // Oyun Tipi Etiketi
+            const typeLabel = getGameTypeLabel(game);
+
             const gameDiv = createElement('div', {
                 className: 'bg-gray-700 p-3 rounded-lg mb-2 flex justify-between items-center'
             });
 
             const infoDiv = createElement('div', {
-                className: 'cursor-pointer hover:opacity-75',
+                className: 'cursor-pointer hover:opacity-75 flex-grow', // Tıklama alanını genişlet
                 onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)),
             });
             
-            const titleP = createElement('p', {
-                className: 'font-bold',
-                textContent: game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername
+            // Başlık Kısmı (İsim ve Etiket)
+            const titleContainer = createElement('div', { className: 'flex flex-col mb-1' });
+            
+            const titleP = createElement('span', {
+                className: 'font-bold text-white text-lg',
+                textContent: game.gameType === 'multiplayer-br' ? 'Battle Royale Ligi' : opponentUsername
             });
+
+            const typeBadge = createElement('span', {
+                className: 'text-xs text-indigo-300 font-medium uppercase tracking-wide',
+                textContent: typeLabel
+            });
+
+            titleContainer.appendChild(titleP);
+            titleContainer.appendChild(typeBadge); // Etiketi ismin altına ekledik
             
             const statusP = createElement('p', {
                 className: `text-sm ${game.currentPlayerId === state.getUserId() || (game.gameType === 'multiplayer-br' && game.status === 'playing') ? 'text-green-400 font-bold' : 'text-gray-400'}`,
                 textContent: statusText
             });
 
-            infoDiv.appendChild(titleP);
+            infoDiv.appendChild(titleContainer);
             infoDiv.appendChild(statusP);
 
             const leaveBtn = createElement('button', {
-                className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-xs flex-shrink-0',
+                className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex-shrink-0 ml-2',
                 textContent: 'Ayrıl',
                 onclick: (e) => {
                     e.stopPropagation(); 
                     const gameName = game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername;
-                    if (confirm(`'${gameName}' oyunundan ayrılmak istediğinize emin misiniz? Bu işlem oyunu sonlandırabilir.`)) {
+                    if (confirm(`'${gameName}' oyunundan ayrılmak istediğinize emin misiniz?`)) {
                         abandonGame(game.id, gameDiv); 
                     }
                 }
@@ -582,25 +611,35 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
         finishedGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
             const opponentUsername = opponentId ? (game.players[opponentId]?.username || 'Rakip') : 'Bilinmiyor';
+            
             let resultText = 'Bitti';
             let borderColor = 'border-gray-500';
 
             if (game.gameType === 'multiplayer-br') {
-                const isWinner = game.matchWinnerId === state.getUserId();
-                resultText = isWinner ? 'Kazandın' : (game.matchWinnerId === null ? 'Berabere' : 'Kaybettin');
-                borderColor = isWinner ? 'border-green-500' : (game.matchWinnerId === null ? 'border-yellow-500' : 'border-red-500');
+                // BR için puan tabanlı sonuç gösterimi
+                const myScore = game.players[state.getUserId()]?.score || 0;
+                resultText = `${myScore} Puan`;
+                borderColor = 'border-indigo-500';
             } else {
                 const isWinner = game.roundWinner === state.getUserId(); 
                 resultText = game.roundWinner ? (isWinner ? 'Kazandın' : 'Kaybettin') : 'Berabere';
                 borderColor = isWinner ? 'border-green-500' : (game.roundWinner === null ? 'border-yellow-500' : 'border-red-500');
             }
 
+            const typeLabel = getGameTypeLabel(game);
+
             const gameDiv = createElement('div', {
-                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor}`,
+                className: `bg-gray-800 p-3 rounded-lg mb-2 border-l-4 ${borderColor} relative`,
                 innerHTML: `
-                    <div class="flex justify-between items-center">
-                        <p class="font-bold">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
-                        <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-gray-500 mb-1">${typeLabel}</span>
+                            <p class="font-bold text-white">${game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold ${borderColor.replace('border-', 'text-')}">${resultText}</p>
+                            <span class="text-xs text-gray-500">${new Date(game.createdAt?.seconds * 1000).toLocaleDateString('tr-TR')}</span>
+                        </div>
                     </div>
                 `
             });
@@ -614,19 +653,27 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     if (invites.length > 0) {
         invites.forEach(invite => {
             const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
+            const typeLabel = getGameTypeLabel(invite);
             
             const inviteDiv = createElement('div', {
-                className: 'bg-gray-700 p-3 rounded-lg mb-2',
-                innerHTML: `<p><strong>${creatorUsername}</strong> seni bir ${invite.gameType === 'multiplayer-br' ? 'Battle Royale' : 'oyuna'} davet ediyor!</p>`
+                className: 'bg-indigo-900/40 border border-indigo-500/30 p-4 rounded-lg mb-2',
+                innerHTML: `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded">${typeLabel}</span>
+                    </div>
+                    <p class="text-gray-200 mb-3">
+                        <strong class="text-white text-lg">${creatorUsername}</strong> seni oyuna davet ediyor!
+                    </p>
+                `
             });
 
             const buttonWrapper = createElement('div', {
-                className: 'flex gap-2 mt-2 justify-end' 
+                className: 'flex gap-3 justify-end' 
             });
 
             const rejectBtn = createElement('button', {
-                className: 'bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-xs',
-                textContent: 'İptal',
+                className: 'bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg text-sm transition-colors',
+                textContent: 'Reddet',
                 onclick: (e) => {
                     e.stopPropagation(); 
                     rejectInvite(invite.id); 
@@ -634,8 +681,8 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             });
 
             const joinBtn = createElement('button', {
-                className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-xs',
-                textContent: 'Katıl',
+                className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg text-sm shadow-lg transition-transform active:scale-95',
+                textContent: 'Kabul Et',
                 onclick: (e) => {
                     e.stopPropagation();
                     if (invite.gameType === 'multiplayer-br') {
