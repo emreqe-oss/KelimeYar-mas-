@@ -1233,17 +1233,25 @@ export async function saveDailyResultToDatabase(userId, username, secretWord, di
 }
 
 
+// js/game.js -> submitGuess fonksiyonunu bul ve bununla değiştir:
+
 async function submitGuess() {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
+
     const gameMode = state.getGameMode();
     const currentUserId = state.getUserId();
     const playerState = localGameData.players[currentUserId];
+
+    // Kontroller
     if (!playerState || playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || (playerState.guesses && playerState.guesses.length >= GUESS_COUNT)) return;
+    
     if (!isBattleRoyale(gameMode) && localGameData.currentPlayerId !== currentUserId) {
         showToast("Sıra sende değil!", true);
         return;
     }
+
+    // Tahmin kelimesini oluştur
     let guessWord = '';
     const currentRow = playerState.guesses ? playerState.guesses.length : 0;
     for (let i = 0; i < wordLength; i++) {
@@ -1256,13 +1264,18 @@ async function submitGuess() {
         }
         guessWord += tileInner.textContent;
     }
+
+    // Zor mod kontrolü
     if (localGameData.isHardMode && playerState.guesses.length > 0) {
         if (!checkHardMode(guessWord, playerState.guesses)) {
             shakeCurrentRow(wordLength, currentRow);
             return;
         }
     }
+
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+
+    // Kelime geçerlilik kontrolü
     const isValidWord = await checkWordValidity(guessWord);
     if (!isValidWord) {
         showToast("Kelime sözlükte bulunamadı!", true);
@@ -1270,21 +1283,66 @@ async function submitGuess() {
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
         return;
     }
+
     stopTurnTimer();
-    const isOnlineMode = gameMode === 'multiplayer' || isBattleRoyale(gameMode);
+
+    // --- BR MODU ÖZEL PUANLAMA MANTIĞI ---
+    if (isBattleRoyale(gameMode)) {
+        const secretWord = localGameData.secretWord;
+        const colors = calculateColors(guessWord, secretWord);
+        const newGuess = { word: guessWord, colors: colors };
+        const updatedGuesses = [...(playerState.guesses || []), newGuess];
+        
+        const isWinner = (guessWord === secretWord);
+        const guessCount = updatedGuesses.length;
+        
+        // Puan Hesapla (1. tahmin 1000, 2. tahmin 800...)
+        let addedScore = 0;
+        if (isWinner) {
+            addedScore = calculateRoundScore(guessCount, true);
+        }
+
+        const updates = {
+            [`players.${currentUserId}.guesses`]: updatedGuesses,
+        };
+
+        if (isWinner) {
+            updates[`players.${currentUserId}.hasSolved`] = true;
+            // Mevcut puana yeni tur puanını ekle
+            const currentScore = playerState.score || 0;
+            updates[`players.${currentUserId}.score`] = currentScore + addedScore;
+        } else if (guessCount >= GUESS_COUNT) {
+            updates[`players.${currentUserId}.hasFailed`] = true; // Elenme yok, sadece başarısız
+        }
+
+        try {
+            await updateDoc(doc(db, "games", state.getCurrentGameId()), updates);
+        } catch (error) {
+            console.error("BR tahmini gönderilemedi:", error);
+            showToast("Bağlantı hatası!", true);
+        }
+        
+        // Yerel güncellemeyi render beklemeden yap (akıcılık için)
+        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+        return;
+    }
+    // --- BR MODU BİTİŞ ---
+
+    // Diğer Modlar (Eski kodun devamı)
+    const isOnlineMode = gameMode === 'multiplayer';
     if (isOnlineMode) {
         try {
-            const result = await submitMultiplayerGuess(state.getCurrentGameId(), guessWord, currentUserId, isBattleRoyale(gameMode));
-            if (!result.success) {
-                throw new Error(result.error || "Tahmin sunucuda işlenirken hata.");
-            }
+            const result = await submitMultiplayerGuess(state.getCurrentGameId(), guessWord, currentUserId, false);
+            if (!result.success) throw new Error(result.error);
         } catch (error) {
-            console.error("Online tahmin gönderimi hatası:", error);
-            showToast(error.message || "Tahmin gönderilirken kritik bir hata oluştu.", true);
+            console.error("Online tahmin hatası:", error);
+            showToast("Hata: " + error.message, true);
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
         }
         return;
     }
+
+    // Yerel Oyun Mantığı (vsCPU, Daily)
     const secretWord = localGameData.secretWord;
     const colors = calculateColors(guessWord, secretWord);
     const newGuess = { word: guessWord, colors: colors };
@@ -1300,15 +1358,13 @@ async function submitGuess() {
     } else {
         if (localGameData.players[currentUserId].guesses.length >= GUESS_COUNT) {
             localGameData.status = 'finished';
-            if (gameMode === 'vsCPU') { 
-                localGameData.roundWinner = 'cpu'; 
-            } else {
-                localGameData.roundWinner = null;
-            }
+            if (gameMode === 'vsCPU') localGameData.roundWinner = 'cpu';
+            else localGameData.roundWinner = null;
         } else if (gameMode === 'vsCPU') {
             localGameData.currentPlayerId = 'cpu';
         }
     }
+
     const didWin = localGameData.roundWinner === currentUserId;
     const guessCount = didWin ? localGameData.players[currentUserId].guesses.length : 0;
     
@@ -1340,23 +1396,51 @@ async function submitGuess() {
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
 }
 
+// js/game.js -> failTurn fonksiyonunu bul ve bununla değiştir:
+
 export async function failTurn(guessWord = '') {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
     const currentUserId = state.getUserId();
     const gameMode = state.getGameMode();
     const playerState = localGameData.players[currentUserId];
-    if (isBattleRoyale(gameMode)) return; 
+
+    // --- BR MODU: ELEME YOK, SADECE BAŞARISIZLIK ---
+    if (isBattleRoyale(gameMode)) {
+        if (playerState.hasSolved || playerState.hasFailed) return;
+        
+        stopTurnTimer();
+        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+
+        // isEliminated YERİNE hasFailed kullanıyoruz.
+        // Puanı değiştirmiyoruz (0 puan eklenmiş gibi oluyor).
+        const updates = {
+            [`players.${currentUserId}.hasFailed`]: true
+        };
+
+        try {
+             await updateDoc(doc(db, "games", state.getCurrentGameId()), updates);
+             showToast("Süre doldu! Bu turdan puan alamadın.", true);
+        } catch (error) {
+             console.error("Fail turn update error:", error);
+        }
+        return;
+    }
+    // --- BR MODU BİTİŞ ---
+
     if (localGameData.currentPlayerId !== currentUserId) return;
     if (playerState.isEliminated || (playerState.guesses && playerState.guesses.length >= GUESS_COUNT)) return;
+    
     stopTurnTimer();
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+
     if (gameMode === 'vsCPU' || gameMode === 'daily') {
         const newGuess = { word: guessWord.padEnd(wordLength, ' '), colors: Array(wordLength).fill('failed') };
         localGameData.players[currentUserId].guesses.push(newGuess);
         localGameData.status = 'finished';
         localGameData.roundWinner = null;
         await updateStats(false, 0);
+        
         if (gameMode === 'daily') {
              saveDailyGameState(localGameData); 
              await saveDailyResultToDatabase(
@@ -1369,27 +1453,25 @@ export async function failTurn(guessWord = '') {
                 localGameData.players['cpu'].score += 100; 
             }
         }
+        
         renderGameState(localGameData, true).then(() => {
             setTimeout(() => showScoreboard(localGameData), wordLength * 300);
         });
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
         return;
     }
+
+    // Multiplayer Standard Modu (BR Hariç)
     const gameId = state.getCurrentGameId();
     if (gameId) {
         try {
             const result = await failMultiplayerTurn(gameId, currentUserId);
-            if (!result.success) {
-                showToast(result.error || "Tur sonlandırma hatası.", true);
-            }
+            if (!result.success) showToast(result.error || "Tur sonlandırma hatası.", true);
         } catch (error) {
             console.error("Fail turn hatası:", error);
-            showToast("Tur sonlandırılırken sunucu hatası.", true);
         } finally {
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
         }
-    } else {
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
     }
 }
 
@@ -1737,107 +1819,122 @@ export async function getDailyLeaderboardStats(currentUserId, secretWord) {
 
 // public/js/game.js (TAM FONKSİYON GÜNCELLEMESİ)
 
+// js/game.js -> startNewRound fonksiyonunu bul ve bununla değiştir:
+
 export async function startNewRound() {
-    state.resetKnownCorrectPositions();
-    state.resetHasUserStartedTyping();
+    state.resetKnownCorrectPositions();
+    state.resetHasUserStartedTyping();
 
-    const gameMode = state.getGameMode();
-    const localGameData = state.getLocalGameData();
-    if (gameMode === 'daily') {
-        leaveGame();
-        return;
-    }
-    if (!localGameData) return;
-    if (isBattleRoyale(gameMode) && localGameData.status === 'finished') {
-        if (localGameData.matchWinnerId !== undefined) { 
-            leaveGame();
-            return;
-        }
-        try {
-            const result = await startNextBRRound(state.getCurrentGameId(), state.getUserId());
-            if (result.success) {
-                showScreen('game-screen'); 
-                return;
-            } else {
-                showToast(result.error || "Sonraki tur başlatılırken bilinmeyen bir hata oluştu.", true);
-                leaveGame();
-            }
-        } catch (error) {
-             showToast("Tur başlatılırken bir hata oluştu: " + error.message, true);
-             leaveGame();
-        }
-        return; 
-    }
+    const gameMode = state.getGameMode();
+    const localGameData = state.getLocalGameData();
+    
+    if (gameMode === 'daily') {
+        leaveGame();
+        return;
+    }
+    if (!localGameData) return;
 
-    // Maç bitiş kontrolü (Yeniden Oyna butonu)
-    if (localGameData.currentRound >= localGameData.matchLength && !isBattleRoyale(gameMode)) {
-        if (gameMode === 'multiplayer') {
-            // Bu kısım showScoreboard'da hallediliyor, ama yedek olarak bırakıldı
-            leaveGame();
-        } else {
-            startNewGame({ mode: gameMode });
-        }
-        return;
-    }
+    // --- BR MODU: YENİ TURA GEÇİŞ ---
+    if (isBattleRoyale(gameMode) && localGameData.status === 'finished') {
+        // Maç bitmişse ana menüye dön
+        if (localGameData.matchWinnerId !== undefined || localGameData.currentRound >= 10) { 
+            leaveGame();
+            return;
+        }
 
-    // === BAŞLANGIÇ: DÖNÜŞÜMLÜ OYUNCU MANTIĞI ===
+        // Sadece oyunu kuran kişi (Host) yeni turu başlatır
+        if (localGameData.creatorId === state.getUserId()) {
+            const newWordLength = getRandomWordLength();
+            const newSecretWord = await getNewSecretWord(newWordLength);
+            
+            const updates = {
+                currentRound: (localGameData.currentRound || 1) + 1,
+                secretWord: newSecretWord,
+                wordLength: newWordLength,
+                status: 'playing',
+                roundWinner: null,
+                matchWinnerId: deleteField(), // Önceki maç kazananını temizle
+                turnStartTime: serverTimestamp(),
+            };
 
-    const newWordLength = getRandomWordLength();
-    const newSecretWord = await getNewSecretWord(newWordLength);
-    if (!newSecretWord) return showToast("Yeni kelime alınamadı.", true);
+            // Oyuncuları resetle ama PUANLARINI (score) KORU
+            Object.keys(localGameData.players).forEach(pid => {
+                updates[`players.${pid}.guesses`] = [];
+                updates[`players.${pid}.hasSolved`] = false;
+                updates[`players.${pid}.hasFailed`] = false;
+                updates[`players.${pid}.isEliminated`] = false; // Her ihtimale karşı
+                updates[`players.${pid}.jokersUsed`] = { present: false, correct: false, remove: false };
+            });
 
-    // 1. Yeni tur numarasını hesapla
-    const newRoundNumber = (localGameData.currentRound || 0) + 1;
+            try {
+                await updateDoc(doc(db, "games", state.getCurrentGameId()), updates);
+            } catch (error) {
+                console.error("Yeni tur başlatılamadı:", error);
+                showToast("Yeni tur başlatılırken hata oluştu.", true);
+            }
+        } else {
+            // Diğer oyuncular sadece bekler (Host başlatınca listenToGameUpdates ekranı açar)
+            showToast("Oyun kurucunun turu başlatması bekleniyor...", false);
+        }
+        return; 
+    }
+    // --- BR MODU BİTİŞ ---
 
-    if (gameMode === 'vsCPU') {
-        // 2. vsCPU için sıradaki oyuncuyu belirle
-        const humanPlayerId = state.getUserId();
-        const cpuPlayerId = 'cpu';
-        // Tek turlar (1, 3, 5...) İnsan, Çift turlar (2, 4, 6...) CPU başlar
-        const nextPlayerId = (newRoundNumber % 2 === 1) ? humanPlayerId : cpuPlayerId;
+    // Diğer Modlar (Standard vsCPU / Multiplayer)
+    if (localGameData.currentRound >= localGameData.matchLength) {
+        if (gameMode === 'multiplayer') leaveGame();
+        else startNewGame({ mode: gameMode });
+        return;
+    }
 
-        const updates = {
-            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
-            currentRound: newRoundNumber, 
-            currentPlayerId: nextPlayerId, // <-- GÜNCELLENDİ
-            roundWinner: null, turnStartTime: new Date(), 
-            players: { ...localGameData.players },
-        };
-        for (const pid in updates.players) {
-            updates.players[pid].guesses = [];
-            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
-        }
-        Object.assign(localGameData, updates);
-        state.setLocalGameData(localGameData);
-        showScreen('game-screen');
-        initializeGameUI(localGameData);
-        await renderGameState(localGameData);
+    const newWordLength = getRandomWordLength();
+    const newSecretWord = await getNewSecretWord(newWordLength);
+    if (!newSecretWord) return showToast("Yeni kelime alınamadı.", true);
 
-    } else if (gameMode === 'multiplayer') {
-        // 2. Multiplayer için sıradaki oyuncuyu belirle
-        const creatorId = localGameData.creatorId;
-        const opponentId = localGameData.playerIds.find(id => id !== creatorId);
+    const newRoundNumber = (localGameData.currentRound || 0) + 1;
 
-        // Tek turlar (1, 3, 5...) Oyunu Kuran, Çift turlar (2, 4, 6...) Rakip başlar
-        // (Eğer rakip yoksa, her zaman kuran başlar)
-        const nextPlayerId = (newRoundNumber % 2 === 1) ? creatorId : (opponentId || creatorId);
-        
-        const updates = {
-            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
-            currentRound: newRoundNumber, 
-            currentPlayerId: nextPlayerId, // <-- GÜNCELLENDİ
-            roundWinner: null, turnStartTime: serverTimestamp(), 
-            players: { ...localGameData.players },
-        };
-        for (const pid in updates.players) {
-            updates.players[pid].guesses = [];
-            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
-        }
-         await updateDoc(doc(db, 'games', state.getCurrentGameId()), updates);
-    } else {
-        startNewGame({ mode: gameMode });
-    }
-    // === BİTİŞ: DÖNÜŞÜMLÜ OYUNCU MANTIĞI ===
+    if (gameMode === 'vsCPU') {
+        const humanPlayerId = state.getUserId();
+        const cpuPlayerId = 'cpu';
+        const nextPlayerId = (newRoundNumber % 2 === 1) ? humanPlayerId : cpuPlayerId;
+
+        const updates = {
+            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
+            currentRound: newRoundNumber, 
+            currentPlayerId: nextPlayerId,
+            roundWinner: null, turnStartTime: new Date(), 
+            players: { ...localGameData.players },
+        };
+        for (const pid in updates.players) {
+            updates.players[pid].guesses = [];
+            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
+        }
+        Object.assign(localGameData, updates);
+        state.setLocalGameData(localGameData);
+        showScreen('game-screen');
+        initializeGameUI(localGameData);
+        await renderGameState(localGameData);
+
+    } else if (gameMode === 'multiplayer') {
+        const creatorId = localGameData.creatorId;
+        const opponentId = localGameData.playerIds.find(id => id !== creatorId);
+        const nextPlayerId = (newRoundNumber % 2 === 1) ? creatorId : (opponentId || creatorId);
+        
+        const updates = {
+            wordLength: newWordLength, secretWord: newSecretWord, status: 'playing',
+            currentRound: newRoundNumber, 
+            currentPlayerId: nextPlayerId, 
+            roundWinner: null, turnStartTime: serverTimestamp(), 
+            players: { ...localGameData.players },
+        };
+        for (const pid in updates.players) {
+            updates.players[pid].guesses = [];
+            updates.players[pid].jokersUsed = { present: false, correct: false, remove: false };
+        }
+         await updateDoc(doc(db, 'games', state.getCurrentGameId()), updates);
+    } else {
+        startNewGame({ mode: gameMode });
+    }
 }
 
 // ===================================================
