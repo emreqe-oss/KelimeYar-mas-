@@ -143,45 +143,86 @@ export async function showScoreboard(gameData) {
         `;
         return;
     }
-    if (gameMode === 'daily') {
-        const dailyStats = await getDailyLeaderboardStats(currentUserId, gameData.secretWord);
-        dailyStatsContainer.classList.remove('hidden');
-        if (dailyStats) {
-            dailyStatsContainer.innerHTML = `
-                <div class="w-full max-w-sm mx-auto">
-                    <div class="grid grid-cols-2 gap-4 text-center mb-6 mt-4">
-                        <div class="bg-gray-700 p-4 rounded-lg"><p class="text-4xl font-extrabold text-white">${dailyStats.userScore}</p><p class="text-sm text-gray-400">Kazandığın Puan</p></div>
-                        <div class="bg-gray-700 p-4 rounded-lg"><p class="text-4xl font-extrabold text-white">${dailyStats.avgScore}</p><p class="text-sm text-gray-400">Ortalama Puan</p></div>
-                        <div class="bg-gray-700 p-4 rounded-lg"><p class="text-4xl font-extrabold text-white">${dailyStats.userGuessCount}</p><p class="text-sm text-gray-400">Deneme Sayın</p></div>
-                        <div class="bg-gray-700 p-4 rounded-lg"><p class="text-4xl font-extrabold text-white">${dailyStats.avgGuesses}</p><p class="text-sm text-gray-400">Ort. Deneme Sayısı</p></div>
-                    </div>
-                    <h4 class="text-xl font-bold mb-2">Günlük Pozisyonun</h4>
-                    <p class="text-3xl font-extrabold text-yellow-500 mb-2">
-                        ${dailyStats.userPosition > 0 ? dailyStats.userPosition + '. sıradayız!' : dailyStats.userScore > 0 ? 'Sıralama Hesaplanıyor...' : 'Sıralamaya girmek için kazanmalısın.'}
-                    </p>
-                    <p class="text-sm text-gray-400">Toplam ${dailyStats.totalPlayers} kişi arasında.</p>
-                    <div class="mt-6 mb-4">
-                        <p>Doğru Kelime: <strong class="text-green-400 text-xl">${gameData.secretWord}</strong></p>
-                        <p id="word-meaning-display-daily" class="text-sm text-gray-400 mt-2 italic">Anlam yükleniyor...</p>
-                    </div>
-                </div>
-            `;
-            const meaningDisplayEl = document.getElementById('word-meaning-display-daily'); 
-            const meaning = await fetchWordMeaning(gameData.secretWord);
-            if(meaningDisplayEl) meaningDisplayEl.textContent = meaning;
-        } else {
-            dailyStatsContainer.innerHTML = `<p class="text-gray-400">Günlük sıralama bilgileri yüklenemedi.</p>`;
-        }
-        finalScores.style.display = 'none';
-        matchWinnerDisplay.style.display = 'none';
-        newRoundBtn.classList.add('hidden'); 
-        defaultWordDisplayContainer.style.display = 'none'; 
-        roundWinnerDisplay.textContent = gameData.roundWinner === currentUserId ? "Tebrikler, Kazandın!" : `Kaybettin! Cevap: ${gameData.secretWord}`;
-        playSound(gameData.roundWinner === currentUserId ? 'win' : 'lose');
-        document.getElementById('main-menu-btn').textContent = "Ana Menüye Dön";
-        defaultRoundButtons.style.display = 'flex';
-        return; 
-    }
+    // js/game.js içinde showScoreboard fonksiyonunu bul
+// ve if (gameMode === 'daily') bloğunu tamamen bununla değiştir:
+
+    if (gameMode === 'daily') {
+        // 1. Varsayılan dış başlıkları gizle (Kendi kartımızın içinde göstereceğiz)
+        roundWinnerDisplay.style.display = 'none';
+        correctWordDisplay.style.display = 'none';
+        matchWinnerDisplay.style.display = 'none';
+        finalScores.style.display = 'none';
+        newRoundBtn.classList.add('hidden'); 
+
+        // 2. İstatistikleri al
+        const dailyStats = await getDailyLeaderboardStats(currentUserId, gameData.secretWord);
+        dailyStatsContainer.classList.remove('hidden');
+
+        // 3. Kazanma/Kaybetme Durumunu Belirle
+        const didWin = gameData.roundWinner === currentUserId;
+        const resultTitle = didWin ? "🎉 TEBRİKLER!" : "😔 MAALESEF";
+        const resultColor = didWin ? "text-green-400" : "text-red-400";
+
+        if (dailyStats) {
+            // 4. Yeni Düzenli HTML Yapısı
+            dailyStatsContainer.innerHTML = `
+                <div class="w-full max-w-md mx-auto bg-gray-800/95 p-6 rounded-xl shadow-2xl border border-gray-600 flex flex-col items-center">
+                    
+                    <h2 class="text-3xl font-extrabold ${resultColor} mb-2 tracking-wide">${resultTitle}</h2>
+                    
+                    <div class="text-center mb-6">
+                        <span class="text-gray-400 text-sm uppercase tracking-wider">Doğru Kelime</span>
+                        <div class="text-4xl font-black text-white mt-1 bg-gray-700 px-6 py-2 rounded-lg tracking-widest shadow-inner">
+                            ${gameData.secretWord}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 w-full mb-6">
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-2xl font-bold text-yellow-400">${dailyStats.userScore}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Puanın</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-2xl font-bold text-indigo-300">${dailyStats.userPosition > 0 ? '#' + dailyStats.userPosition : '-'}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Sıralama</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-xl font-bold text-white">${dailyStats.userGuessCount}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Deneme</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-xl font-bold text-white">${dailyStats.avgScore}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Ort. Puan</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-4">Toplam ${dailyStats.totalPlayers} oyuncu bugün oynadı.</p>
+
+                    <div class="w-full border-t border-gray-600 pt-4 mt-2 text-center">
+                        <p id="word-meaning-display-daily" class="text-sm text-gray-300 italic leading-relaxed">
+                            Anlam yükleniyor...
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            // Anlamı yükle ve yerleştir
+            const meaningDisplayEl = document.getElementById('word-meaning-display-daily'); 
+            const meaning = await fetchWordMeaning(gameData.secretWord);
+            if(meaningDisplayEl) meaningDisplayEl.textContent = meaning;
+
+        } else {
+            dailyStatsContainer.innerHTML = `<p class="text-gray-400 text-center">Günlük sıralama bilgileri yüklenemedi.</p>`;
+        }
+
+        // Butonları düzenle
+        playSound(didWin ? 'win' : 'lose');
+        document.getElementById('main-menu-btn').textContent = "Ana Menüye Dön";
+        defaultWordDisplayContainer.style.display = 'none'; 
+        defaultRoundButtons.style.display = 'flex';
+        
+        return; 
+    }
 
     // --- GEVŞEK / MEYDAN OKUMA / VS CPU MANTIĞI ---
 
