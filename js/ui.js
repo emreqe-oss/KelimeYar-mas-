@@ -232,74 +232,60 @@ export function createKeyboard(handleKeyPress) {
 
 
 // === BAŞLANGIÇ: DÜZELTİLMİŞ updateKeyboard FONKSİYONU ===
+// js/ui.js dosyasında updateKeyboard fonksiyonunu bul ve bununla değiştir:
+
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
 
     // Kendi ID'mizi state'den alıyoruz
     const currentUserId = state.getUserId(); 
-    if (!currentUserId) return; // ID yoksa (olmamalı ama) çık
+    if (!currentUserId) return; 
 
     const keyStates = {};
 
     // 1. ADIM: SADECE KENDİ TAHMİNLERİMİZİ İŞLE
+    // Artık sadece 'currentUserId'ye ait tahminlere bakıyoruz.
     const myGuesses = gameData.players[currentUserId]?.guesses || [];
+    
     myGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
             const color = colors[i];
             
+            // Eğer bu harf daha önce 'correct' (yeşil) işaretlendiyse, rengini koru.
             if (keyStates[letter] === 'correct') continue; 
+            
+            // Eğer bu harf 'present' (sarı) ise ve şimdiki durum 'correct' değilse, sarı kalmaya devam etsin.
             if (keyStates[letter] === 'present' && color !== 'correct') continue; 
+            
+            // Harfin durumunu güncelle (absent, present veya correct)
             keyStates[letter] = color;
         }
     });
 
-    // 2. ADIM: RAKİPLERİN TAHMİNLERİNİ İŞLE
-    Object.keys(gameData.players).forEach(playerId => {
-        if (playerId === currentUserId) return; 
+    // --- DEĞİŞİKLİK ---
+    // "Rakip Tahminlerini İşle" bloğu buradan tamamen silindi.
+    // Böylece rakip "A" harfini bulsa bile, sizin klavyenizde "A" renklenmeyecek.
+    // ------------------
 
-        const opponentGuesses = gameData.players[playerId]?.guesses || [];
-        opponentGuesses.forEach(({ word, colors }) => {
-            for (let i = 0; i < word.length; i++) {
-                const letter = word[i];
-                const color = colors[i];
-                const myCurrentColor = keyStates[letter];
-
-                // Rakip yeşil VEYA sarı bulduysa
-                if (color === 'correct' || color === 'present') {
-                    // Ve biz bu harfi ya hiç bulamadıysak YA DA 'absent' sanıyorsak...
-                    if (!myCurrentColor || myCurrentColor === 'absent') {
-                        // ...klavyemizi 'present' (sarı) olarak güncelle.
-                        keyStates[letter] = 'present';
-                    }
-                }
-                // Rakip gri bulduysa
-                else if (color === 'absent') {
-                    // Ve biz bu harf hakkında HİÇBİR ŞEY bilmiyorsak...
-                    if (!myCurrentColor) {
-                        // ...o zaman gri olarak işaretle.
-                        keyStates[letter] = 'absent';
-                    }
-                }
-            }
-        });
-    });
-    // === DÜZELTME SONU ===
-
-    // 3. ADIM: keyStates'i UI'a uygula
+    // 2. ADIM: Hesaplanan renkleri klavye tuşlarına uygula
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
+        
         const guessColor = keyStates[keyId]; 
+        
+        // Önceki renkleri temizle
+        btn.classList.remove('correct', 'present', 'absent');
+
+        // Yeni rengi ekle
         if (guessColor === 'correct') {
-            btn.classList.remove('present', 'absent'); 
             btn.classList.add('correct');
         } 
-        else if (guessColor === 'present' && !btn.classList.contains('correct')) {
-            btn.classList.remove('absent'); 
+        else if (guessColor === 'present') {
             btn.classList.add('present');
         } 
-        else if (guessColor === 'absent' && !btn.classList.contains('correct') && !btn.classList.contains('present')) {
+        else if (guessColor === 'absent') {
             btn.classList.add('absent');
         }
     });

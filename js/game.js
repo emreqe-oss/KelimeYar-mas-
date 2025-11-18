@@ -447,197 +447,191 @@ async function handleMeaningIconClick(word) {
 
 // public/js/game.js (TAM FONKSİYON GÜNCELLEMESİ)
 
-export async function renderGameState(gameData, didMyGuessChange = false) { 
-    const currentUserId = state.getUserId();
-    
-    const oldGameData = state.getLocalGameData();
-    const oldPlayerId = oldGameData?.currentPlayerId;
-    const isMyTurnNow = gameData.currentPlayerId === currentUserId;
+// js/game.js içindeki renderGameState fonksiyonunu bul ve bununla değiştir:
 
-    if (oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
-        playSound('turn');
-    }
-    
-    if (!gameData) return;
-    const gameMode = state.getGameMode();
-    const isBR = isBattleRoyale(gameMode);
-    
-    const sequentialGameInfo = document.getElementById('sequential-game-info');
-    const gameInfoBar = document.getElementById('game-info-bar');
-    const jokerContainer = document.getElementById('joker-container');
-    const copyBtn = document.getElementById('copy-game-id-btn');
-    const shareBtn = document.getElementById('share-game-btn');
-    
-    updateMultiplayerScoreBoard(gameData); 
+export async function renderGameState(gameData, didMyGuessChange = false) { 
+    const currentUserId = state.getUserId();
+    
+    const oldGameData = state.getLocalGameData();
+    const oldPlayerId = oldGameData?.currentPlayerId;
+    const isMyTurnNow = gameData.currentPlayerId === currentUserId;
 
-    if (gameMode === 'daily') {
-        if (sequentialGameInfo) {
-            sequentialGameInfo.classList.remove('hidden');
-            document.getElementById('player1-score').innerHTML = '';
-            document.getElementById('player2-score').innerHTML = '';
-            if (turnDisplay) turnDisplay.textContent = 'Günün Kelimesi'; 
-            if (roundCounter) roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
-            if (timerDisplay) timerDisplay.textContent = ''; 
-        }
+    if (oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
+        playSound('turn');
+    }
+    
+    if (!gameData) return;
+    const gameMode = state.getGameMode();
+    const isBR = isBattleRoyale(gameMode);
+    
+    const sequentialGameInfo = document.getElementById('sequential-game-info');
+    const gameInfoBar = document.getElementById('game-info-bar');
+    const jokerContainer = document.getElementById('joker-container');
+    const copyBtn = document.getElementById('copy-game-id-btn');
+    const shareBtn = document.getElementById('share-game-btn');
+    
+    updateMultiplayerScoreBoard(gameData); 
 
-        if (gameInfoBar) {
-            gameInfoBar.style.display = 'flex'; 
-            if (gameIdDisplay) gameIdDisplay.textContent = ''; 
-            if (copyBtn) copyBtn.style.display = 'none';
-            if (shareBtn) shareBtn.style.display = 'none';
-        }
+    if (gameMode === 'daily') {
+        if (sequentialGameInfo) {
+            sequentialGameInfo.classList.remove('hidden');
+            document.getElementById('player1-score').innerHTML = '';
+            document.getElementById('player2-score').innerHTML = '';
+            if (turnDisplay) turnDisplay.textContent = 'Günün Kelimesi'; 
+            if (roundCounter) roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
+            if (timerDisplay) timerDisplay.textContent = ''; 
+        }
+        if (gameInfoBar) {
+            gameInfoBar.style.display = 'flex'; 
+            if (gameIdDisplay) gameIdDisplay.textContent = ''; 
+            if (copyBtn) copyBtn.style.display = 'none';
+            if (shareBtn) shareBtn.style.display = 'none';
+        }
+        if (jokerContainer) {
+            jokerContainer.style.display = 'none'; 
+        }
+    } else {
+        if (jokerContainer) {
+            jokerContainer.style.display = 'flex'; 
+        }
+        if (gameInfoBar) {
+            gameInfoBar.style.display = 'flex';
+            if (gameIdDisplay) gameIdDisplay.textContent = gameData.gameId || '';
+            if (copyBtn) copyBtn.style.display = 'block'; 
+        }
+        if (isBR) {
+            if (brRoundCounter) brRoundCounter.textContent = `Tur ${gameData.currentRound || 1}`;
+        } else {
+            if (roundCounter) roundCounter.textContent = (gameMode === 'multiplayer' || gameMode === 'vsCPU') ? `Tur ${gameData.currentRound}/${gameData.matchLength}` : '';
+        }
+    }
+    
+    timeLimit = gameData.timeLimit || 45;
+    
+    const playerState = gameData.players[currentUserId] || {};
+    if (isBR && (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed)) {
+        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+    } else {
+        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+    }
 
-        if (jokerContainer) {
-            jokerContainer.style.display = 'none'; 
-        }
+    updateTurnDisplay(gameData);
 
-    } else {
-        if (jokerContainer) {
-            jokerContainer.style.display = 'flex'; 
-        }
-        
-        if (gameInfoBar) {
-            gameInfoBar.style.display = 'flex';
-            if (gameIdDisplay) gameIdDisplay.textContent = gameData.gameId || '';
-            if (copyBtn) copyBtn.style.display = 'block'; 
-        }
-        
-        if (isBR) {
-            if (brRoundCounter) brRoundCounter.textContent = `Tur ${gameData.currentRound || 1}`;
-        } else {
-            if (roundCounter) roundCounter.textContent = (gameMode === 'multiplayer' || gameMode === 'vsCPU') ? `Tur ${gameData.currentRound}/${gameData.matchLength}` : '';
-        }
-    }
-    
-    timeLimit = gameData.timeLimit || 45; // timeLimit'i burada ayarla
-    
-    const playerState = gameData.players[currentUserId] || {};
-    if (isBR && (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed)) {
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-    } else {
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
-    }
+    // === IZGARA VE İPUCU MANTIĞI ===
+    const firstTile = document.getElementById(`tile-0-0`);
+    const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
+    
+    // Eğer ızgara boşsa veya tahmin değiştiyse yeniden çiz
+    const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
+    
+    if (didMyGuessChange || isGridPristine) {
+        const playerGuesses = gameData.players[currentUserId]?.guesses || [];
+        const currentRow = playerGuesses.length;
+        
+        for (let i = 0; i < GUESS_COUNT; i++) {
+            for (let j = 0; j < wordLength; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                if (!tile) continue;
+                
+                const front = tile.querySelector('.front');
+                const back = tile.querySelector('.back');
+                const oldIcon = back.querySelector('.meaning-icon');
+                if (oldIcon) { oldIcon.remove(); }
+                
+                // Temizlik
+                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
+                if (i !== currentRow) {
+                    front.textContent = '';
+                    back.textContent = '';
+                }
 
-    // Bu fonksiyon artık SADECE metinleri günceller, zamanlayıcıyı durdurmaz.
-    updateTurnDisplay(gameData);
+                // Eski tahminleri çiz
+                if (playerGuesses[i]) {
+                    const guess = playerGuesses[i];
+                    front.textContent = guess.word[j];
+                    back.textContent = guess.word[j];
+                    
+                    const isLastRow = i === playerGuesses.length - 1;
+                    if (didMyGuessChange && isLastRow) { 
+                        setTimeout(() => {
+                            tile.classList.add(guess.colors[j]);
+                            tile.classList.add('flip');
+                        }, j * 250);
+                    } else {
+                        tile.classList.add(guess.colors[j]);
+                        tile.classList.add('flip');
+                    }
+                } 
+                // === YENİ: ŞİMDİKİ SATIRA YEŞİL İPUÇLARINI KOY ===
+                else if (i === currentRow && gameData.status === 'playing') {
+                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR;
+                    
+                    // Eğer sıra bendeyse VE henüz yazmaya başlamadıysam
+                    if (isMyTurn && !state.getHasUserStartedTyping()) {
+                        const knownPositions = getKnownCorrectPositions();
+                        if (knownPositions[j]) {
+                            // ui.js'deki fonksiyonu kullanarak statik harfi koy
+                            updateStaticTile(i, j, knownPositions[j], 'correct');
+                        }
+                    }
+                }
+            } 
+            
+            // Anlam İkonu Ekleme
+            if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
+                const guessWord = playerGuesses[i].word;
+                const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
+                if (lastTileInRow) {
+                    const backFace = lastTileInRow.querySelector('.back');
+                    const meaningIcon = createElement('button', {
+                        className: 'meaning-icon', 
+                        innerHTML: '?',
+                        onclick: (e) => { e.stopPropagation(); handleMeaningIconClick(guessWord); }
+                    });
+                    Object.assign(meaningIcon.style, {
+                        position: 'absolute', right: '2px', top: '2px',
+                        width: '22px', height: '22px', backgroundColor: '#ef4444',
+                        color: 'white', borderRadius: '50%', border: '1px solid white',
+                        fontSize: '15px', fontWeight: 'bold', cursor: 'pointer',
+                        zIndex: '10', padding: '0', lineHeight: '21px'
+                    });
+                    if(backFace) { backFace.appendChild(meaningIcon); }
+                }
+            }
+        } 
+    }
+    
+    updateKeyboard(gameData);
+    
+    if (gameData.status === 'playing') {
+        const playerState = gameData.players[currentUserId] || {};
+        if (isBR && (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed)) {
+            startBRTimer(); 
+        } else if (gameMode === 'multiplayer') {
+            startTurnTimer(); 
+        } else if (gameMode === 'vsCPU') {
+            if (gameData.currentPlayerId === currentUserId) {
+                startTurnTimer();
+            } else {
+                stopTurnTimer();
+                setTimeout(cpuTurn, 1500);
+            }
+        }
+    } else {
+        stopTurnTimer(); 
+    }
 
-    // ... (Izgara (grid) oluşturma kodunuz burada başlar... 
-    // ... [Satır 485 - 533 arası] ...
-    // ... Izgara (grid) oluşturma kodunuz burada biter) ...
-    
-    // (Bu bloğu kopyalamayı unutmayın: tile-0-0'dan... ...meaningIcon);)
-    // Kopyalayamıyorsanız, sadece bu dosyadaki if/else bloğunu (Adım 2) güncelleyin.
-    // === Izgara Kodu Başlangıcı (ÖNCEKİ KODUNUZDAN ALIN) ===
-    const firstTile = document.getElementById(`tile-0-0`);
-    const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
-    const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
-    if (didMyGuessChange || isGridPristine) {
-        const playerGuesses = gameData.players[currentUserId]?.guesses || [];
-        const currentRow = playerGuesses.length;
-        for (let i = 0; i < GUESS_COUNT; i++) {
-            for (let j = 0; j < wordLength; j++) {
-                const tile = document.getElementById(`tile-${i}-${j}`);
-                if (!tile) continue;
-                const front = tile.querySelector('.front');
-                const back = tile.querySelector('.back');
-                const oldIcon = back.querySelector('.meaning-icon');
-                if (oldIcon) { oldIcon.remove(); }
-                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
-                if (i !== currentRow) {
-                    front.textContent = '';
-                    back.textContent = '';
-                }
-                if (playerGuesses[i]) {
-                    const guess = playerGuesses[i];
-                    front.textContent = guess.word[j];
-                    back.textContent = guess.word[j];
-                    const isLastRow = i === playerGuesses.length - 1;
-                    if (didMyGuessChange && isLastRow) { 
-                        setTimeout(() => {
-                            tile.classList.add(guess.colors[j]);
-                            tile.classList.add('flip');
-                        }, j * 250);
-                    } else {
-                        tile.classList.add(guess.colors[j]);
-                        tile.classList.add('flip');
-                    }
-                } 
-                else if (i === currentRow && gameData.status === 'playing') {
-                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR;
-                    if (isMyTurn) {
-                        const knownPositions = getKnownCorrectPositions();
-                        if (knownPositions[j]) {
-                            updateStaticTile(i, j, knownPositions[j], 'correct');
-                        }
-                    }
-                }
-            } 
-            if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
-                const guessWord = playerGuesses[i].word;
-                const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
-                if (lastTileInRow) {
-                    const backFace = lastTileInRow.querySelector('.back');
-                    const meaningIcon = createElement('button', {
-                        className: 'meaning-icon', 
-                        innerHTML: '?',
-                        onclick: (e) => { e.stopPropagation(); handleMeaningIconClick(guessWord); }
-                    });
-                    Object.assign(meaningIcon.style, {
-                        position: 'absolute', right: '2px', top: '2px',
-                        width: '22px', height: '22px', backgroundColor: '#ef4444',
-                        color: 'white', borderRadius: '50%', border: '1px solid white',
-                        fontSize: '15px', fontWeight: 'bold', cursor: 'pointer',
-                        zIndex: '10', padding: '0', lineHeight: '21px'
-                    });
-                    if(backFace) { backFace.appendChild(meaningIcon); }
-                }
-            }
-        } 
-    }
-    // === Izgara Kodu Bitişi ===
-    
-    updateKeyboard(gameData);
-    
-    // ================================================
-    // === BAŞLANGIÇ: RAKİP SÜRESİ GÖSTERİM DÜZELTMESİ ===
-    // ================================================
-    if (gameData.status === 'playing') {
-        const playerState = gameData.players[currentUserId] || {};
-        if (isBR && (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed)) {
-            // BR zamanlayıcısı
-            startBRTimer(); 
-        } else if (gameMode === 'multiplayer') {
-            // Multiplayer (Seri Oyun): Sıra kimde olursa olsun zamanlayıcıyı başlat
-            startTurnTimer(); 
-        } else if (gameMode === 'vsCPU') {
-            // vsCPU: Sadece sıra bizdeyse başlat
-            if (gameData.currentPlayerId === currentUserId) {
-                startTurnTimer();
-            } else {
-                // Sıra CPU'daysa zamanlayıcıyı durdur ve CPU'yu çalıştır
-                stopTurnTimer();
-                setTimeout(cpuTurn, 1500);
-            }
-        }
-    } else {
-        // Oyun bittiyse (finished) veya bekliyorsa (waiting) tüm zamanlayıcıları durdur
-        stopTurnTimer(); 
-    }
-    // ================================================
-    // === BİTİŞ: RAKİP SÜRESİ GÖSTERİM DÜZELTMESİ ===
-    // ================================================
-
-    const isMyTurn = isBR ? 
-        (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
-        (gameData.currentPlayerId === currentUserId);
-    
-    const playerJokers = gameData.players[currentUserId]?.jokersUsed || {};
-    
-    if (gameMode === 'daily') {
-        updateJokerUI({}, false, 'finished'); 
-    } else {
-        updateJokerUI(playerJokers, isMyTurn, gameData.status);
-    }
+    const isMyTurn = isBR ? 
+        (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
+        (gameData.currentPlayerId === currentUserId);
+    
+    const playerJokers = gameData.players[currentUserId]?.jokersUsed || {};
+    
+    if (gameMode === 'daily') {
+        updateJokerUI({}, false, 'finished'); 
+    } else {
+        updateJokerUI(playerJokers, isMyTurn, gameData.status);
+    }
 }
 
 export async function fetchWordMeaning(word) {
@@ -669,27 +663,78 @@ function updateKnownPositions(playerGuesses) {
     return newPositions;
 }
 
+// js/game.js dosyasında listenToGameUpdates fonksiyonunu bul ve tamamını bununla değiştir:
+
+// js/game.js dosyasında listenToGameUpdates fonksiyonunu bul ve tamamını bununla değiştir:
+
+// js/game.js dosyasında listenToGameUpdates fonksiyonunu bul ve bununla değiştir:
+
 export function listenToGameUpdates(gameId) {
     const gameUnsubscribe = state.getGameUnsubscribe();
     if (gameUnsubscribe) gameUnsubscribe();
     const gameRef = doc(db, "games", gameId);
-    const unsubscribe = onSnapshot(gameRef, (doc) => {
-        const gameData = doc.data();
+
+    const unsubscribe = onSnapshot(gameRef, (docSnapshot) => { // doc ismini docSnapshot yaptım karışıklık olmasın diye
+        const gameData = docSnapshot.data();
         if (!gameData) {
             showToast("Oyun sonlandırıldı.");
             leaveGame();
             return;
         }
+        
+        // Glitch önleyici: Eski tur verisi gelirse yoksay
+        const localCurrentRound = state.getLocalGameData()?.currentRound;
+        if (localCurrentRound && gameData.currentRound < localCurrentRound) {
+             return;
+        }
+
+        const currentUserId = state.getUserId();
         const oldGameData = state.getLocalGameData();
         const oldStatus = oldGameData?.status;
+        
         state.setLocalGameData(gameData);
         
-        if (gameData.players && gameData.players[state.getUserId()]) {
-            updateKnownPositions(gameData.players[state.getUserId()].guesses);
+        if (gameData.players && gameData.players[currentUserId]) {
+            updateKnownPositions(gameData.players[currentUserId].guesses);
         }
+
+        // --- YENİ DÜZELTME: HERKES BİTTİ Mİ KONTROLÜ (WATCHDOG) ---
+        // Eğer oyun hala 'playing' modundaysa ama herkesin işi bittiyse, durumu 'finished' yap.
+        if (gameData.status === 'playing') {
+            const allPlayerIds = Object.keys(gameData.players);
+            const isEveryoneDone = allPlayerIds.every(pid => {
+                const p = gameData.players[pid];
+                if (!p) return false;
+                
+                // 1. Elendi mi? (BR modu)
+                if (p.isEliminated) return true;
+                
+                // 2. Çözdü mü?
+                const lastGuess = p.guesses[p.guesses.length - 1];
+                const hasWon = lastGuess && lastGuess.word === gameData.secretWord;
+                if (hasWon) return true;
+
+                // 3. Hakları bitti mi? (6 hak)
+                if (p.guesses.length >= GUESS_COUNT) return true;
+
+                // 4. Süresi bitti mi? (hasFailed flag'i varsa)
+                if (p.hasFailed) return true;
+
+                return false; // Hala oynuyor
+            });
+
+            // Eğer herkesin işi bittiyse veritabanını güncelle
+            if (isEveryoneDone) {
+                console.log("LOG: Herkesin turu bitti. Oyun sonlandırılıyor...");
+                // Veritabanına status: finished gönder
+                updateDoc(gameRef, { status: 'finished' }).catch(err => console.error("Oyun bitirme hatası:", err));
+            }
+        }
+        // --- WATCHDOG BİTİŞİ ---
 
         const wasFinished = oldStatus === 'finished';
         const isNowPlaying = gameData.status === 'playing';
+        
         if (wasFinished && isNowPlaying) {
             showScreen('game-screen');
             initializeGameUI(gameData);
@@ -697,22 +742,39 @@ export function listenToGameUpdates(gameId) {
         if (oldGameData && oldGameData.wordLength !== gameData.wordLength) {
             initializeGameUI(gameData);
         }
-        const currentGuesses = gameData.players[state.getUserId()]?.guesses || [];
-        const oldGuessesCount = oldGameData?.players[state.getUserId()]?.guesses.length || 0;
+        
+        const currentGuesses = gameData.players[currentUserId]?.guesses || [];
+        const oldGuessesCount = oldGameData?.players[currentUserId]?.guesses.length || 0;
         const didMyGuessChange = currentGuesses.length > oldGuessesCount;
 
         const oldPlayerId = oldGameData?.currentPlayerId;
-        const currentUserId = state.getUserId(); 
         const isMyTurnNow = gameData.currentPlayerId === currentUserId;
+        const isTurnComingToMe = (oldPlayerId !== currentUserId && isMyTurnNow);
 
-        const isTurnComingToMe = (oldPlayerId !== state.getUserId() && isMyTurnNow);
         if (didMyGuessChange || isTurnComingToMe) {
             state.resetHasUserStartedTyping();
         }
+
+        // --- BEKLEME MANTIĞI (Sadece kendi ekranımız için) ---
+        if (gameData.status === 'playing') {
+            const myGuesses = gameData.players[currentUserId]?.guesses || [];
+            
+            // Eğer benim haklarım bittiyse ama oyun henüz (yukarıdaki Watchdog sayesinde) bitmediyse:
+            if (myGuesses.length >= GUESS_COUNT) {
+                stopTurnTimer();
+                if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+                if (turnDisplay) {
+                    turnDisplay.textContent = "Rakip Bekleniyor... ⏳";
+                    turnDisplay.classList.remove('pulsate');
+                }
+            }
+        }
         
+        // Oyun sunucuda resmen bittiyse skor tablosunu aç
         if (gameData.status === 'finished') {
+            stopTurnTimer();
             renderGameState(gameData, didMyGuessChange).then(() => {
-                const delay = isBattleRoyale(state.getGameMode()) ? wordLength * 300 + 1000 : wordLength * 300 + 500;
+                const delay = isBattleRoyale(state.getGameMode()) ? wordLength * 300 + 1000 : 1500;
                 setTimeout(() => showScoreboard(gameData), delay);
             });
         } else {
@@ -720,7 +782,12 @@ export function listenToGameUpdates(gameId) {
         }
     }, (error) => { 
         console.error("Oyun dinlenirken bir hata oluştu:", error);
+        if(error.code === 'permission-denied') {
+             showToast("Bağlantı hatası veya oyun sonlandı.");
+             leaveGame();
+        }
     });
+    
     state.setGameUnsubscribe(unsubscribe);
 }
 
@@ -1306,19 +1373,24 @@ export function handleKeyPress(key) {
     }
 }
 
+// js/game.js içindeki addLetter fonksiyonunu bul ve bununla değiştir:
+
 function addLetter(letter) {
     const localGameData = state.getLocalGameData();
     if (!localGameData) return;
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
+    // === YENİ: YAZMAYA BAŞLAMA KONTROLÜ ===
     if (!state.getHasUserStartedTyping()) {
+        // İlk harf yazıldığında, referans (statik) kutuları temizle
         clearStaticTiles(currentRow, wordLength);
         state.setHasUserStartedTyping(true);
     }
 
     for (let i = 0; i < wordLength; i++) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
+        // Sadece boş olan kutuya yaz
         if (tile && tile.querySelector('.front').textContent === '') {
             tile.querySelector('.front').textContent = letter;
             playSound('click');
@@ -1327,21 +1399,43 @@ function addLetter(letter) {
     }
 }
 
+// js/game.js içindeki deleteLetter fonksiyonunu bul ve bununla değiştir:
+
 function deleteLetter() {
     const localGameData = state.getLocalGameData();
     if (!localGameData) return;
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
+    // Eğer kullanıcı henüz yazmaya başlamadıysa silecek bir şey yok
     if (!state.getHasUserStartedTyping()) {
         return; 
     }
 
+    // Sondan başa doğru dolu olan ilk kutuyu bul ve sil
+    let deletedIndex = -1;
     for (let i = wordLength - 1; i >= 0; i--) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
         if (tile && tile.querySelector('.front').textContent !== '') {
             tile.querySelector('.front').textContent = '';
+            deletedIndex = i;
             break;
+        }
+    }
+    
+    // === YENİ: SATIR TAMAMEN BOŞALDIYSA İPUÇLARINI GERİ GETİR ===
+    // Eğer ilk kutu (index 0) boşaldıysa veya hiç harf kalmadıysa:
+    const firstTile = document.getElementById(`tile-${currentRow}-0`);
+    if (firstTile && firstTile.querySelector('.front').textContent === '') {
+        // Durumu resetle
+        state.setHasUserStartedTyping(false);
+        
+        // Bilinen pozisyonları al ve tekrar çiz
+        const knownPositions = getKnownCorrectPositions();
+        for (let j = 0; j < wordLength; j++) {
+            if (knownPositions[j]) {
+                updateStaticTile(currentRow, j, knownPositions[j], 'correct');
+            }
         }
     }
 }
