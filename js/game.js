@@ -719,12 +719,14 @@ function updateKnownPositions(playerGuesses) {
 
 // js/game.js dosyasında listenToGameUpdates fonksiyonunu bul ve bununla değiştir:
 
+// js/game.js dosyasında listenToGameUpdates fonksiyonunu bul ve bununla değiştir:
+
 export function listenToGameUpdates(gameId) {
     const gameUnsubscribe = state.getGameUnsubscribe();
     if (gameUnsubscribe) gameUnsubscribe();
     const gameRef = doc(db, "games", gameId);
 
-    const unsubscribe = onSnapshot(gameRef, (docSnapshot) => { // doc ismini docSnapshot yaptım karışıklık olmasın diye
+    const unsubscribe = onSnapshot(gameRef, (docSnapshot) => { 
         const gameData = docSnapshot.data();
         if (!gameData) {
             showToast("Oyun sonlandırıldı.");
@@ -732,55 +734,59 @@ export function listenToGameUpdates(gameId) {
             return;
         }
         
-        // Glitch önleyici: Eski tur verisi gelirse yoksay
+        // Glitch önleyici
         const localCurrentRound = state.getLocalGameData()?.currentRound;
         if (localCurrentRound && gameData.currentRound < localCurrentRound) {
              return;
         }
 
         const currentUserId = state.getUserId();
-        const oldGameData = state.getLocalGameData();
+        const oldGameData = state.getLocalGameData(); // Eski veriyi kaydet
         const oldStatus = oldGameData?.status;
         
-        state.setLocalGameData(gameData);
+        // === YENİ: SIRA BANA GELDİ Mİ KONTROLÜ ===
+        // Bu kontrolü setLocalGameData'dan ÖNCE yapmalıyız ki eski ve yeni veriyi kıyaslayabilelim.
+        if (oldGameData && gameData.status === 'playing') {
+            const oldPlayerId = oldGameData.currentPlayerId;
+            const newPlayerId = gameData.currentPlayerId;
+            
+            // Eğer eskiden sıra bende DEĞİLSE ve şimdi sıra BANA geldiyse:
+            if (oldPlayerId !== currentUserId && newPlayerId === currentUserId) {
+                // Sadece Battle Royale değilse (Sıralı moddaysa) çal
+                if (!isBattleRoyale(gameData.gameType)) {
+                    playSound('turn'); // "Sıra Sende" sesi
+                    showToast("🔔 Sıra Sende!", false); // Ufak bir görsel uyarı da ekleyelim
+                }
+            }
+        }
+        // === KONTROL BİTİŞİ ===
+
+        state.setLocalGameData(gameData); // Şimdi yeniyi kaydedebiliriz
         
         if (gameData.players && gameData.players[currentUserId]) {
             updateKnownPositions(gameData.players[currentUserId].guesses);
         }
 
-        // --- YENİ DÜZELTME: HERKES BİTTİ Mİ KONTROLÜ (WATCHDOG) ---
-        // Eğer oyun hala 'playing' modundaysa ama herkesin işi bittiyse, durumu 'finished' yap.
+        // --- WATCHDOG (Herkes Bitti mi Kontrolü) ---
         if (gameData.status === 'playing') {
             const allPlayerIds = Object.keys(gameData.players);
             const isEveryoneDone = allPlayerIds.every(pid => {
                 const p = gameData.players[pid];
                 if (!p) return false;
-                
-                // 1. Elendi mi? (BR modu)
                 if (p.isEliminated) return true;
-                
-                // 2. Çözdü mü?
                 const lastGuess = p.guesses[p.guesses.length - 1];
                 const hasWon = lastGuess && lastGuess.word === gameData.secretWord;
                 if (hasWon) return true;
-
-                // 3. Hakları bitti mi? (6 hak)
                 if (p.guesses.length >= GUESS_COUNT) return true;
-
-                // 4. Süresi bitti mi? (hasFailed flag'i varsa)
                 if (p.hasFailed) return true;
-
-                return false; // Hala oynuyor
+                return false; 
             });
 
-            // Eğer herkesin işi bittiyse veritabanını güncelle
             if (isEveryoneDone) {
                 console.log("LOG: Herkesin turu bitti. Oyun sonlandırılıyor...");
-                // Veritabanına status: finished gönder
                 updateDoc(gameRef, { status: 'finished' }).catch(err => console.error("Oyun bitirme hatası:", err));
             }
         }
-        // --- WATCHDOG BİTİŞİ ---
 
         const wasFinished = oldStatus === 'finished';
         const isNowPlaying = gameData.status === 'playing';
@@ -805,11 +811,9 @@ export function listenToGameUpdates(gameId) {
             state.resetHasUserStartedTyping();
         }
 
-        // --- BEKLEME MANTIĞI (Sadece kendi ekranımız için) ---
+        // --- BEKLEME MANTIĞI ---
         if (gameData.status === 'playing') {
             const myGuesses = gameData.players[currentUserId]?.guesses || [];
-            
-            // Eğer benim haklarım bittiyse ama oyun henüz (yukarıdaki Watchdog sayesinde) bitmediyse:
             if (myGuesses.length >= GUESS_COUNT) {
                 stopTurnTimer();
                 if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
@@ -820,7 +824,6 @@ export function listenToGameUpdates(gameId) {
             }
         }
         
-        // Oyun sunucuda resmen bittiyse skor tablosunu aç
         if (gameData.status === 'finished') {
             stopTurnTimer();
             renderGameState(gameData, didMyGuessChange).then(() => {
