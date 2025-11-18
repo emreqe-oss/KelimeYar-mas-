@@ -384,10 +384,12 @@ export function updateMultiplayerScoreBoard(gameData) {
     
     multiplayerScoreBoard.classList.toggle('hidden', !isBR);
 
+    // js/ui.js -> updateMultiplayerScoreBoard fonksiyonu içinde:
+
     if (isBR) {
         const players = Object.entries(gameData.players)
             .map(([id, data]) => ({ id, ...data }))
-            .sort((a, b) => a.id.localeCompare(b.id));
+            .sort((a, b) => (b.score || 0) - (a.score || 0)); // Puana göre sırala
 
         for (let i = 0; i < 4; i++) {
             const slot = brPlayerSlots[i];
@@ -399,47 +401,45 @@ export function updateMultiplayerScoreBoard(gameData) {
 
                 if (player) {
                     const isMe = player.id === currentUserId;
-                    const isEliminated = player.isEliminated;
+                    // isEliminated kontrolünü kaldırdık, artık herkes oyunda
                     const hasSolved = player.hasSolved;
                     const hasFailed = player.hasFailed;
 
                     let playerStatus = '';
                     let statusColor = 'text-gray-400';
-                    let bgColor = isMe ? 'bg-indigo-600' : 'bg-gray-600';
+                    let bgColor = isMe ? 'bg-indigo-600' : 'bg-gray-700';
                     let nameColor = isMe ? 'text-white' : 'text-gray-200';
 
+                    // Durum yerine PUAN gösterelim
+                    const scoreText = `${player.score || 0} Puan`;
+
                     if (hasSolved) {
-                        playerStatus = 'ÇÖZDÜ!';
+                        playerStatus = `✅ ${scoreText}`;
                         statusColor = 'text-green-400 font-bold';
-                    } else if (isEliminated) {
-                        playerStatus = 'ELENDİ';
-                        statusColor = 'text-red-400 font-bold';
-                        bgColor = 'bg-gray-700 opacity-60'; 
-                        nameColor = 'text-gray-500';
                     } else if (hasFailed) {
-                        playerStatus = 'HAKKI BİTTİ';
-                        statusColor = 'text-yellow-400 font-bold';
-                        bgColor = isMe ? 'bg-indigo-800' : 'bg-gray-700';
+                        playerStatus = `❌ ${scoreText}`;
+                        statusColor = 'text-red-400 font-bold';
                     } else if (gameData.status === 'playing') {
-                        playerStatus = `${(player.guesses || []).length}/${gameData.GUESS_COUNT}`;
-                        statusColor = isMe ? 'text-indigo-200' : 'text-gray-400';
+                        // Oynuyorsa kaçıncı tahminde olduğunu göster
+                        const guessCount = (player.guesses || []).length;
+                        playerStatus = `🤔 ${guessCount}/6 - ${scoreText}`;
+                        statusColor = 'text-yellow-300';
                     } else if (gameData.status === 'waiting') {
                         playerStatus = 'Bekliyor...';
-                        statusColor = 'text-gray-400';
+                    } else {
+                         playerStatus = scoreText;
                     }
 
-                    slot.className = `${bgColor} p-2 rounded-lg shadow`; 
-                    nameEl.textContent = `${player.username} ${isMe ? '(Sen)' : ''}`;
+                    slot.className = `${bgColor} p-2 rounded-lg shadow border border-gray-600`; 
+                    nameEl.textContent = `${player.username}`;
                     nameEl.className = `font-bold text-sm truncate ${nameColor}`;
                     statusEl.textContent = playerStatus;
                     statusEl.className = `text-xs ${statusColor}`;
 
                 } else {
-                    slot.className = 'bg-gray-700 p-2 rounded-lg shadow';
-                    nameEl.textContent = '---';
-                    nameEl.className = 'font-bold text-sm truncate text-gray-500';
+                    slot.className = 'bg-gray-800 p-2 rounded-lg shadow opacity-50';
+                    nameEl.textContent = '-';
                     statusEl.textContent = 'Boş';
-                    statusEl.className = 'text-xs text-gray-500';
                 }
             }
         }

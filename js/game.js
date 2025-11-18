@@ -74,75 +74,84 @@ export async function showScoreboard(gameData) {
     if (newRoundBtn) {
         newRoundBtn.disabled = false;
     }
-    if (isBattleRoyale(gameMode)) {
-        dailyStatsContainer.classList.remove('hidden');
-        defaultWordDisplayContainer.style.display = 'none';
-        const isMatchEndWithWinner = gameData.matchWinnerId && gameData.matchWinnerId !== null;
-        const isMatchDraw = gameData.matchWinnerId === null;
-        const isMatchFinished = gameData.matchWinnerId !== undefined; 
-        let winnerMessage;
-        let matchWinnerName = "";
-        if (isMatchEndWithWinner) {
-             matchWinnerName = gameData.players[gameData.matchWinnerId].username || "Sen";
-        }
-        if (isMatchEndWithWinner) {
-            winnerMessage = gameData.matchWinnerId === currentUserId ? "👑 TEBRİKLER, MAÇI KAZANDIN!" : `👑 MAÇI ${matchWinnerName} KAZANDİ!`;
-        } else if (isMatchDraw) {
-            winnerMessage = "Maç Berabere Bitti! 🤝";
-        } else if (gameData.roundWinner) {
-            const winnerName = gameData.players[gameData.roundWinner].username || "Sen";
-            winnerMessage = gameData.roundWinner === currentUserId ? "✅ TURU KAZANDIN!" : `✅ TURU ${winnerName} KAZANDI!`;
-        } else {
-            winnerMessage = "❌ KİMSE ÇÖZEMEDİ! BERABERE.";
-        }
-        roundWinnerDisplay.textContent = winnerMessage;
-        if (isMatchFinished) {
-             matchWinnerDisplay.style.display = 'block';
-             matchWinnerDisplay.textContent = isMatchEndWithWinner ? `OYUN SONU: ${matchWinnerName.toLocaleUpperCase('tr-TR')}` : 'OYUN SONU: BERABERE';
-             newRoundBtn.textContent = 'Ana Menü';
-             newRoundBtn.onclick = leaveGame;
-             newRoundBtn.classList.remove('hidden');
-        } else {
-             matchWinnerDisplay.style.display = 'none';
-             newRoundBtn.textContent = 'Sonraki Kelime'; 
-             newRoundBtn.onclick = () => {
-                 newRoundBtn.disabled = true;
-                 newRoundBtn.textContent = 'Yükleniyor...';
-                 showToast("Yeni tur başlatılıyor...", false); 
-                 startNewRound();
-             };
-            newRoundBtn.classList.remove('hidden');
-        }
-        playSound(gameData.matchWinnerId === currentUserId ? 'win' : (gameData.roundWinner === currentUserId ? 'win' : 'lose')); 
-        const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => {
-            if (a.id === gameData.matchWinnerId) return -1;
-            if (b.id === gameData.matchWinnerId) return 1;
-            if (a.isEliminated && !b.isEliminated) return 1;
-            if (b.isEliminated && !a.isEliminated) return -1;
-            if (a.hasSolved && !b.hasSolved) return -1;
-            if (b.hasSolved && !a.hasSolved) return 1;
-            if (a.hasFailed && !b.hasFailed) return 1;
-            if (b.hasFailed && !a.hasFailed) return -1;
-            return (a.username || '').localeCompare(b.username || '');
-        });
-        finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">Oyuncu Durumları (Tur ${gameData.currentRound})</h3>`;
-        finalScores.style.display = 'block';
-        sortedPlayers.forEach(player => {
-            const statusIcon = player.id === gameData.matchWinnerId ? '👑' : (player.isEliminated ? '💀' : (player.hasSolved ? '✅' : (player.hasFailed ? '❌' : '⏳')));
-            const scoreEl = document.createElement('p');
-            scoreEl.className = 'text-lg ' + (player.id === currentUserId ? 'font-bold text-yellow-300' : '');
-            scoreEl.textContent = `${statusIcon} ${player.username}`; 
-            finalScores.appendChild(scoreEl);
-        });
-        const meaning = await fetchWordMeaning(gameData.secretWord);
-        dailyStatsContainer.innerHTML = `
-            <div class="mt-6 mb-4">
-                <p>Doğru Kelime: <strong class="text-green-400 text-xl">${gameData.secretWord}</strong></p>
-                <p id="word-meaning-display-br" class="text-sm text-gray-400 mt-2 italic">${meaning}</p>
-            </div>
-        `;
-        return;
-    }
+    // js/game.js -> showScoreboard fonksiyonunun içindeki BR bloğunu değiştir:
+
+    if (isBattleRoyale(gameMode)) {
+        dailyStatsContainer.classList.remove('hidden');
+        defaultWordDisplayContainer.style.display = 'none';
+        
+        // === YENİ MANTIK: 10 TUR KONTROLÜ ===
+        const isMatchFinished = gameData.currentRound >= 10; // 10. Tur bitti mi?
+        
+        // Kazananı Puanına Göre Belirle (Eğer maç bittiyse)
+        let winnerMessage;
+        let matchWinnerName = "";
+        
+        if (isMatchFinished) {
+            // En yüksek puanlıyı bul
+            const playersArr = Object.values(gameData.players);
+            playersArr.sort((a, b) => (b.score || 0) - (a.score || 0));
+            const winner = playersArr[0];
+            
+            if (winner.score > 0) {
+                matchWinnerName = winner.username;
+                winnerMessage = winner.userId === currentUserId ? "👑 TEBRİKLER, ŞAMPİYONSUN!" : `👑 ŞAMPİYON: ${matchWinnerName}`;
+            } else {
+                winnerMessage = "MAÇ BERABERE BİTTİ!";
+            }
+            
+            matchWinnerDisplay.style.display = 'block';
+            matchWinnerDisplay.textContent = `MAÇ SONUCU: ${matchWinnerName} (${winner.score} Puan)`;
+            
+            newRoundBtn.textContent = 'Ana Menü';
+            newRoundBtn.onclick = leaveGame;
+            newRoundBtn.classList.remove('hidden');
+        } else {
+            // Maç devam ediyorsa
+            matchWinnerDisplay.style.display = 'none';
+            winnerMessage = gameData.roundWinner === currentUserId ? "✅ TURU KAZANDIN!" : "TUR TAMAMLANDI";
+            
+            newRoundBtn.textContent = `Sonraki Tur (${gameData.currentRound}/10)`; 
+            newRoundBtn.onclick = () => {
+                newRoundBtn.disabled = true;
+                newRoundBtn.textContent = 'Yükleniyor...';
+                showToast("Yeni tur başlatılıyor...", false); 
+                startNewRound();
+            };
+            newRoundBtn.classList.remove('hidden');
+        }
+
+        roundWinnerDisplay.textContent = winnerMessage;
+        playSound(isMatchFinished ? 'win' : 'turn'); 
+
+        // Skor Tablosu Sıralaması (Puana Göre)
+        const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => {
+            return (b.score || 0) - (a.score || 0); // Puana göre azalan sıralama
+        });
+
+        finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">Puan Durumu (Tur ${gameData.currentRound}/10)</h3>`;
+        finalScores.style.display = 'block';
+        
+        sortedPlayers.forEach(player => {
+            const statusIcon = player.hasSolved ? '✅' : (player.hasFailed ? '❌' : '⏳');
+            const scoreEl = document.createElement('div'); // div yaparak daha düzenli gösterelim
+            scoreEl.className = 'flex justify-between items-center bg-gray-700 p-2 rounded mb-1 ' + (player.id === currentUserId ? 'border border-yellow-400' : '');
+            scoreEl.innerHTML = `
+                <span class="font-bold text-white">${player.username}</span>
+                <span class="text-yellow-400 font-mono text-lg">${player.score || 0} Puan</span>
+            `; 
+            finalScores.appendChild(scoreEl);
+        });
+
+        const meaning = await fetchWordMeaning(gameData.secretWord);
+        dailyStatsContainer.innerHTML = `
+            <div class="mt-6 mb-4">
+                <p>Doğru Kelime: <strong class="text-green-400 text-xl">${gameData.secretWord}</strong></p>
+                <p id="word-meaning-display-br" class="text-sm text-gray-400 mt-2 italic">${meaning}</p>
+            </div>
+        `;
+        return;
+    }
     // js/game.js içinde showScoreboard fonksiyonunu bul
 // ve if (gameMode === 'daily') bloğunu tamamen bununla değiştir:
 
@@ -1136,7 +1145,7 @@ function restoreDailyGame(savedState) {
     const gameData = {
         wordLength: savedState.secretWord.length, 
         secretWord: savedState.secretWord, timeLimit: 60,
-        isHardMode: false, currentRound: 1, matchLength: 1,
+        isHardMode: false, currentRound: 1, matchLength: 10,
         roundWinner: savedState.status === 'finished' && savedState.guesses.length < GUESS_COUNT ? state.getUserId() : null,
         players: { 
             [state.getUserId()]: { 
