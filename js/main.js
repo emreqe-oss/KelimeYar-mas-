@@ -47,7 +47,7 @@ import {
     newRoundBtn, mainMenuBtn, shareResultsBtn,
     jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
     playTutorialAnimation,
-    stopTutorialAnimation
+    stopTutorialAnimation, marketBtn, backToMainFromMarketBtn, openKirtasiyeScreen
 } from './ui.js';
 import { 
     startNewGame, 
@@ -293,6 +293,19 @@ const openEditProfileScreen = () => {
 
 // Tüm butonlara tıklama olaylarını (event listener) ekleyen fonksiyon
 function addEventListeners() {
+
+    // Kırtasiye Butonları
+    if (marketBtn) {
+        marketBtn.addEventListener('click', () => openKelimeligScreen()); // HATA: Burada openKirtasiyeScreen olmalı
+        // DÜZELTME:
+        marketBtn.addEventListener('click', () => {
+             import('./ui.js').then(module => module.openKirtasiyeScreen());
+        });
+    }
+    
+    if (backToMainFromMarketBtn) {
+        backToMainFromMarketBtn.addEventListener('click', () => showScreen('main-menu-screen'));
+    }
 
     // Geri Tuşu Dinleyicisi
     window.addEventListener('popstate', (event) => {

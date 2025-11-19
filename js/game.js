@@ -2971,3 +2971,76 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
     showToast(`${opponentName} ile maç başladı! 120 Saniye!`, false); // Mesajı güncelledik
     // -------------------------
 }
+
+// --- MARKET (SATIN ALMA) İŞLEMLERİ ---
+
+export async function buyItem(type, itemKey, price) {
+    const userId = state.getUserId();
+    const profile = state.getCurrentUserProfile();
+    
+    if (!profile) return;
+
+    const currentGold = profile.gold || 0;
+
+    if (currentGold < price) {
+        showToast("Yetersiz bakiye! Altın kazanmalısın.", true);
+        playSound('lose'); // Hata sesi
+        return;
+    }
+
+    // Yeni bakiyeyi hesapla
+    const newGold = currentGold - price;
+    
+    // Envanteri güncelle
+    const inventory = profile.inventory || { present: 0, correct: 0, remove: 0 };
+    inventory[itemKey] = (inventory[itemKey] || 0) + 1;
+
+    try {
+        // Veritabanını güncelle
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+            gold: newGold,
+            inventory: inventory
+        });
+
+        // Yerel profili güncelle
+        const newProfile = { ...profile, gold: newGold, inventory: inventory };
+        state.setCurrentUserProfile(newProfile);
+        
+        // UI'ı güncelle
+        const { updateMarketUI } = await import('./ui.js');
+        updateMarketUI();
+
+        showToast("Satın alma başarılı!", false);
+        playSound('win'); // Kasa sesi gibi düşün
+
+    } catch (error) {
+        console.error("Satın alma hatası:", error);
+        showToast("İşlem sırasında hata oluştu.", true);
+    }
+}
+
+export async function addGold(amount) {
+    const userId = state.getUserId();
+    const profile = state.getCurrentUserProfile();
+    if (!profile) return;
+
+    const newGold = (profile.gold || 0) + amount;
+
+    try {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { gold: newGold });
+
+        const newProfile = { ...profile, gold: newGold };
+        state.setCurrentUserProfile(newProfile);
+        
+        const { updateMarketUI } = await import('./ui.js');
+        updateMarketUI();
+
+        showToast(`${amount} Altın hesabına eklendi!`, false);
+        playSound('win');
+
+    } catch (error) {
+        console.error("Altın ekleme hatası:", error);
+    }
+}

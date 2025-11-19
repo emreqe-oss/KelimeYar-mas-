@@ -24,7 +24,7 @@ export let
     // Main Menu
     newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
     howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
-    closeProfileBtn,
+    closeProfileBtn, marketBtn, backToMainFromMarketBtn, userGoldDisplay, stockPresent, stockCorrect, stockRemove,
     
     // Navigation
     backToMainMenuBtn, backToMainMenuFromGamesBtn, backToMainFromFriendsBtn,
@@ -54,6 +54,16 @@ export let
     // Misc
     userDisplay, invitationModal, 
     copyGameIdBtn; // <-- İŞTE EKSİK OLAN BU VE ARKADAŞLARI!
+
+    // initUI fonksiyonunun içine:
+
+    // Market UI
+    marketBtn = document.getElementById('market-btn');
+    backToMainFromMarketBtn = document.getElementById('back-to-main-from-market-btn');
+    userGoldDisplay = document.getElementById('user-gold-display');
+    stockPresent = document.getElementById('stock-present');
+    stockCorrect = document.getElementById('stock-correct');
+    stockRemove = document.getElementById('stock-remove');
 
 const brPlayerSlots = []; 
 let currentScreen = '';
@@ -170,7 +180,7 @@ export function showScreen(screenId, isBackNavigation = false) {
         'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
         'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
         'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
-        'edit-profile-screen', 'kelimelig-screen'
+        'edit-profile-screen', 'kelimelig-screen', 'kirtasiye-screen'
     ];
     
     if (currentScreen === screenId) return;
@@ -1074,4 +1084,46 @@ export function renderLeagueStandings(standingsData, currentUserId) {
         `;
         tbody.appendChild(tr);
     });
+}
+
+// --- KIRTASİYE (MARKET) FONKSİYONLARI ---
+
+import { buyItem, addGold } from './game.js'; // Birazdan game.js'e yazacağız
+
+export function updateMarketUI() {
+    const profile = state.getCurrentUserProfile();
+    if (!profile) return;
+
+    // Altın (Yoksa 0 varsay)
+    const gold = profile.gold || 0;
+    if (userGoldDisplay) userGoldDisplay.textContent = gold;
+
+    // Envanter (Yoksa boş obje varsay)
+    const inventory = profile.inventory || { present: 0, correct: 0, remove: 0 };
+    
+    if (stockPresent) stockPresent.textContent = inventory.present || 0;
+    if (stockCorrect) stockCorrect.textContent = inventory.correct || 0;
+    if (stockRemove) stockRemove.textContent = inventory.remove || 0;
+
+    // Satın Alma Butonları Dinleyicileri (Her açılışta yenilememek için kontrol edilebilir ama basitlik için tekrar atıyoruz)
+    document.querySelectorAll('.buy-item-btn').forEach(btn => {
+        btn.onclick = () => {
+            const type = btn.dataset.type; // 'joker'
+            const item = btn.dataset.item; // 'present', 'correct', 'remove'
+            const price = parseInt(btn.dataset.price);
+            buyItem(type, item, price);
+        };
+    });
+
+    document.querySelectorAll('.buy-gold-btn').forEach(btn => {
+        btn.onclick = () => {
+            const amount = parseInt(btn.dataset.amount);
+            addGold(amount);
+        };
+    });
+}
+
+export function openKirtasiyeScreen() {
+    showScreen('kirtasiye-screen');
+    updateMarketUI();
 }
