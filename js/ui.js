@@ -1,8 +1,10 @@
-// js/ui.js - TAM DOSYA (TÜM DÜZELTMELER DAHİL)
+// js/ui.js - TAM DOSYA (Kelimelig, BR Puanlama, Klavye Düzeltmesi, Rozetler)
 
-import * as state from './state.js'; // Sunucunun çökmemesi için import
+// js/ui.js EN BAŞI
+
+import * as state from './state.js'; 
 import { getStatsFromProfile, createElement } from './utils.js';
-import { joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame } from './game.js';
+import { joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame, checkLeagueStatus, joinCurrentLeague } from './game.js';
 
 // Değişkenler
 export let 
@@ -33,21 +35,28 @@ export let
     dailyWordBtn, 
     createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn,
     
+    // Kelimelig UI
+    kelimeligBtn, joinLeagueBtn, backToMainFromLeagueBtn, 
+    leagueIntroSection, leagueDashboardSection, leagueMatchesList,
+    btnShowFixtures, btnShowStandings, tabLeagueFixtures, tabLeagueStandings, leagueStandingsBody,
+
     // Friends Tabs
     friendsTab, requestsTab, addFriendTab, showFriendsTabBtn, 
     showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn, friendRequestCount,
     
     // My Games Tabs
-    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
-    gameInviteCount,
+    showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn, 
+    gameInviteCount, // <-- BUNU EKLEMİŞTİK, KALSIN
     
     // Game Over
     newRoundBtn, mainMenuBtn, shareResultsBtn,
     
     // Misc
-    userDisplay, invitationModal, copyGameIdBtn;
+    userDisplay, invitationModal, 
+    copyGameIdBtn; // <-- İŞTE EKSİK OLAN BU VE ARKADAŞLARI!
 
 const brPlayerSlots = []; 
+let currentScreen = '';
 
 export function initUI() {
     // Game Screen
@@ -93,6 +102,21 @@ export function initUI() {
     themeLightBtn = document.getElementById('theme-light-btn');
     themeDarkBtn = document.getElementById('theme-dark-btn');
     closeProfileBtn = document.getElementById('close-profile-btn');
+
+    // Kelimelig UI
+    kelimeligBtn = document.getElementById('kelimelig-btn');
+    joinLeagueBtn = document.getElementById('join-league-btn');
+    backToMainFromLeagueBtn = document.getElementById('back-to-main-from-league-btn');
+    leagueIntroSection = document.getElementById('league-intro-section');
+    leagueDashboardSection = document.getElementById('league-dashboard-section');
+    leagueMatchesList = document.getElementById('league-matches-list');
+    
+    // Kelimelig Tabs
+    btnShowFixtures = document.getElementById('btn-show-fixtures');
+    btnShowStandings = document.getElementById('btn-show-standings');
+    tabLeagueFixtures = document.getElementById('tab-league-fixtures');
+    tabLeagueStandings = document.getElementById('tab-league-standings');
+    leagueStandingsBody = document.getElementById('league-standings-body');
 
     // Navigation
     backToMainMenuBtn = document.getElementById('back-to-main-menu-btn');
@@ -141,42 +165,30 @@ export function initUI() {
     copyGameIdBtn = document.getElementById('copy-game-id-btn');
 }
 
-// js/ui.js (yaklaşık 128. satır)
-
-// YENİ: Hangi ekranda olduğumuzu global olarak takip etmek için bu değişkeni ekleyin
-let currentScreen = '';
-
 export function showScreen(screenId, isBackNavigation = false) {
-    const screens = [
-        'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
-        'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
-        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
-        'edit-profile-screen'
-    ];
+    const screens = [
+        'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
+        'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
+        'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
+        'edit-profile-screen', 'kelimelig-screen'
+    ];
     
-    // YENİ: Zaten o ekrandaysak hiçbir şey yapma
     if (currentScreen === screenId) return;
 
-    screens.forEach(id => {
-        const screenElement = document.getElementById(id);
-        if (screenElement) {
-            screenElement.classList.add('hidden');
-        }
-    });
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) {
-        targetScreen.classList.remove('hidden');
-        currentScreen = screenId; // Yeni mevcut ekranı ayarla
-
-        // YENİ: Eğer bu fonksiyon 'geri' tuşuyla çağrılmadıysa,
-        // tarayıcı geçmişine yeni bir kayıt ekle.
+    screens.forEach(id => {
+        const screenElement = document.getElementById(id);
+        if (screenElement) {
+            screenElement.classList.add('hidden');
+        }
+    });
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.remove('hidden');
+        currentScreen = screenId;
         if (!isBackNavigation) {
-            // #screenId (örn: #main-menu-screen) URL'ye eklenecek
             history.pushState({ screen: screenId }, '', `#${screenId}`);
         }
-    } else {
-        console.error(`showScreen Fonksiyonu çağrıldı ama "${screenId}" ID'li ekran bulunamadı!`);
-    }
+    }
 }
 
 export function createGrid(wordLength, GUESS_COUNT) {
@@ -230,120 +242,63 @@ export function createKeyboard(handleKeyPress) {
     });
 }
 
-
-// === BAŞLANGIÇ: DÜZELTİLMİŞ updateKeyboard FONKSİYONU ===
-// js/ui.js dosyasında updateKeyboard fonksiyonunu bul ve bununla değiştir:
-
 export function updateKeyboard(gameData) {
     if (!gameData || !gameData.players) return;
 
-    // Kendi ID'mizi state'den alıyoruz
     const currentUserId = state.getUserId(); 
     if (!currentUserId) return; 
 
     const keyStates = {};
 
-    // 1. ADIM: SADECE KENDİ TAHMİNLERİMİZİ İŞLE
-    // Artık sadece 'currentUserId'ye ait tahminlere bakıyoruz.
+    // SADECE KENDİ TAHMİNLERİMİZ (Rakip ipucu yok)
     const myGuesses = gameData.players[currentUserId]?.guesses || [];
-    
     myGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
             const color = colors[i];
-            
-            // Eğer bu harf daha önce 'correct' (yeşil) işaretlendiyse, rengini koru.
             if (keyStates[letter] === 'correct') continue; 
-            
-            // Eğer bu harf 'present' (sarı) ise ve şimdiki durum 'correct' değilse, sarı kalmaya devam etsin.
             if (keyStates[letter] === 'present' && color !== 'correct') continue; 
-            
-            // Harfin durumunu güncelle (absent, present veya correct)
             keyStates[letter] = color;
         }
     });
 
-    // --- DEĞİŞİKLİK ---
-    // "Rakip Tahminlerini İşle" bloğu buradan tamamen silindi.
-    // Böylece rakip "A" harfini bulsa bile, sizin klavyenizde "A" renklenmeyecek.
-    // ------------------
-
-    // 2. ADIM: Hesaplanan renkleri klavye tuşlarına uygula
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
-        
         const guessColor = keyStates[keyId]; 
-        
-        // Önceki renkleri temizle
         btn.classList.remove('correct', 'present', 'absent');
-
-        // Yeni rengi ekle
-        if (guessColor === 'correct') {
-            btn.classList.add('correct');
-        } 
-        else if (guessColor === 'present') {
-            btn.classList.add('present');
-        } 
-        else if (guessColor === 'absent') {
-            btn.classList.add('absent');
-        }
+        if (guessColor === 'correct') btn.classList.add('correct');
+        else if (guessColor === 'present') btn.classList.add('present');
+        else if (guessColor === 'absent') btn.classList.add('absent');
     });
 }
-// === BİTİŞ: DÜZELTİLMİŞ updateKeyboard FONKSİYONU ===
 
-
-// === BAŞLANGIÇ: YENİ EKLENEN FONKSİYONLAR (GERÇEK OYUN İÇİN) ===
-
-/**
- * YENİ FONKSİYON: Bir kareyi animasyonsuz, anında günceller.
- * (Yeşil harfleri alt satıra taşımak için kullanılır)
- */
+// --- YENİ: Hayalet Harfler İçin Statik Kutu Güncelleme ---
 export function updateStaticTile(row, col, letter, colorClass) {
     const tileId = `tile-${row}-${col}`;
     const tile = document.getElementById(tileId);
     if (!tile) return;
-
     const front = tile.querySelector('.front');
     const back = tile.querySelector('.back');
-
-    // Harfi hem öne hem arkaya yaz
     front.textContent = letter;
     back.textContent = letter;
-
-    // Rengi .back yüzüne ver
     back.className = 'tile-inner back ' + colorClass;
-
-    // Kutuya 'flip' (dönme) sınıfı VERME.
-    // Sadece statik rengi göstermesi için 'tile' sınıfına da ekle.
     tile.className = 'tile static ' + colorClass;
 }
 
-/**
- * YENİ FONKSİYON: Bir satırdaki tüm statik (taşınan) kareleri temizler.
- * (Kullanıcı yazmaya başladığında çağrılır)
- */
 export function clearStaticTiles(row, wordLength) {
      for (let j = 0; j < wordLength; j++) {
         const tileId = `tile-${row}-${j}`;
         const tile = document.getElementById(tileId);
-        // Sadece 'static' sınıfına sahip olanları temizle
         if (tile && tile.classList.contains('static')) {
-             // Statik rengi kaldır, normal boş tile'a döndür
              tile.className = 'tile';
              const front = tile.querySelector('.front');
-             // === DÜZELTME (Hard Mode Hatası için) ===
-             // Harfleri hem önden hem arkadan sil
              if (front) front.textContent = '';
              const back = tile.querySelector('.back');
              if (back) back.textContent = '';
-             // === DÜZELTME SONU ===
         }
     }
 }
-
-// === BİTİŞ: YENİ EKLENEN FONKSİYONLAR ===
-
 
 export function getUsername() {
     const profile = state.getCurrentUserProfile();
@@ -384,12 +339,10 @@ export function updateMultiplayerScoreBoard(gameData) {
     
     multiplayerScoreBoard.classList.toggle('hidden', !isBR);
 
-    // js/ui.js -> updateMultiplayerScoreBoard fonksiyonu içinde:
-
     if (isBR) {
         const players = Object.entries(gameData.players)
             .map(([id, data]) => ({ id, ...data }))
-            .sort((a, b) => (b.score || 0) - (a.score || 0)); // Puana göre sırala
+            .sort((a, b) => (b.score || 0) - (a.score || 0)); 
 
         for (let i = 0; i < 4; i++) {
             const slot = brPlayerSlots[i];
@@ -401,7 +354,6 @@ export function updateMultiplayerScoreBoard(gameData) {
 
                 if (player) {
                     const isMe = player.id === currentUserId;
-                    // isEliminated kontrolünü kaldırdık, artık herkes oyunda
                     const hasSolved = player.hasSolved;
                     const hasFailed = player.hasFailed;
 
@@ -410,7 +362,6 @@ export function updateMultiplayerScoreBoard(gameData) {
                     let bgColor = isMe ? 'bg-indigo-600' : 'bg-gray-700';
                     let nameColor = isMe ? 'text-white' : 'text-gray-200';
 
-                    // Durum yerine PUAN gösterelim
                     const scoreText = `${player.score || 0} Puan`;
 
                     if (hasSolved) {
@@ -420,7 +371,6 @@ export function updateMultiplayerScoreBoard(gameData) {
                         playerStatus = `❌ ${scoreText}`;
                         statusColor = 'text-red-400 font-bold';
                     } else if (gameData.status === 'playing') {
-                        // Oynuyorsa kaçıncı tahminde olduğunu göster
                         const guessCount = (player.guesses || []).length;
                         playerStatus = `🤔 ${guessCount}/6 - ${scoreText}`;
                         statusColor = 'text-yellow-300';
@@ -511,8 +461,6 @@ export function switchMyGamesTab(tabName) {
     }
 }
 
-// js/ui.js dosyasında renderMyGamesLists fonksiyonunu bul ve bununla değiştir:
-
 export function renderMyGamesLists(activeGames, finishedGames, invites) {
     const activeTab = document.getElementById('active-games-tab');
     const finishedTab = document.getElementById('finished-games-tab');
@@ -524,7 +472,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
 
     const createPlaceholder = (text) => `<p class="text-center text-gray-400 mt-16">${text}</p>`;
 
-    // --- YARDIMCI FONKSİYON: Oyun Tipini Metne Çevir ---
     const getGameTypeLabel = (game) => {
         if (game.gameType === 'multiplayer-br') return '👑 Battle Royale';
         if (game.gameType === 'random_series') return '🏆 Seri Oyun (Rastgele)';
@@ -534,9 +481,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
         }
         return 'Oyun';
     };
-    // ----------------------------------------------------
 
-    // Aktif Oyunları Render Et
     if (activeGames.length > 0) {
         activeGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
@@ -549,7 +494,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                 statusText = game.status === 'waiting' ? `Lobi (${game.playerIds.length}/${game.maxPlayers || 4})` : `Oynanıyor (Tur ${game.currentRound})`;
             }
 
-            // Oyun Tipi Etiketi
             const typeLabel = getGameTypeLabel(game);
 
             const gameDiv = createElement('div', {
@@ -557,11 +501,10 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             });
 
             const infoDiv = createElement('div', {
-                className: 'cursor-pointer hover:opacity-75 flex-grow', // Tıklama alanını genişlet
+                className: 'cursor-pointer hover:opacity-75 flex-grow',
                 onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)),
             });
             
-            // Başlık Kısmı (İsim ve Etiket)
             const titleContainer = createElement('div', { className: 'flex flex-col mb-1' });
             
             const titleP = createElement('span', {
@@ -575,7 +518,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             });
 
             titleContainer.appendChild(titleP);
-            titleContainer.appendChild(typeBadge); // Etiketi ismin altına ekledik
+            titleContainer.appendChild(typeBadge);
             
             const statusP = createElement('p', {
                 className: `text-sm ${game.currentPlayerId === state.getUserId() || (game.gameType === 'multiplayer-br' && game.status === 'playing') ? 'text-green-400 font-bold' : 'text-gray-400'}`,
@@ -606,7 +549,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
         activeTab.innerHTML = createPlaceholder('Aktif oyununuz bulunmuyor.');
     }
 
-    // Biten Oyunları Render Et
     if (finishedGames.length > 0) {
         finishedGames.forEach(game => {
             const opponentId = game.playerIds.find(id => id !== state.getUserId());
@@ -616,7 +558,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
             let borderColor = 'border-gray-500';
 
             if (game.gameType === 'multiplayer-br') {
-                // BR için puan tabanlı sonuç gösterimi
                 const myScore = game.players[state.getUserId()]?.score || 0;
                 resultText = `${myScore} Puan`;
                 borderColor = 'border-indigo-500';
@@ -649,7 +590,6 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
         finishedTab.innerHTML = createPlaceholder('Henüz biten oyununuz yok.');
     }
 
-    // Davetleri Render Et
     if (invites.length > 0) {
         invites.forEach(invite => {
             const creatorUsername = invite.players[invite.creatorId]?.username || 'Bir arkadaşın';
@@ -723,8 +663,126 @@ export function updateJokerUI(jokersUsed, isMyTurn, gameStatus) {
     });
 }
 
-// === BAŞLANGIÇ: "NASIL OYNANIR" ANİMASYON KODLARI (DEĞİŞİKLİK YOK) ===
+// --- KELİMELİG (League) EK FONKSİYONLARI ---
 
+export async function openKelimeligScreen() {
+    showScreen('kelimelig-screen');
+    
+    // UI'ı sıfırla
+    const intro = document.getElementById('league-intro-section');
+    const dashboard = document.getElementById('league-dashboard-section');
+    const joinStatus = document.getElementById('league-join-status');
+    const joinBtn = document.getElementById('join-league-btn');
+
+    if(intro) intro.classList.remove('hidden');
+    if(dashboard) dashboard.classList.add('hidden');
+    if(joinStatus) joinStatus.classList.add('hidden');
+    if(joinBtn) joinBtn.classList.remove('hidden');
+
+    await checkLeagueStatus();
+}
+
+export function renderLeagueMatches(matches, currentUserId) {
+    const list = document.getElementById('league-matches-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (matches.length === 0) {
+        list.innerHTML = `
+            <div class="text-center p-8 bg-gray-700/30 rounded-lg border border-dashed border-gray-600">
+                <p class="text-gray-400 text-sm">Henüz rakip yok.</p>
+                <p class="text-xs text-gray-500 mt-1">Lig başladığında rakipler burada görünecek.</p>
+            </div>
+        `;
+        return;
+    }
+
+    matches.forEach(match => {
+        const opponentId = match.p1 === currentUserId ? match.p2 : match.p1;
+        const opponentName = match.opponentName || 'Rakip';
+        
+        const myData = match.p1 === currentUserId ? match.p1_data : match.p2_data;
+        const oppData = match.p1 === currentUserId ? match.p2_data : match.p1_data;
+        
+        const hasIPlayed = myData && myData.guesses;
+        const hasOppPlayed = oppData && oppData.guesses;
+
+        let statusBadge = '';
+        let buttonHTML = '';
+        let cardClass = 'bg-gray-800 border-gray-700';
+        let scoreDisplay = '';
+
+        if (hasIPlayed) {
+            // Ben oynamışım
+            if (!hasOppPlayed) {
+                // Rakip oynamamış
+                buttonHTML = '<button class="bg-gray-600 text-gray-400 cursor-not-allowed py-1 px-3 rounded text-xs font-bold" disabled>Bekleniyor...</button>';
+                statusBadge = '<span class="text-[10px] bg-yellow-900/50 text-yellow-500 px-2 py-0.5 rounded uppercase tracking-wide">Rakip Bekleniyor</span>';
+                cardClass = 'bg-gray-800/80 border-yellow-900/30';
+            } else {
+                // İkimiz de oynamışız
+                const myGuesses = myData.guesses.length;
+                const oppGuesses = oppData.guesses.length;
+                const myFail = myData.failed;
+                const oppFail = oppData.failed;
+                
+                let myPoints = 0;
+                let resultText = '';
+                let resultColor = '';
+
+                if (myFail && oppFail) { myPoints = 1; resultText = 'BERABERE'; resultColor = 'text-blue-400'; }
+                else if (myFail) { myPoints = 0; resultText = 'KAYBETTİN'; resultColor = 'text-red-400'; }
+                else if (oppFail) { myPoints = 3; resultText = 'KAZANDIN'; resultColor = 'text-green-400'; }
+                else if (myGuesses < oppGuesses) { myPoints = 3; resultText = 'KAZANDIN'; resultColor = 'text-green-400'; }
+                else if (myGuesses === oppGuesses) { myPoints = 1; resultText = 'BERABERE'; resultColor = 'text-blue-400'; }
+                else { myPoints = 0; resultText = 'KAYBETTİN'; resultColor = 'text-red-400'; }
+
+                buttonHTML = `<div class="text-right"><span class="block text-xs font-bold ${resultColor}">${resultText}</span></div>`;
+                scoreDisplay = `<div class="flex flex-col items-center justify-center bg-gray-900 rounded p-2 ml-3 w-12 h-12 border border-gray-700 shadow-inner">
+                                    <span class="text-lg font-black text-white leading-none">${myPoints}</span>
+                                    <span class="text-[8px] text-gray-500 uppercase">Puan</span>
+                                </div>`;
+                cardClass = myPoints === 3 ? 'bg-green-900/20 border-green-900/50' : (myPoints === 1 ? 'bg-blue-900/20 border-blue-900/50' : 'bg-red-900/10 border-red-900/30');
+            }
+        } else {
+            // Ben oynamamışım
+            buttonHTML = `<button class="play-league-match-btn bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-lg transition active:scale-95 flex items-center gap-1">
+                            <span>▶</span> OYNA
+                          </button>`;
+            statusBadge = '<span class="text-[10px] bg-green-900/50 text-green-400 px-2 py-0.5 rounded uppercase tracking-wide animate-pulse">Sıra Sende</span>';
+            cardClass = 'bg-gray-700 border-green-500/50 shadow-md';
+        }
+
+        const matchDiv = document.createElement('div');
+        matchDiv.className = `p-3 rounded-lg border flex justify-between items-center transition hover:bg-gray-750 ${cardClass}`;
+        
+        matchDiv.innerHTML = `
+            <div class="flex flex-col">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-white text-md">${opponentName}</span>
+                </div>
+                ${statusBadge}
+            </div>
+            <div class="flex items-center">
+                ${buttonHTML}
+                ${scoreDisplay}
+            </div>
+        `;
+        
+        const playBtn = matchDiv.querySelector('.play-league-match-btn');
+        if (playBtn) {
+            playBtn.onclick = () => {
+                import('./game.js').then(module => {
+                    module.startLeagueMatch(match.id, opponentId, opponentName);
+                });
+            };
+        }
+
+        list.appendChild(matchDiv);
+    });
+}
+
+// --- TUTORIAL (Animasyon Kodları) ---
 let tutorialTimeoutIds = []; 
 let isTutorialRunning = false; 
 
@@ -807,7 +865,7 @@ async function updateTutorialKeyboard(keys, colorClass, delay) {
             keyEl.className = 'tutorial-key correct';
         } else if (colorClass === 'present') {
             keyEl.className = 'tutorial-key present';
-        } else { // absent
+        } else { 
             keyEl.className = 'tutorial-key absent';
         }
         
@@ -850,16 +908,13 @@ async function animateJokerRemove(delay) {
     }
 }
 
-
 export async function playTutorialAnimation() {
     if (isTutorialRunning) return; 
     isTutorialRunning = true; 
     cleanTutorialBoard(); 
-
-    // Senaryonun gizli kelimesi: ÖRNEK
     
     try {
-        // --- ADIM 1: TAHMİN "ÖLÇÜT" (SATIR 0) ---
+        // ADIM 1: TAHMİN "ÖLÇÜT"
         const guess1 = { word: ['Ö', 'L', 'Ç', 'Ü', 'T'], colors: ['correct', 'absent', 'absent', 'absent', 'absent'], keys: { correct: ['Ö'], absent: ['L', 'Ç', 'Ü', 'T'] } };
         await typeTutorialTile(0, 0, guess1.word[0], 50); 
         await typeTutorialTile(0, 1, guess1.word[1], 150);
@@ -872,75 +927,75 @@ export async function playTutorialAnimation() {
         await updateTutorialKeyboard(guess1.keys.absent, 'absent', 0);
         await wait(2000); 
 
-        // --- ADIM 2: TAHMİN "ÖZLEM" (SATIR 1) ---
+        // ADIM 2: TAHMİN "ÖZLEM"
         const guess2 = { word: ['Ö', 'Z', 'L', 'E', 'M'], colors: ['correct', 'absent', 'absent', 'correct', 'absent'], keys: { correct: ['E'], absent: ['Z', 'M'] } };
-        await wait(500); // Tahminler arası bekleme
-        await typeTutorialTile(1, 0, 'Ö', 0); // 'Ö' harfini satıra koy
-        await flipTutorialTile(1, 0, 'correct', 0); // Anında yeşil yap
-        await wait(1500); // *** KRİTİK BEKLEME 1: Kullanıcı taşınan harfi görsün ***
-        await typeTutorialTile(1, 1, guess2.word[1], 150); // 'Z'
-        await typeTutorialTile(1, 2, guess2.word[2], 150); // 'L'
-        await typeTutorialTile(1, 3, guess2.word[3], 150); // 'E'
-        await typeTutorialTile(1, 4, guess2.word[4], 150); // 'M'
+        await wait(500); 
+        await typeTutorialTile(1, 0, 'Ö', 0); 
+        await flipTutorialTile(1, 0, 'correct', 0); 
+        await wait(1500); 
+        await typeTutorialTile(1, 1, guess2.word[1], 150); 
+        await typeTutorialTile(1, 2, guess2.word[2], 150); 
+        await typeTutorialTile(1, 3, guess2.word[3], 150); 
+        await typeTutorialTile(1, 4, guess2.word[4], 150); 
         await wait(1000);
         for (let i = 1; i < 5; i++) await flipTutorialTile(1, i, guess2.colors[i], 300);
         await updateTutorialKeyboard(guess2.keys.correct, 'correct', 0);
         await updateTutorialKeyboard(guess2.keys.absent, 'absent', 0);
         await wait(2000); 
 
-        // --- ADIM 3: SARI JOKER + TAHMİN "ÖNDER" (SATIR 2) ---
-        await wait(500); // Adımlar arası bekleme
-        await typeTutorialTile(2, 0, 'Ö', 0); // 0. index
+        // ADIM 3: SARI JOKER + TAHMİN "ÖNDER"
+        await wait(500); 
+        await typeTutorialTile(2, 0, 'Ö', 0); 
         await flipTutorialTile(2, 0, 'correct', 0);
-        await typeTutorialTile(2, 3, 'E', 150); // 3. index
+        await typeTutorialTile(2, 3, 'E', 150); 
         await flipTutorialTile(2, 3, 'correct', 0);
-        await wait(2000); // *** KRİTİK BEKLEME 2: (Yavaşlatıldı) Kullanıcı taşınan 2 harfi görsün ***
+        await wait(2000); 
 
         await highlightTutorialJoker('tutorial-joker-present', 0, 1000);
         await disableTutorialJoker('tutorial-joker-present', 1000);
-        await wait(1000); // Jokerin basılma efektini gör
+        await wait(1000); 
 
-        await typeTutorialTile(2, 1, 'N', 500); // Jokerin ipucu verdiği 'N' harfi
-        await flipTutorialTile(2, 1, 'present', 0); // Anında SARI yap
-        await wait(2000); // *** KRİTİK BEKLEME 3: (Yavaşlatıldı) Kullanıcı sarı joker ipucunu görsün ***
+        await typeTutorialTile(2, 1, 'N', 500); 
+        await flipTutorialTile(2, 1, 'present', 0); 
+        await wait(2000); 
         
         await typeTutorialTile(2, 2, 'D', 150);
         await typeTutorialTile(2, 4, 'R', 150);
 
         const guess3 = { word: ['Ö', 'N', 'D', 'E', 'R'], colors: ['correct', 'present', 'absent', 'correct', 'present'], keys: { present: ['N', 'R'], absent: ['D'] } };
         await wait(1000);
-        await flipTutorialTile(2, 2, guess3.colors[2], 300); // D (gri)
-        await flipTutorialTile(2, 4, guess3.colors[4], 300); // R (sarı)
+        await flipTutorialTile(2, 2, guess3.colors[2], 300); 
+        await flipTutorialTile(2, 4, guess3.colors[4], 300); 
         await updateTutorialKeyboard(guess3.keys.present, 'present', 0);
         await updateTutorialKeyboard(guess3.keys.absent, 'absent', 0);
         await wait(2000); 
 
-        // --- ADIM 4: KLAVYE JOKERİ (Remove) ---
-        await wait(500); // Adımlar arası bekleme
-        await typeTutorialTile(3, 0, 'Ö', 0); // 4. Satıra (index 3) 'Ö' koy
+        // ADIM 4: KLAVYE JOKERİ
+        await wait(500); 
+        await typeTutorialTile(3, 0, 'Ö', 0); 
         await flipTutorialTile(3, 0, 'correct', 0);
-        await typeTutorialTile(3, 3, 'E', 150); // 4. Satıra (index 3) 'E' koy
+        await typeTutorialTile(3, 3, 'E', 150); 
         await flipTutorialTile(3, 3, 'correct', 0);
-        await wait(2000); // *** KRİTİK BEKLEME 4: (Yavaşlatıldı) Taşınan harfleri gör ***
+        await wait(2000); 
 
         await highlightTutorialJoker('tutorial-joker-remove', 0, 1000);
         await disableTutorialJoker('tutorial-joker-remove', 1000);
-        await animateJokerRemove(1000); // 4 harfi sil
+        await animateJokerRemove(1000); 
         await wait(2000); 
 
-        // --- ADIM 5: YEŞİL JOKER (Correct) + "ÖRNEK" TAHMİNİ (SATIR 3) ---
-        await wait(500); // Adımlar arası bekleme
+        // ADIM 5: YEŞİL JOKER + "ÖRNEK"
+        await wait(500); 
         await highlightTutorialJoker('tutorial-joker-correct', 0, 1000);
         await disableTutorialJoker('tutorial-joker-correct', 1000);
-        await wait(1000); // Jokerin basılma efektini gör
+        await wait(1000); 
         
-        await typeTutorialTile(3, 4, 'K', 500); // Jokerin ipucu verdiği 'K' harfi
-        await flipTutorialTile(3, 4, 'correct', 0); // Anında YEŞİL yap
-        await wait(2000); // *** KRİTİK BEKLEME 5: (Yavaşlatıldı) Yeşil joker ipucunu gör ***
+        await typeTutorialTile(3, 4, 'K', 500); 
+        await flipTutorialTile(3, 4, 'correct', 0); 
+        await wait(2000); 
         
         const guess4 = { word: ['Ö', 'R', 'N', 'E', 'K'], colors: ['correct', 'correct', 'correct', 'correct', 'correct'], keys: { correct: ['R', 'N', 'K'] } };
-        await typeTutorialTile(3, 1, guess4.word[1], 150); // R
-        await typeTutorialTile(3, 2, guess4.word[2], 150); // N
+        await typeTutorialTile(3, 1, guess4.word[1], 150); 
+        await typeTutorialTile(3, 2, guess4.word[2], 150); 
         
         await wait(1000);
         await flipTutorialTile(3, 1, guess4.colors[1], 300);
@@ -948,10 +1003,7 @@ export async function playTutorialAnimation() {
         
         await updateTutorialKeyboard(guess4.keys.correct, 0);
         
-        // Animasyon bitti.
-        
     } catch (e) {
-        // "Anladım"a basılırsa burası çalışır.
         console.log("Tutorial animation stopped by user.");
     } finally {
         isTutorialRunning = false;
@@ -962,4 +1014,64 @@ export function stopTutorialAnimation() {
     isTutorialRunning = false; 
     cleanTutorialBoard();
 }
-// === BİTİŞ: "NASIL OYNANIR" ANİMASYON KODLARI ===
+
+// --- KELİMELİG SEKME YÖNETİMİ ---
+
+export function switchLeagueTab(tabName) {
+    const fixturesBtn = document.getElementById('btn-show-fixtures');
+    const standingsBtn = document.getElementById('btn-show-standings');
+    const fixturesTab = document.getElementById('tab-league-fixtures');
+    const standingsTab = document.getElementById('tab-league-standings');
+
+    if (!fixturesBtn || !standingsBtn) return;
+
+    if (tabName === 'fixtures') {
+        fixturesTab.classList.remove('hidden');
+        standingsTab.classList.add('hidden');
+        
+        fixturesBtn.classList.add('text-white', 'border-yellow-500');
+        fixturesBtn.classList.remove('text-gray-400', 'border-transparent');
+        
+        standingsBtn.classList.remove('text-white', 'border-yellow-500');
+        standingsBtn.classList.add('text-gray-400', 'border-transparent');
+    } else {
+        fixturesTab.classList.add('hidden');
+        standingsTab.classList.remove('hidden');
+        
+        standingsBtn.classList.add('text-white', 'border-yellow-500');
+        standingsBtn.classList.remove('text-gray-400', 'border-transparent');
+        
+        fixturesBtn.classList.remove('text-white', 'border-yellow-500');
+        fixturesBtn.classList.add('text-gray-400', 'border-transparent');
+    }
+}
+
+export function renderLeagueStandings(standingsData, currentUserId) {
+    const tbody = document.getElementById('league-standings-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (standingsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Henüz veri yok.</td></tr>';
+        return;
+    }
+
+    standingsData.forEach((row, index) => {
+        const isMe = row.id === currentUserId;
+        const tr = document.createElement('tr');
+        tr.className = isMe ? 'bg-indigo-900/40 border-b border-gray-700' : 'border-b border-gray-700 hover:bg-gray-750';
+        
+        tr.innerHTML = `
+            <td class="px-3 py-3 font-medium whitespace-nowrap flex items-center gap-2">
+                <span class="text-gray-500 text-xs w-4">${index + 1}.</span>
+                <span class="${isMe ? 'text-yellow-300 font-bold' : 'text-white'} truncate max-w-[100px]">${row.username}</span>
+            </td>
+            <td class="px-2 py-3 text-center text-gray-300">${row.O}</td>
+            <td class="px-2 py-3 text-center text-green-400">${row.G}</td>
+            <td class="px-2 py-3 text-center text-blue-400">${row.B}</td>
+            <td class="px-2 py-3 text-center text-red-400">${row.M}</td>
+            <td class="px-3 py-3 text-center font-black text-yellow-400 text-lg">${row.P}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}

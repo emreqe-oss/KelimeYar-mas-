@@ -4,7 +4,7 @@ import {
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
     getFriendsUnsubscribe, setFriendsUnsubscribe,
     getMyGamesUnsubscribe, setMyGamesUnsubscribe,
-    getChallengedFriendId, setChallengedFriendId 
+    getChallengedFriendId, setChallengedFriendId
 } from './state.js';
 
 import { db, auth } from './firebase.js'; 
@@ -22,6 +22,7 @@ import {
 
 import { 
     initUI, 
+    switchLeagueTab, btnShowFixtures, btnShowStandings, 
     showScreen, 
     displayStats, 
     switchFriendTab, 
@@ -34,6 +35,9 @@ import {
     backToMainFromFriendsBtn,
     randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
     dailyWordBtn,
+    // --- YENİ EKLENENLER BAŞLANGIÇ ---
+    kelimeligBtn, backToMainFromLeagueBtn, openKelimeligScreen,
+    // --- YENİ EKLENENLER BİTİŞ ---
     showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
     showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
     closeProfileBtn,
@@ -310,6 +314,27 @@ function addEventListeners() {
     newGameBtn.addEventListener('click', () => showScreen('new-game-screen'));
     myGamesBtn.addEventListener('click', () => showScreen('my-games-screen'));
     friendsBtn.addEventListener('click', () => showScreen('friends-screen'));
+// --- KELİMELİG BUTONLARI (Main.js içine eklenecek) ---
+    if (kelimeligBtn) {
+        kelimeligBtn.addEventListener('click', () => {
+            openKelimeligScreen();
+        });
+    }
+
+    if (backToMainFromLeagueBtn) {
+        backToMainFromLeagueBtn.addEventListener('click', () => {
+            showScreen('main-menu-screen');
+        });
+    }
+    // -----------------------------------------------------
+
+    // Kelimelig Sekme Butonları
+    if (btnShowFixtures) {
+        btnShowFixtures.addEventListener('click', () => switchLeagueTab('fixtures'));
+    }
+    if (btnShowStandings) {
+        btnShowStandings.addEventListener('click', () => switchLeagueTab('standings'));
+    }
 
     // İstatistik Butonları
     statsBtn.addEventListener('click', openStatsScreen);

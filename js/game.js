@@ -38,7 +38,7 @@ import {
     updateJokerUI,
     turnDisplay, timerDisplay, gameIdDisplay, roundCounter,
     updateStaticTile, 
-    clearStaticTiles 
+    clearStaticTiles, openKelimeligScreen 
 } from './ui.js';
 
 import { default as allWordList } from '../functions/kelimeler.json'; 
@@ -1033,6 +1033,15 @@ export async function startNewGame(config) {
             gameSettings.timeLimit = 45;
             gameSettings.matchLength = 5;
             break;
+            // === BURAYI EKLE BAŞLANGIÇ ===
+        case 'league':
+            secretWord = config.secretWord;
+            if (!secretWord) { showToast("Lig kelimesi yüklenemedi.", true); return; }
+            gameSettings.wordLength = secretWord.length;
+            gameSettings.timeLimit = 90; // Lig kuralı: 90 saniye
+            gameSettings.matchLength = 1;
+            break;
+        // === BURAYI EKLE BİTİŞ ===
         case 'daily':
             secretWord = getDailySecretWord();
             if (!secretWord) {
@@ -1380,6 +1389,36 @@ async function submitGuess() {
 
     if (localGameData.status === 'finished') { 
         await updateStats(didWin, guessCount);
+        // --- KELİMELİG KAYIT MANTIĞI (submitGuess içine eklenecek) ---
+    if (gameMode === 'league' && localGameData.status === 'finished') {
+        const matchId = localGameData.leagueMatchId;
+        const weekID = localGameData.leagueWeekID;
+        const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+        
+        // Veriyi okuyup hangi oyuncu (p1 mi p2 mi) olduğumuzu bulalım
+        const snap = await getDoc(matchRef);
+        const data = snap.data();
+        const playerKey = data.p1 === currentUserId ? 'p1_data' : 'p2_data';
+
+        const resultData = {
+            guesses: localGameData.players[currentUserId].guesses,
+            failed: !didWin, // Eğer kazanamadıysa failed: true
+            completedAt: new Date()
+        };
+
+        // Lig tablosuna sonucu yaz
+        await updateDoc(matchRef, {
+            [playerKey]: resultData
+        });
+
+        showToast("Maç sonucu kaydedildi!", false);
+        
+        // 3 saniye sonra lig ekranına dön
+        setTimeout(() => {
+             openKelimeligScreen(); 
+        }, 3000);
+    }
+    // -----------------------------------------------------------
         if (gameMode === 'daily') {
             if(didWin) localGameData.roundWinner = currentUserId; 
             saveDailyGameState(localGameData);
@@ -1493,7 +1532,7 @@ export function handleKeyPress(key) {
     const isPlayerActive = playerGuesses.length < GUESS_COUNT;
     const isOnlineMode = gameMode === 'multiplayer';
     const isMyTurnOnline = isOnlineMode && localGameData.currentPlayerId === currentUserId;
-    const isLocalMode = ['daily', 'vsCPU', 'series', 'single'].includes(gameMode);
+    const isLocalMode = ['daily', 'vsCPU', 'series', 'league', 'single'].includes(gameMode);
     const canPlay = isPlayerActive && (isLocalMode || isMyTurnOnline || isBattleRoyale(gameMode));
     if (!canPlay) return;
     const processedKey = key.toLocaleUpperCase('tr-TR');
@@ -2532,4 +2571,289 @@ export async function startRematch() {
         }
         leaveGame(); // Hata olursa ana menüye dön
     }
+}
+
+// ==========================================
+// === KELİMELİG (WORD LEAGUE) FONKSİYONLARI ===
+// ==========================================
+
+// Hangi haftadayız? (Örn: "2025-W47")
+function getCurrentWeekID() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const firstJan = new Date(year, 0, 1);
+    const numberOfDays = Math.floor((date - firstJan) / (24 * 60 * 60 * 1000));
+    const week = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+    return `${year}-W${week}`;
+}
+
+// Lig Ekranını Açma ve Durum Kontrolü
+export async function checkLeagueStatus() {
+    const userId = state.getUserId();
+    if (!userId) return;
+
+    const weekID = getCurrentWeekID();
+    const participantRef = doc(db, "leagues", weekID, "participants", userId);
+
+    try {
+        const participantDoc = await getDoc(participantRef);
+        
+        if (participantDoc.exists()) {
+            // Kullanıcı lige kayıtlı
+            const now = new Date();
+            const day = now.getDay(); // 0: Pazar, 1: Pazartesi
+            
+            // Test için day >= 0 yapabilirsin, normalde day >= 1 (Pazartesi) olmalı
+            // const isLeagueStarted = day >= 1;  orjinal hali
+            const isLeagueStarted = true; // TEST MODU: Her zaman açık 
+
+            document.getElementById('league-intro-section').classList.add('hidden');
+            document.getElementById('league-dashboard-section').classList.remove('hidden');
+
+            if (isLeagueStarted) {
+                await fetchAndDisplayLeagueMatches(weekID, userId);
+            } else {
+                document.getElementById('league-matches-list').innerHTML = `
+                    <div class="text-center p-6">
+                        <p class="text-xl text-yellow-400 font-bold">⏳ Lig Başlamadı</p>
+                        <p class="text-gray-400 mt-2">Pazartesi 00:00'da maçlar açılacak.</p>
+                    </div>
+                `;
+            }
+        } else {
+            // Kayıtlı değil, tanıtım ekranını göster
+            const joinBtn = document.getElementById('join-league-btn');
+            if(joinBtn) joinBtn.onclick = () => joinCurrentLeague(weekID);
+        }
+    } catch (error) {
+        console.error("Lig durumu kontrol hatası:", error);
+    }
+}
+
+// Lige Katıl (Kayıt Ol)
+export async function joinCurrentLeague(weekID) {
+    const userId = state.getUserId();
+    const username = getUsername();
+    
+    try {
+        const joinBtn = document.getElementById('join-league-btn');
+        joinBtn.disabled = true;
+        joinBtn.textContent = "Kaydediliyor...";
+
+        // Katılımcılar listesine ekle
+        await setDoc(doc(db, "leagues", weekID, "participants", userId), {
+            username: username,
+            joinedAt: serverTimestamp(),
+            score: 0
+        });
+
+        // Lig dökümanını oluştur (yoksa)
+        await setDoc(doc(db, "leagues", weekID), { isActive: true }, { merge: true });
+
+        joinBtn.classList.add('hidden');
+        document.getElementById('league-join-status').classList.remove('hidden');
+        
+        showToast("Lige başarıyla katıldın!");
+
+    } catch (error) {
+        console.error("Lige katılma hatası:", error);
+        showToast("Hata oluştu.", true);
+        document.getElementById('join-league-btn').disabled = false;
+    }
+}
+
+// Maçları ve Rakipleri Getir
+// js/game.js -> fetchAndDisplayLeagueMatches fonksiyonunu bul ve bununla değiştir:
+
+async function fetchAndDisplayLeagueMatches(weekID, userId) {
+    // 1. Katılımcıları çek
+    const participantsRef = collection(db, "leagues", weekID, "participants");
+    const pSnapshot = await getDocs(participantsRef);
+    const participants = {}; // ID -> { username, stats... }
+    
+    pSnapshot.forEach(doc => {
+        participants[doc.id] = { 
+            id: doc.id, 
+            username: doc.data().username,
+            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } // Başlangıç istatistikleri
+        };
+    });
+
+    // 2. Ligdeki TÜM maçları çek (Hem benimkileri hem diğerlerini)
+    const matchesRef = collection(db, "leagues", weekID, "matches");
+    const mSnapshot = await getDocs(matchesRef);
+    
+    const myMatchesList = [];
+    let myTotalScore = 0;
+
+    mSnapshot.forEach(doc => {
+        const data = doc.data();
+        const p1 = data.p1;
+        const p2 = data.p2;
+        
+        // A) İstatistik Hesaplama (Sadece bitmiş maçlar için)
+        const p1Data = data.p1_data;
+        const p2Data = data.p2_data;
+
+        if (p1Data && p1Data.guesses && p2Data && p2Data.guesses) {
+            // İki taraf da oynamış, maç sonuçlanmış
+            if (participants[p1]) participants[p1].stats.O++;
+            if (participants[p2]) participants[p2].stats.O++;
+
+            let p1Points = 0, p2Points = 0;
+
+            // Puan Mantığı
+            if (p1Data.failed && p2Data.failed) { 
+                // İkisi de yandı -> Berabere (1-1)
+                p1Points = 1; p2Points = 1;
+                if(participants[p1]) participants[p1].stats.B++;
+                if(participants[p2]) participants[p2].stats.B++;
+            }
+            else if (p1Data.failed) { 
+                // p1 yandı -> p2 kazandı (0-3)
+                p1Points = 0; p2Points = 3;
+                if(participants[p1]) participants[p1].stats.M++;
+                if(participants[p2]) participants[p2].stats.G++;
+            }
+            else if (p2Data.failed) { 
+                // p2 yandı -> p1 kazandı (3-0)
+                p1Points = 3; p2Points = 0;
+                if(participants[p1]) participants[p1].stats.G++;
+                if(participants[p2]) participants[p2].stats.M++;
+            }
+            else if (p1Data.guesses.length < p2Data.guesses.length) { 
+                // p1 daha az tahmin -> p1 kazandı (3-0)
+                p1Points = 3; p2Points = 0;
+                if(participants[p1]) participants[p1].stats.G++;
+                if(participants[p2]) participants[p2].stats.M++;
+            }
+            else if (p1Data.guesses.length > p2Data.guesses.length) { 
+                // p2 daha az tahmin -> p2 kazandı (0-3)
+                p1Points = 0; p2Points = 3;
+                if(participants[p1]) participants[p1].stats.M++;
+                if(participants[p2]) participants[p2].stats.G++;
+            }
+            else { 
+                // Eşit tahmin -> Berabere (1-1)
+                p1Points = 1; p2Points = 1;
+                if(participants[p1]) participants[p1].stats.B++;
+                if(participants[p2]) participants[p2].stats.B++;
+            }
+
+            if (participants[p1]) participants[p1].stats.P += p1Points;
+            if (participants[p2]) participants[p2].stats.P += p2Points;
+            
+            // Benim puanımı güncelle
+            if (p1 === userId) myTotalScore += p1Points;
+            if (p2 === userId) myTotalScore += p2Points;
+        }
+
+        // B) Fikstür Listesi Oluşturma (Sadece BENİM olduğum maçlar)
+        if (p1 === userId || p2 === userId) {
+            const opponentId = p1 === userId ? p2 : p1;
+            const opponentData = participants[opponentId];
+            
+            let matchObj = { 
+                id: doc.id, 
+                p1: p1, 
+                p2: p2, 
+                opponentName: opponentData ? opponentData.username : 'Bilinmiyor',
+                ...data 
+            };
+            myMatchesList.push(matchObj);
+        }
+    });
+
+    // --- FİKSTÜR GÜNCELLEME ---
+    // Eğer maç listesi boşsa ve katılımcı varsa, henüz veritabanında maçlar oluşmamış olabilir.
+    // Bu durumda "on-the-fly" (anlık) liste oluşturma mantığı eklenebilir, 
+    // ama şimdilik sadece var olanları gösterelim. (startLeagueMatch zaten oluşturuyor)
+    // Eksik maçları client tarafında sanal olarak göstermek için:
+    
+    Object.values(participants).forEach(opp => {
+        if (opp.id === userId) return;
+        // Bu rakiple bir maç kaydı var mı kontrol et
+        const exists = myMatchesList.find(m => m.p1 === opp.id || m.p2 === opp.id);
+        if (!exists) {
+            // Henüz oynanmamış, veritabanında da yoksa sanal ekle
+            // (Aslında startLeagueMatch tıklandığında oluşturulacak)
+            const matchId = [userId, opp.id].sort().join('_');
+            myMatchesList.push({
+                id: matchId,
+                p1: userId < opp.id ? userId : opp.id,
+                p2: userId < opp.id ? opp.id : userId,
+                opponentName: opp.username,
+                // Veri yok (henüz oynanmadı)
+            });
+        }
+    });
+
+    // --- SIRALAMA LİSTESİ OLUŞTURMA ---
+    const standingsList = Object.values(participants).map(p => ({
+        id: p.id,
+        username: p.username,
+        ...p.stats
+    }));
+
+    // Puan (P) sonra Averaj/Galibiyet (G) sıralaması
+    standingsList.sort((a, b) => {
+        if (b.P !== a.P) return b.P - a.P; // Puana göre
+        if (b.G !== a.G) return b.G - a.G; // Galibiyete göre
+        return (a.username || '').localeCompare(b.username || ''); // İsme göre
+    });
+
+    // UI Import
+    const { renderLeagueMatches, renderLeagueStandings } = await import('./ui.js');
+    
+    // Ekranı Güncelle
+    const leagueScoreEl = document.getElementById('league-total-score');
+    if(leagueScoreEl) leagueScoreEl.textContent = myTotalScore;
+
+    renderLeagueMatches(myMatchesList, userId); // Fikstür sekmesi
+    renderLeagueStandings(standingsList, userId); // Sıralama sekmesi
+}
+
+// Maçı Başlat (90 Saniye)
+export async function startLeagueMatch(matchId, opponentId, opponentName) {
+    const weekID = getCurrentWeekID();
+    const userId = state.getUserId();
+    
+    const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+    const matchSnap = await getDoc(matchRef);
+    
+    let secretWord;
+    let isNewMatch = false;
+
+    if (matchSnap.exists() && matchSnap.data().secretWord) {
+        secretWord = matchSnap.data().secretWord;
+    } else {
+        const len = getRandomWordLength();
+        secretWord = await getNewSecretWord(len);
+        isNewMatch = true;
+    }
+
+    if (isNewMatch) {
+        await setDoc(matchRef, {
+            matchId: matchId,
+            weekID: weekID,
+            p1: userId < opponentId ? userId : opponentId,
+            p2: userId < opponentId ? opponentId : userId,
+            secretWord: secretWord,
+            createdAt: serverTimestamp()
+        }, { merge: true });
+    }
+
+    // Oyunu Başlat
+    startNewGame({
+        mode: 'league',
+        secretWord: secretWord
+    });
+
+    // Local veriye lig bilgilerini ekle (submitGuess için lazım)
+    const localData = state.getLocalGameData();
+    localData.leagueMatchId = matchId;
+    localData.leagueWeekID = weekID;
+    state.setLocalGameData(localData);
+
+    showToast(`${opponentName} ile maç başladı! 90 Saniye!`, false);
 }
