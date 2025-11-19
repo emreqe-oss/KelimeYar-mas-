@@ -131,22 +131,92 @@ export async function showScoreboard(gameData) {
     }
 
     // 2. GÜNÜN KELİMESİ KONTROLÜ
+    // === GÜNÜN KELİMESİ (DAILY) MODU DÜZELTMESİ ===
     if (gameMode === 'daily') {
-         // ... (Mevcut Daily kodların burada kalacak) ...
-         // (Yukarıdaki BR bloğu gibi burası da aynen kalmalı, değiştirmene gerek yok)
-         // Yer kazanmak için burayı özet geçiyorum, senin dosyadaki 'daily' bloğu aynen kalsın.
-         roundWinnerDisplay.style.display = 'none';
-         // ...
-         // ...
-         const dailyStats = await getDailyLeaderboardStats(currentUserId, gameData.secretWord);
-         // ... (Senin kodundaki daily bloğu devam eder) ...
-         if (dailyStats) {
-             // ...
-             dailyStatsContainer.innerHTML = `...HTML KODLARI...`; // Senin kodundaki hali
-             // ...
-         }
-         // ...
-         return; 
+        // 1. Standart başlıkları ve kutuları GİZLE
+        roundWinnerDisplay.style.display = 'none';
+        correctWordDisplay.style.display = 'none';
+        matchWinnerDisplay.style.display = 'none';
+        finalScores.style.display = 'none';
+        newRoundBtn.classList.add('hidden'); 
+        newWordRematchBtn.classList.add('hidden');
+        
+        // Standart kelime gösterim kutusunu da gizle (Kendi kartımızda göstereceğiz)
+        defaultWordDisplayContainer.style.display = 'none'; 
+
+        // 2. İstatistikleri al
+        const dailyStats = await getDailyLeaderboardStats(currentUserId, gameData.secretWord);
+        dailyStatsContainer.classList.remove('hidden');
+
+        // 3. Kazanma/Kaybetme Durumunu Belirle
+        const didWin = gameData.roundWinner === currentUserId;
+        const resultTitle = didWin ? "🎉 TEBRİKLER!" : "😔 MAALESEF";
+        const resultColor = didWin ? "text-green-400" : "text-red-400";
+
+        // 4. Özel Kartı Çiz
+        if (dailyStats) {
+            dailyStatsContainer.innerHTML = `
+                <div class="w-full max-w-md mx-auto bg-gray-800/95 p-6 rounded-xl shadow-2xl border border-gray-600 flex flex-col items-center">
+                    
+                    <h2 class="text-3xl font-extrabold ${resultColor} mb-2 tracking-wide">${resultTitle}</h2>
+                    
+                    <div class="text-center mb-6">
+                        <span class="text-gray-400 text-sm uppercase tracking-wider">Doğru Kelime</span>
+                        <div class="text-4xl font-black text-white mt-1 bg-gray-700 px-6 py-2 rounded-lg tracking-widest shadow-inner">
+                            ${gameData.secretWord}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 w-full mb-6">
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-2xl font-bold text-yellow-400">${dailyStats.userScore}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Puanın</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-2xl font-bold text-indigo-300">${dailyStats.userPosition > 0 ? '#' + dailyStats.userPosition : '-'}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Sıralama</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-xl font-bold text-white">${dailyStats.userGuessCount}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Deneme</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-xl font-bold text-white">${dailyStats.avgScore}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Ort. Puan</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-4">Toplam ${dailyStats.totalPlayers} oyuncu bugün oynadı.</p>
+
+                    <div class="w-full border-t border-gray-600 pt-4 mt-2 text-center">
+                        <p id="word-meaning-display-daily" class="text-sm text-gray-300 italic leading-relaxed">
+                            Anlam yükleniyor...
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            // Anlamı yükle
+            const meaningDisplayEl = document.getElementById('word-meaning-display-daily'); 
+            const meaning = await fetchWordMeaning(gameData.secretWord);
+            if(meaningDisplayEl) meaningDisplayEl.textContent = meaning;
+
+        } else {
+            dailyStatsContainer.innerHTML = `<p class="text-gray-400 text-center">Günlük sıralama bilgileri yüklenemedi.</p>`;
+        }
+
+        // 5. Butonları düzenle
+        playSound(didWin ? 'win' : 'lose');
+        
+        const mainMenuBtn = document.getElementById('main-menu-btn');
+        mainMenuBtn.textContent = "Ana Menüye Dön";
+        mainMenuBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg";
+        mainMenuBtn.onclick = leaveGame; // Normal çıkış fonksiyonu
+        
+        document.getElementById('share-results-btn').classList.remove('hidden'); // Paylaş butonu açık olsun
+        defaultRoundButtons.style.display = 'flex';
+        
+        return; 
     }
 
     // === 3. YENİ EKLENEN KISIM: KELİMELİG (LEAGUE) MODU ===
@@ -444,6 +514,8 @@ async function handleMeaningIconClick(word) {
 
 // js/game.js içindeki renderGameState fonksiyonunu bul ve bununla değiştir:
 
+// js/game.js -> renderGameState fonksiyonunun TAMAMI:
+
 export async function renderGameState(gameData, didMyGuessChange = false) { 
     const currentUserId = state.getUserId();
     
@@ -467,29 +539,35 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     
     updateMultiplayerScoreBoard(gameData); 
 
-    // --- DÜZELTME: Lig Modunu da Günlük Mod gibi göster (Süre ve Bilgi Çubuğu için) ---
-    // --- DÜZELTME: Lig Modu Görünümü (Büyük Sayaç, Temiz Ekran) ---
+    // === GÖRÜNÜM AYARLARI (LİG VE GÜNLÜK) ===
     if (gameMode === 'daily' || gameMode === 'league') {
         if (sequentialGameInfo) {
             sequentialGameInfo.classList.remove('hidden');
             
-            // Lig Modu Özel Ayarları
             if (gameMode === 'league') {
-                // 1. Gereksiz her şeyi gizle (Sıra Sende, Skorlar, Tur Sayısı)
+                // --- LİG MODU: BÜYÜK SAYAÇ ---
                 document.getElementById('player1-score').style.display = 'none';
                 document.getElementById('player2-score').style.display = 'none';
-                if (turnDisplay) turnDisplay.style.display = 'none'; // "Sıra Sende" GİZLE
-                if (roundCounter) roundCounter.style.display = 'none'; // Küçük yazıları GİZLE
+                if (turnDisplay) turnDisplay.style.display = 'none';
+                if (roundCounter) roundCounter.style.display = 'none';
 
-                // 2. Sayacı DEVASA yap
                 if (timerDisplay) {
                     timerDisplay.style.display = 'block';
-                    timerDisplay.className = 'font-mono font-black text-6xl text-yellow-400 w-full text-center drop-shadow-md';
-                    // Sayacın hemen görünmesi için (Timer başlamadan önce boş kalmasın)
-                    timerDisplay.textContent = timeLimit || 90; 
+                    // Sayacın kapsayıcısını (Annesini) genişletip ortalıyoruz
+                    if(timerDisplay.parentElement) {
+                        timerDisplay.parentElement.className = "w-full flex justify-center items-center";
+                    }
+                    // Sayacın kendisini büyütüyoruz
+                    timerDisplay.className = 'font-mono font-black text-6xl text-yellow-400 tracking-widest drop-shadow-lg';
+                    timerDisplay.textContent = timeLimit || 120; 
                 }
             } else {
-                // Daily Modu (Eski hali)
+                // --- DAILY MODU: STANDART GÖRÜNÜM ---
+                // Sayacın kapsayıcısını eski haline (küçük kutu) getiriyoruz
+                if(timerDisplay && timerDisplay.parentElement) {
+                    timerDisplay.parentElement.className = "text-center w-1/5";
+                }
+
                 document.getElementById('player1-score').innerHTML = '';
                 document.getElementById('player2-score').innerHTML = '';
                 if (turnDisplay) { turnDisplay.style.display = 'block'; turnDisplay.textContent = 'Günün Kelimesi'; }
@@ -507,10 +585,15 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (jokerContainer) jokerContainer.style.display = 'none'; 
 
     } else {
-        // ... (Buradan sonrası aynı: Else bloğu - Diğer modlar) ...
-        // Bu else bloğunun içini değiştirmene gerek yok, sadece üstteki if bloğunu değiştir.
+        // === DİĞER MODLAR (vsCPU, Multiplayer, BR) ===
         
-        // Eski stilin bozulmaması için timerDisplay stilini resetle (Diğer modlar için)
+        // 3. ADIM DÜZELTMESİ BURADA:
+        // Lig modundan çıkıp normal oyuna girince sayacın yeri bozulmasın diye RESETLİYORUZ.
+        if (timerDisplay && timerDisplay.parentElement) {
+            timerDisplay.parentElement.className = "text-center w-1/5";
+        }
+        
+        // Standart stilleri geri yükle
         if (timerDisplay) timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
         if (turnDisplay) turnDisplay.style.display = 'block';
         if (roundCounter) roundCounter.style.display = 'block';
@@ -541,11 +624,9 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 
     updateTurnDisplay(gameData);
 
-    // === IZGARA VE İPUCU MANTIĞI ===
+    // === HAYALET HARFLER VE IZGARA ===
     const firstTile = document.getElementById(`tile-0-0`);
     const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
-    
-    // Eğer ızgara boşsa veya tahmin değiştiyse yeniden çiz
     const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
     
     if (didMyGuessChange || isGridPristine) {
@@ -560,16 +641,14 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                 const front = tile.querySelector('.front');
                 const back = tile.querySelector('.back');
                 const oldIcon = back.querySelector('.meaning-icon');
-                if (oldIcon) { oldIcon.remove(); }
+                if (oldIcon) oldIcon.remove(); 
                 
-                // Temizlik
                 tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
                 if (i !== currentRow) {
                     front.textContent = '';
                     back.textContent = '';
                 }
 
-                // Eski tahminleri çiz
                 if (playerGuesses[i]) {
                     const guess = playerGuesses[i];
                     front.textContent = guess.word[j];
@@ -586,22 +665,17 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                         tile.classList.add('flip');
                     }
                 } 
-                // === YENİ: ŞİMDİKİ SATIRA YEŞİL İPUÇLARINI KOY ===
                 else if (i === currentRow && gameData.status === 'playing') {
-                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR;
-                    
-                    // Eğer sıra bendeyse VE henüz yazmaya başlamadıysam
+                    const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR || (gameMode === 'league');
                     if (isMyTurn && !state.getHasUserStartedTyping()) {
                         const knownPositions = getKnownCorrectPositions();
                         if (knownPositions[j]) {
-                            // ui.js'deki fonksiyonu kullanarak statik harfi koy
                             updateStaticTile(i, j, knownPositions[j], 'correct');
                         }
                     }
                 }
             } 
             
-            // Anlam İkonu Ekleme
             if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
                 const guessWord = playerGuesses[i].word;
                 const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
@@ -613,13 +687,11 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                         onclick: (e) => { e.stopPropagation(); handleMeaningIconClick(guessWord); }
                     });
                     Object.assign(meaningIcon.style, {
-                        position: 'absolute', right: '2px', top: '2px',
-                        width: '22px', height: '22px', backgroundColor: '#ef4444',
-                        color: 'white', borderRadius: '50%', border: '1px solid white',
-                        fontSize: '15px', fontWeight: 'bold', cursor: 'pointer',
-                        zIndex: '10', padding: '0', lineHeight: '21px'
+                        position: 'absolute', right: '2px', top: '2px', width: '22px', height: '22px', 
+                        backgroundColor: '#ef4444', color: 'white', borderRadius: '50%', border: '1px solid white',
+                        fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', zIndex: '10', padding: '0', lineHeight: '21px'
                     });
-                    if(backFace) { backFace.appendChild(meaningIcon); }
+                    if(backFace) backFace.appendChild(meaningIcon); 
                 }
             }
         } 
@@ -640,6 +712,8 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                 stopTurnTimer();
                 setTimeout(cpuTurn, 1500);
             }
+        } else if (gameMode === 'league') {
+            startTurnTimer();
         }
     } else {
         stopTurnTimer(); 
@@ -1012,7 +1086,7 @@ export async function startNewGame(config) {
             secretWord = config.secretWord;
             if (!secretWord) { showToast("Lig kelimesi yüklenemedi.", true); return; }
             gameSettings.wordLength = secretWord.length;
-            gameSettings.timeLimit = 90; // Lig kuralı: 90 saniye
+            gameSettings.timeLimit = 120; // Lig kuralı: 90 saniye
             gameSettings.matchLength = 1;
             break;
         // === BURAYI EKLE BİTİŞ ===
@@ -1982,31 +2056,48 @@ export async function startNewRound() {
 
 // js/game.js -> startTurnTimer fonksiyonu (DÜZELTİLMİŞ HALİ)
 
+// js/game.js -> startTurnTimer fonksiyonunu tamamen değiştir:
+
+// js/game.js -> startTurnTimer fonksiyonunun GÜNCEL VE TAM HALİ
+
 export function startTurnTimer() {
     const gameMode = state.getGameMode();
     const localGameData = state.getLocalGameData();
     const currentUserId = state.getUserId(); 
 
-    // BR ve Daily modları bu sayacı kullanmaz
+    // Battle Royale ve Daily modları bu sayacı kullanmaz
     if (isBattleRoyale(gameMode) || gameMode === 'daily') return;
     
-    stopTurnTimer(); 
+    stopTurnTimer(); // Önceki sayacı temizle
 
     if (localGameData.status !== 'playing') return;
     
     const isMyTurn = (gameMode === 'league') || (localGameData.currentPlayerId === currentUserId); 
 
-    // Sunucu zamanını al, yoksa yerel zamanı kullan
-    let turnStartTime = (localGameData.turnStartTime?.toDate) ? localGameData.turnStartTime.toDate() : new Date();
+    // Zaman Başlangıcı: Sunucudan geleni al, yoksa yerel zamanı kullan
+    let startTimeObj = localGameData.turnStartTime;
+    let turnStartTime;
+
+    if (startTimeObj && startTimeObj.toDate) {
+        turnStartTime = startTimeObj.toDate(); // Firestore Timestamp
+    } else if (startTimeObj && startTimeObj instanceof Date) {
+        turnStartTime = startTimeObj; // JS Date
+    } else {
+        turnStartTime = new Date(); // Fallback
+    }
     
-    // Süre sınırını belirle (Lig ise 90, değilse gameData'dan, o da yoksa 45)
-    const limit = (gameMode === 'league') ? 90 : (localGameData.timeLimit || 45);
+    // --- DÜZELTME BURADA: Lig Modu için 120 Saniye ---
+    const limit = (gameMode === 'league') ? 120 : (localGameData.timeLimit || 45);
+    // -------------------------------------------------
 
     const interval = setInterval(async () => {
         let now = new Date();
         let elapsed = Math.floor((now - turnStartTime) / 1000);
         let timeLeft = limit - elapsed; 
         
+        // Negatif süreleri ve senkron kaymalarını düzelt
+        if (timeLeft > limit) timeLeft = limit; 
+
         if (timerDisplay) { 
             timerDisplay.textContent = timeLeft > 0 ? timeLeft : 0;
             
@@ -2014,16 +2105,21 @@ export function startTurnTimer() {
             if (timeLeft <= 10 && isMyTurn) {
                 timerDisplay.classList.add('text-red-500', 'pulsate');
             } else {
-                // Lig modunda ana rengimiz sarı (text-yellow-400), diğerlerinde gri
-                if (gameMode !== 'league') timerDisplay.classList.remove('text-red-500', 'pulsate');
-                else timerDisplay.classList.remove('text-red-500'); 
+                // Lig modunda ana rengimiz sarı, diğerlerinde gri
+                if (gameMode === 'league') {
+                     timerDisplay.classList.remove('text-red-500', 'pulsate');
+                     // Sarı rengi korumak için class eklemeye gerek yok, renderGameState'de zaten verildi.
+                     // Sadece kırmızıyı kaldırmak yeterli.
+                } else {
+                     timerDisplay.classList.remove('text-red-500', 'pulsate');
+                }
             }
         }
         
         if (timeLeft <= 0) {
             stopTurnTimer();
             if (isMyTurn) {
-                await failTurn(''); 
+                await failTurn(''); // Süre bitti, işlemi yap
             }
         }
     }, 1000);
@@ -2662,21 +2758,23 @@ export async function joinCurrentLeague(weekID) {
 // Maçları ve Rakipleri Getir
 // js/game.js -> fetchAndDisplayLeagueMatches fonksiyonunu bul ve bununla değiştir:
 
+// js/game.js -> fetchAndDisplayLeagueMatches fonksiyonunun GÜNCELLENMİŞ HALİ:
+
 async function fetchAndDisplayLeagueMatches(weekID, userId) {
     // 1. Katılımcıları çek
     const participantsRef = collection(db, "leagues", weekID, "participants");
     const pSnapshot = await getDocs(participantsRef);
-    const participants = {}; // ID -> { username, stats... }
+    const participants = {}; 
     
     pSnapshot.forEach(doc => {
         participants[doc.id] = { 
             id: doc.id, 
             username: doc.data().username,
-            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } // Başlangıç istatistikleri
+            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } 
         };
     });
 
-    // 2. Ligdeki TÜM maçları çek (Hem benimkileri hem diğerlerini)
+    // 2. Ligdeki maçları çek
     const matchesRef = collection(db, "leagues", weekID, "matches");
     const mSnapshot = await getDocs(matchesRef);
     
@@ -2691,47 +2789,40 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
         // A) İstatistik Hesaplama (Sadece bitmiş maçlar için)
         const p1Data = data.p1_data;
         const p2Data = data.p2_data;
-
+        
+        // Maç puanlarını hesapla (İstatistik tablosu için)
         if (p1Data && p1Data.guesses && p2Data && p2Data.guesses) {
-            // İki taraf da oynamış, maç sonuçlanmış
             if (participants[p1]) participants[p1].stats.O++;
             if (participants[p2]) participants[p2].stats.O++;
 
             let p1Points = 0, p2Points = 0;
 
-            // Puan Mantığı
             if (p1Data.failed && p2Data.failed) { 
-                // İkisi de yandı -> Berabere (1-1)
                 p1Points = 1; p2Points = 1;
                 if(participants[p1]) participants[p1].stats.B++;
                 if(participants[p2]) participants[p2].stats.B++;
             }
             else if (p1Data.failed) { 
-                // p1 yandı -> p2 kazandı (0-3)
                 p1Points = 0; p2Points = 3;
                 if(participants[p1]) participants[p1].stats.M++;
                 if(participants[p2]) participants[p2].stats.G++;
             }
             else if (p2Data.failed) { 
-                // p2 yandı -> p1 kazandı (3-0)
                 p1Points = 3; p2Points = 0;
                 if(participants[p1]) participants[p1].stats.G++;
                 if(participants[p2]) participants[p2].stats.M++;
             }
             else if (p1Data.guesses.length < p2Data.guesses.length) { 
-                // p1 daha az tahmin -> p1 kazandı (3-0)
                 p1Points = 3; p2Points = 0;
                 if(participants[p1]) participants[p1].stats.G++;
                 if(participants[p2]) participants[p2].stats.M++;
             }
             else if (p1Data.guesses.length > p2Data.guesses.length) { 
-                // p2 daha az tahmin -> p2 kazandı (0-3)
                 p1Points = 0; p2Points = 3;
                 if(participants[p1]) participants[p1].stats.M++;
                 if(participants[p2]) participants[p2].stats.G++;
             }
             else { 
-                // Eşit tahmin -> Berabere (1-1)
                 p1Points = 1; p2Points = 1;
                 if(participants[p1]) participants[p1].stats.B++;
                 if(participants[p2]) participants[p2].stats.B++;
@@ -2740,74 +2831,98 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
             if (participants[p1]) participants[p1].stats.P += p1Points;
             if (participants[p2]) participants[p2].stats.P += p2Points;
             
-            // Benim puanımı güncelle
             if (p1 === userId) myTotalScore += p1Points;
             if (p2 === userId) myTotalScore += p2Points;
         }
 
-        // B) Fikstür Listesi Oluşturma (Sadece BENİM olduğum maçlar)
+        // B) Fikstür Listesi Oluşturma ve SIRALAMA MANTIĞI
         if (p1 === userId || p2 === userId) {
             const opponentId = p1 === userId ? p2 : p1;
             const opponentData = participants[opponentId];
             
+            // Benim verim ve Rakibin verisi
+            const myData = p1 === userId ? p1Data : p2Data;
+            const oppData = p1 === userId ? p2Data : p1Data;
+            
+            // --- SIRALAMA İÇİN KATEGORİ BELİRLEME ---
+            let sortCategory = 5; // Varsayılan (En alt)
+
+            if (!myData || !myData.guesses) {
+                // 1. Henüz Oynamadım (En Üst)
+                sortCategory = 0;
+            } else if (!oppData || !oppData.guesses) {
+                // 2. Ben Oynadım, Rakip Bekleniyor (İkinci sıra)
+                sortCategory = 1;
+            } else {
+                // Maç Sonuçlanmış -> Puanıma bak
+                // Puanı tekrar basitçe hesaplayalım:
+                let myMatchPoints = 0;
+                if (myData.failed && oppData.failed) myMatchPoints = 1;
+                else if (myData.failed) myMatchPoints = 0;
+                else if (oppData.failed) myMatchPoints = 3;
+                else if (myData.guesses.length < oppData.guesses.length) myMatchPoints = 3;
+                else if (myData.guesses.length === oppData.guesses.length) myMatchPoints = 1;
+                else myMatchPoints = 0;
+
+                if (myMatchPoints === 3) sortCategory = 2; // Kazanılan
+                else if (myMatchPoints === 1) sortCategory = 3; // Berabere
+                else sortCategory = 4; // Kaybedilen
+            }
+            // ----------------------------------------
+
             let matchObj = { 
                 id: doc.id, 
                 p1: p1, 
                 p2: p2, 
                 opponentName: opponentData ? opponentData.username : 'Bilinmiyor',
+                sortCategory: sortCategory, // Sıralama için ekledik
                 ...data 
             };
             myMatchesList.push(matchObj);
         }
     });
 
-    // --- FİKSTÜR GÜNCELLEME ---
-    // Eğer maç listesi boşsa ve katılımcı varsa, henüz veritabanında maçlar oluşmamış olabilir.
-    // Bu durumda "on-the-fly" (anlık) liste oluşturma mantığı eklenebilir, 
-    // ama şimdilik sadece var olanları gösterelim. (startLeagueMatch zaten oluşturuyor)
-    // Eksik maçları client tarafında sanal olarak göstermek için:
-    
+    // --- EKSİK MAÇLARI SANAL OLARAK EKLE ---
     Object.values(participants).forEach(opp => {
         if (opp.id === userId) return;
-        // Bu rakiple bir maç kaydı var mı kontrol et
         const exists = myMatchesList.find(m => m.p1 === opp.id || m.p2 === opp.id);
         if (!exists) {
-            // Henüz oynanmamış, veritabanında da yoksa sanal ekle
-            // (Aslında startLeagueMatch tıklandığında oluşturulacak)
             const matchId = [userId, opp.id].sort().join('_');
             myMatchesList.push({
                 id: matchId,
                 p1: userId < opp.id ? userId : opp.id,
                 p2: userId < opp.id ? opp.id : userId,
                 opponentName: opp.username,
-                // Veri yok (henüz oynanmadı)
+                sortCategory: 0 // Hiç oynanmamış -> En Üst
             });
         }
     });
 
-    // --- SIRALAMA LİSTESİ OLUŞTURMA ---
+    // --- LİSTEYİ SIRALA ---
+    // sortCategory'ye göre küçükten büyüğe (0 -> 1 -> 2 -> 3 -> 4)
+    myMatchesList.sort((a, b) => a.sortCategory - b.sortCategory);
+
+    // --- SIRALAMA LİSTESİ ---
     const standingsList = Object.values(participants).map(p => ({
         id: p.id,
         username: p.username,
         ...p.stats
     }));
 
-    // Puan (P) sonra Averaj/Galibiyet (G) sıralaması
     standingsList.sort((a, b) => {
-        if (b.P !== a.P) return b.P - a.P; // Puana göre
-        if (b.G !== a.G) return b.G - a.G; // Galibiyete göre
-        return (a.username || '').localeCompare(b.username || ''); // İsme göre
+        if (b.P !== a.P) return b.P - a.P;
+        if (b.G !== a.G) return b.G - a.G; 
+        return (a.username || '').localeCompare(b.username || '');
     });
 
-    // UI Import
+    // UI Import ve Güncelleme
     const { renderLeagueMatches, renderLeagueStandings } = await import('./ui.js');
     
-    // Ekranı Güncelle
     const leagueScoreEl = document.getElementById('league-total-score');
     if(leagueScoreEl) leagueScoreEl.textContent = myTotalScore;
 
-    renderLeagueMatches(myMatchesList, userId); // Fikstür sekmesi
-    renderLeagueStandings(standingsList, userId); // Sıralama sekmesi
+    renderLeagueMatches(myMatchesList, userId); 
+    renderLeagueStandings(standingsList, userId); 
 }
 
 // Maçı Başlat (90 Saniye)
@@ -2852,5 +2967,7 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
     localData.leagueWeekID = weekID;
     state.setLocalGameData(localData);
 
-    showToast(`${opponentName} ile maç başladı! 90 Saniye!`, false);
+    // --- DEĞİŞİKLİK BURADA ---
+    showToast(`${opponentName} ile maç başladı! 120 Saniye!`, false); // Mesajı güncelledik
+    // -------------------------
 }
