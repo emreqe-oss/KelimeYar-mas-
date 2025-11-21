@@ -237,7 +237,15 @@ export async function showScoreboard(gameData) {
         return; 
     }
 
-    // 4. DİĞER STANDART MODLAR (Gevşek / Seri / vsCPU)
+// 4. DİĞER STANDART MODLAR (Gevşek / Seri / vsCPU)
+    
+    const mainMenuBtnReset = document.getElementById('main-menu-btn');
+    if (mainMenuBtnReset) {
+        mainMenuBtnReset.textContent = "Ana Menü";
+        mainMenuBtnReset.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg";
+        mainMenuBtnReset.onclick = leaveGame;
+    }
+    document.getElementById('share-results-btn').classList.remove('hidden'); // Paylaş butonunu geri getir
     dailyStatsContainer.classList.add('hidden');
     defaultWordDisplayContainer.style.display = 'block';
     defaultRoundButtons.style.display = 'flex';
@@ -286,7 +294,9 @@ export async function showScoreboard(gameData) {
             newRoundBtn.classList.remove('hidden');
         } 
         else {
+            // --- MAÇ BİTİŞİ (SERİ TAMAMLANDI) ---
             newRoundBtn.textContent = 'Yeniden Oyna';
+            
             if (gameMode === 'vsCPU') {
                 newRoundBtn.onclick = () => startNewGame({ mode: gameMode });
             } else if (gameMode === 'multiplayer') {
@@ -298,14 +308,26 @@ export async function showScoreboard(gameData) {
             }
             newRoundBtn.classList.remove('hidden');
 
+            // GALİBİYET HESAPLAMA VE GÖSTERİMİ
             if (showScores && gameData.matchLength > 1) {
-                const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
-                if (sortedPlayers.length > 1 && sortedPlayers[0].score > sortedPlayers[1].score) {
-                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[0].username} KAZANDI!`;
-                } else if (sortedPlayers.length > 1 && sortedPlayers[0].score < sortedPlayers[1].score) {
-                    matchWinnerDisplay.textContent = `MAÇI ${sortedPlayers[1].username} KAZANDI!`;
-                } else if (sortedPlayers.length > 1) {
-                    matchWinnerDisplay.textContent = 'MAÇ BERABERE!';
+                const sortedPlayers = Object.entries(gameData.players)
+                    .map(([id, data]) => ({ ...data, id }))
+                    .sort((a, b) => (b.score || 0) - (a.score || 0));
+                
+                // En üstteki başlığı değiştir
+                roundWinnerDisplay.innerHTML = '<span class="text-yellow-400">🏆 SERİ TAMAMLANDI!</span>';
+                
+                // Alt başlığa kazananı yaz
+                if (sortedPlayers.length > 1) {
+                    if (sortedPlayers[0].score > sortedPlayers[1].score) {
+                        matchWinnerDisplay.innerHTML = `KAZANAN: <span class="text-green-400 text-4xl block mt-2">${sortedPlayers[0].username.toUpperCase()}</span>`;
+                        playSound('win'); // Maç sonu zafer sesi
+                    } else if (sortedPlayers[0].score < sortedPlayers[1].score) {
+                        matchWinnerDisplay.innerHTML = `KAZANAN: <span class="text-green-400 text-4xl block mt-2">${sortedPlayers[1].username.toUpperCase()}</span>`;
+                    } else {
+                        matchWinnerDisplay.innerHTML = `<span class="text-blue-400 text-4xl block mt-2">DOSTLUK KAZANDI!<br>(BERABERE)</span>`;
+                    }
+                    matchWinnerDisplay.style.display = 'block';
                 }
             }
         }
@@ -484,6 +506,12 @@ async function handleMeaningIconClick(word) {
 export async function renderGameState(gameData, didMyGuessChange = false) { 
     const currentUserId = state.getUserId();
     
+    // --- DÜZELTME: Bilinen harfleri her çizimde güncelle (Online mod için kritik) ---
+    if (gameData && gameData.players && gameData.players[currentUserId]) {
+        updateKnownPositions(gameData.players[currentUserId].guesses);
+    }
+    // -----------------------------------------------------------------------------
+
     const oldGameData = state.getLocalGameData();
     const oldPlayerId = oldGameData?.currentPlayerId;
     const isMyTurnNow = gameData.currentPlayerId === currentUserId;
@@ -510,7 +538,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             sequentialGameInfo.classList.remove('hidden');
             
             if (gameMode === 'league') {
-                // --- LİG MODU: BÜYÜK SAYAÇ ---
                 document.getElementById('player1-score').style.display = 'none';
                 document.getElementById('player2-score').style.display = 'none';
                 if (turnDisplay) turnDisplay.style.display = 'none';
@@ -525,7 +552,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                     timerDisplay.textContent = timeLimit || 120; 
                 }
             } else {
-                // --- DAILY MODU: STANDART GÖRÜNÜM ---
                 if(timerDisplay && timerDisplay.parentElement) {
                     timerDisplay.parentElement.className = "text-center w-1/5";
                 }
@@ -547,8 +573,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (jokerContainer) jokerContainer.style.display = 'none'; 
 
     } else {
-        // === DİĞER MODLAR (vsCPU, Multiplayer, BR) ===
-        
         if (timerDisplay && timerDisplay.parentElement) {
             timerDisplay.parentElement.className = "text-center w-1/5";
         }
@@ -624,8 +648,10 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                         tile.classList.add('flip');
                     }
                 } 
+                // --- DÜZELTME: Yeşil harfleri (Hayaletleri) yerleştir ---
                 else if (i === currentRow && gameData.status === 'playing') {
                     const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR || (gameMode === 'league');
+                    
                     if (isMyTurn && !state.getHasUserStartedTyping()) {
                         const knownPositions = getKnownCorrectPositions();
                         if (knownPositions[j]) {
@@ -633,6 +659,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                         }
                     }
                 }
+                // -------------------------------------------------------
             } 
             
             if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
@@ -1536,28 +1563,41 @@ function deleteLetter() {
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
+    // Eğer kullanıcı henüz yazmaya başlamadıysa silecek bir şey yok
     if (!state.getHasUserStartedTyping()) {
         return; 
     }
 
+    // Sondan başa doğru dolu olan ilk kutuyu bul ve sil
     let deletedIndex = -1;
     for (let i = wordLength - 1; i >= 0; i--) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
-        if (tile && tile.querySelector('.front').textContent !== '') {
+        // Sadece 'static' (ipucu) OLMAYAN kutuları silebiliriz
+        if (tile && tile.querySelector('.front').textContent !== '' && !tile.classList.contains('static')) {
             tile.querySelector('.front').textContent = '';
             deletedIndex = i;
             break;
         }
     }
     
-    const firstTile = document.getElementById(`tile-${currentRow}-0`);
-    if (firstTile && firstTile.querySelector('.front').textContent === '') {
-        state.setHasUserStartedTyping(false);
-        
-        const knownPositions = getKnownCorrectPositions();
+    // Eğer silinecek normal harf bulamadıysa (hepsi statikse veya boşsa)
+    if (deletedIndex === -1) {
+        // Satır tamamen temizlendiyse "yazma modu"ndan çık ve hayaletleri geri yükle
+        let hasUserTyped = false;
         for (let j = 0; j < wordLength; j++) {
-            if (knownPositions[j]) {
-                updateStaticTile(currentRow, j, knownPositions[j], 'correct');
+            const t = document.getElementById(`tile-${currentRow}-${j}`);
+            if (t && t.querySelector('.front').textContent !== '' && !t.classList.contains('static')) {
+                hasUserTyped = true;
+                break;
+            }
+        }
+        if (!hasUserTyped) {
+            state.setHasUserStartedTyping(false);
+            const knownPositions = getKnownCorrectPositions();
+            for (let j = 0; j < wordLength; j++) {
+                if (knownPositions[j]) {
+                    updateStaticTile(currentRow, j, knownPositions[j], 'correct');
+                }
             }
         }
     }
@@ -2167,11 +2207,14 @@ export async function joinBRGame(gameId) {
     }
 }
 
+// ===================================
+// === JOKER MANTIK FONKSİYONLARI ===
+// ===================================
+
 async function updateJokerState(jokerKey) {
     const gameMode = state.getGameMode(); 
     const gameData = state.getLocalGameData(); 
     const gameId = state.getCurrentGameId();
-    
     const currentUserId = state.getUserId();
     const jokerUpdatePath = `players.${currentUserId}.jokersUsed.${jokerKey}`;
 
@@ -2180,24 +2223,22 @@ async function updateJokerState(jokerKey) {
     const playerState = gameData.players[currentUserId]; 
     if (!playerState) return;
     
-    if (!playerState.jokersUsed) {
-        playerState.jokersUsed = { present: false, correct: false, remove: false };
-    }
+    // Joker kullanımını işaretle
+    if (!playerState.jokersUsed) playerState.jokersUsed = { present: false, correct: false, remove: false };
     playerState.jokersUsed[jokerKey] = true;
 
+    // Online ise sunucuya bildir
     if (gameMode === 'multiplayer' || gameMode === 'multiplayer-br') {
-        if (!gameId) return;
-        try {
-            await updateDoc(doc(db, "games", gameId), {
-                [jokerUpdatePath]: true 
-            });
-        } catch (error) {
-            console.error("Joker durumu güncellenirken hata:", error);
-            showToast("Joker kullanılırken bir hata oluştu.", true);
-            playerState.jokersUsed[jokerKey] = false; 
+        if (gameId) {
+            try {
+                await updateDoc(doc(db, "games", gameId), { [jokerUpdatePath]: true });
+            } catch (error) {
+                console.error("Joker sunucu hatası:", error);
+            }
         }
     }
     
+    // UI güncelle
     const isBR = isBattleRoyale(gameMode);
     const isMyTurn = isBR ? 
         (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
@@ -2206,141 +2247,138 @@ async function updateJokerState(jokerKey) {
     updateJokerUI(playerState.jokersUsed, isMyTurn, gameData.status);
 }
 
+// 1. TURUNCU KALEM (Harf İpucu)
 export async function usePresentJoker() {
     const gameData = state.getLocalGameData();
-    const playerState = gameData.players[state.getUserId()];
-    const gameMode = state.getGameMode(); 
-
-    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.present) || gameData.status !== 'playing') {
-        return; 
-    }
-
-    if (!isBattleRoyale(gameMode) && gameData.currentPlayerId !== state.getUserId()) {
-        showToast("Sıra sende olmadığında joker kullanamazsın!", true);
-        return;
-    }
+    const currentUserId = state.getUserId();
+    const playerState = gameData.players[currentUserId];
     
+    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.present)) return;
+
     const secretWord = gameData.secretWord;
     const knownLetters = new Set();
+    
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         if (btn.classList.contains('correct') || btn.classList.contains('present')) {
             knownLetters.add(btn.dataset.key);
         }
     });
-    const secretLetters = new Set(secretWord.split(''));
+
     const hintCandidates = [];
-    secretLetters.forEach(letter => {
+    for (const letter of secretWord) {
         if (!knownLetters.has(letter)) {
             hintCandidates.push(letter);
         }
-    });
+    }
+
     if (hintCandidates.length === 0) {
-        showToast("İpucu verecek yeni bir harf bulunamadı! (Tüm harfler zaten klavyede)", true);
+        showToast("Tüm harfler zaten ipucu olarak açık!", true);
         return;
     }
+
     const hintLetter = hintCandidates[Math.floor(Math.random() * hintCandidates.length)];
-    const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
-    if (keyButton && !keyButton.classList.contains('correct')) {
-        keyButton.classList.add('present');
-        await updateJokerState('present');
-    } else {
-        console.error(`Joker hatası: ${hintLetter} harfi klavyede bulunamadı.`);
-    }
-}
-
-export async function useCorrectJoker() {
-    const gameData = state.getLocalGameData();
-    const playerState = gameData.players[state.getUserId()];
-    const gameMode = state.getGameMode(); 
-
-    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.correct) || gameData.status !== 'playing') {
-        return;
-    }
-
-    if (!isBattleRoyale(gameMode) && gameData.currentPlayerId !== state.getUserId()) {
-        showToast("Sıra sende olmadığında joker kullanamazsın!", true);
-        return;
-    }
-
-    const secretWord = gameData.secretWord;
-    const knownCorrectIndices = new Set();
-    playerState.guesses.forEach(guess => {
-        guess.colors.forEach((color, i) => {
-            if (color === 'correct') {
-                knownCorrectIndices.add(i);
-            }
-        });
-    });
-    const availableHintIndices = [];
-    for (let i = 0; i < secretWord.length; i++) {
-        if (!knownCorrectIndices.has(i)) {
-            availableHintIndices.push(i);
-        }
-    }
-    if (availableHintIndices.length === 0) {
-        showToast("Tüm doğru harfleri zaten buldunuz!", true);
-        return;
-    }
-    const hintIndex = availableHintIndices[Math.floor(Math.random() * availableHintIndices.length)];
-    const hintLetter = secretWord[hintIndex]; 
-    const currentRow = playerState.guesses ? playerState.guesses.length : 0;
-    if (currentRow >= GUESS_COUNT) {
-        showToast("Tahmin hakkınız doldu!", true);
-        return; 
-    }
-
-    const currentPositions = state.getKnownCorrectPositions();
-    currentPositions[hintIndex] = hintLetter;
-    state.setKnownCorrectPositions(currentPositions);
-
-    updateStaticTile(currentRow, hintIndex, hintLetter, 'correct');
     
     const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
     if (keyButton) {
-        keyButton.classList.remove('present');
-        keyButton.classList.add('correct');
+        keyButton.classList.remove('absent'); 
+        keyButton.classList.add('present');
+        
+        keyButton.style.transform = "scale(1.2)";
+        keyButton.style.borderColor = "#f59e0b";
+        setTimeout(() => { keyButton.style.transform = "scale(1)"; }, 300);
+        
+        showToast(`İpucu: "${hintLetter}" harfi kelimede var!`, false);
+        await updateJokerState('present');
     }
+}
+
+// 2. YEŞİL KALEM (Kesin Harf)
+export async function useCorrectJoker() {
+    const gameData = state.getLocalGameData();
+    const currentUserId = state.getUserId();
+    const playerState = gameData.players[currentUserId];
+    
+    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.correct)) return;
+
+    const secretWord = gameData.secretWord;
+    const currentRow = playerState.guesses ? playerState.guesses.length : 0;
+    
+    const knownPositions = getKnownCorrectPositions(); 
+    const availableIndices = [];
+
+    for (let i = 0; i < secretWord.length; i++) {
+        if (!knownPositions[i]) {
+            availableIndices.push(i);
+        }
+    }
+
+    if (availableIndices.length === 0) {
+        showToast("Tüm harflerin yerini zaten biliyorsun!", true);
+        return;
+    }
+
+    const hintIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    const hintLetter = secretWord[hintIndex];
+
+    // HAFIZAYA AL
+    knownPositions[hintIndex] = hintLetter;
+    setKnownCorrectPositions(knownPositions);
+
+    // KUTUYU GÜNCELLE
+    updateStaticTile(currentRow, hintIndex, hintLetter, 'correct');
+
+    // KLAVYEYİ GÜNCELLE
+    const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
+    if (keyButton) {
+        keyButton.classList.remove('present', 'absent');
+        keyButton.classList.add('correct');
+        keyButton.style.transform = "scale(1.2)";
+        setTimeout(() => { keyButton.style.transform = "scale(1)"; }, 300);
+    }
+
+    showToast(`İpucu: ${hintIndex + 1}. harf "${hintLetter}"!`, false);
     await updateJokerState('correct');
 }
 
+// 3. SİLGİ (Harf Elet)
 export async function useRemoveJoker() {
     const gameData = state.getLocalGameData();
-    const playerState = gameData.players[state.getUserId()];
-    const gameMode = state.getGameMode(); 
-
-    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.remove) || gameData.status !== 'playing') {
-        return;
-    }
-
-    if (!isBattleRoyale(gameMode) && gameData.currentPlayerId !== state.getUserId()) {
-        showToast("Sıra sende olmadığında joker kullanamazsın!", true);
-        return;
-    }
+    const currentUserId = state.getUserId();
+    const playerState = gameData.players[currentUserId];
+    
+    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.remove)) return;
 
     const secretWord = gameData.secretWord;
-    const cleanKeys = [];
+    
+    const candidates = [];
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const key = btn.dataset.key;
         if (key && key.length === 1 && 
-            !btn.classList.contains('correct') &&
-            !btn.classList.contains('present') &&
+            !btn.classList.contains('correct') && 
+            !btn.classList.contains('present') && 
             !btn.classList.contains('absent')) 
         {
-            cleanKeys.push(btn);
+            if (!secretWord.includes(key)) {
+                candidates.push(btn);
+            }
         }
     });
-    const absentKeys = cleanKeys.filter(btn => {
-        const key = btn.dataset.key;
-        return !secretWord.includes(key);
-    });
-    if (absentKeys.length === 0) {
-        showToast("Kelimede olmayan harflerin tümü zaten klavyede işaretli!", true);
+
+    if (candidates.length === 0) {
+        showToast("Elenecek harf kalmadı!", true);
         return;
     }
-    const keysToDisable = absentKeys.sort(() => 0.5 - Math.random()).slice(0, 4);
-    keysToDisable.forEach(btn => {
+
+    const countToRemove = Math.min(candidates.length, 4);
+    const toRemove = candidates.sort(() => 0.5 - Math.random()).slice(0, countToRemove);
+
+    toRemove.forEach(btn => {
         btn.classList.add('absent');
+        btn.style.opacity = "0.3"; 
+        btn.style.pointerEvents = "none"; 
     });
+
+    showToast(`${countToRemove} adet yanlış harf elendi!`, false);
     await updateJokerState('remove');
 }
 

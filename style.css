@@ -150,6 +150,28 @@ body.theme-light .back-button-hitbox:hover {
     padding: 8px 0; 
     flex-shrink: 0; 
 }
+
+/* Joker Butonları İnce Ayar */
+#joker-container {
+    gap: 20px !important; /* Aralarını biraz daha açalım */
+}
+
+.joker-button {
+    width: 56px !important; /* Biraz daha büyük olsun */
+    height: 56px !important;
+    border-width: 2px !important;
+    background-color: transparent; /* JS inline style ile eziyoruz ama olsun */
+}
+
+/* Rozet konumu */
+.joker-badge {
+    top: -5px;
+    right: -5px;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+}
+
 .joker-button {
     position: relative;
     width: 52px; 
