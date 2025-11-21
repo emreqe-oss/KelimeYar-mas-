@@ -273,6 +273,7 @@ export function updateKeyboard(gameData) {
 
     const keyStates = {};
 
+    // 1. Tahminlerden Gelen Renkler
     const myGuesses = gameData.players[currentUserId]?.guesses || [];
     myGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
@@ -284,11 +285,38 @@ export function updateKeyboard(gameData) {
         }
     });
 
+    // Eğer bir harf yeşil jokerle açıldıysa, klavyede her zaman yeşil kalsın.
+    // --- DÜZELTME BAŞLANGIÇ: Yeşil Joker Hafızasını da Ekle ---
+    const knownPositions = state.getKnownCorrectPositions(); 
+    if (knownPositions) {
+        Object.values(knownPositions).forEach(letter => {
+            if (letter) keyStates[letter] = 'correct'; 
+        });
+    }
+
+    // --- YENİ EKLEME: Turuncu Joker Hafızasını da Ekle ---
+    const presentLetters = state.getPresentJokerLetters(); 
+    
+    if (presentLetters) {
+        presentLetters.forEach(letter => {
+            // Eğer harf zaten YEŞİL değilse, SARI yap
+            if (keyStates[letter] !== 'correct') {
+                keyStates[letter] = 'present';
+            }
+        });
+    }
+    
+    // 3. Klavyeyi Boya
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
+        
         const guessColor = keyStates[keyId]; 
+        
+        // Mevcut renkleri temizle
         btn.classList.remove('correct', 'present', 'absent');
+        
+        // Yeni rengi ekle
         if (guessColor === 'correct') btn.classList.add('correct');
         else if (guessColor === 'present') btn.classList.add('present');
         else if (guessColor === 'absent') btn.classList.add('absent');

@@ -56,7 +56,7 @@ export function getChallengedFriendId() { return _challengedFriendId; }
 // Yeşil harf hafızasını yöneten fonksiyonlar
 export function getKnownCorrectPositions() { return _knownCorrectPositions; }
 export function setKnownCorrectPositions(positions) { _knownCorrectPositions = positions; }
-export function resetKnownCorrectPositions() { _knownCorrectPositions = {}; }
+export function resetKnownCorrectPositions() { _knownCorrectPositions = {}; resetPresentJokerLetters(); }
 
 // Yazma bayrağını yöneten fonksiyonlar
 export function setHasUserStartedTyping(value) { _hasUserStartedTypingInCurrentRow = value; }
@@ -80,3 +80,18 @@ export function getInvitesUnsubscribe() { return _invitesUnsubscribe; }
 
 export function setMyGamesUnsubscribe(func) { _myGamesUnsubscribe = func; }
 export function getMyGamesUnsubscribe() { return _myGamesUnsubscribe; }
+
+// --- TURUNCU JOKER HAFIZASI (YENİ EKLENECEK KISIM) ---
+let presentJokerLetters = new Set(); 
+
+export function addPresentJokerLetter(letter) {
+    presentJokerLetters.add(letter);
+}
+
+export function getPresentJokerLetters() {
+    return Array.from(presentJokerLetters);
+}
+
+export function resetPresentJokerLetters() {
+    presentJokerLetters.clear();
+}

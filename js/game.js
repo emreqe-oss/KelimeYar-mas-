@@ -27,7 +27,8 @@ import {
     resetKnownCorrectPositions,
     getHasUserStartedTyping, 
     setHasUserStartedTyping, 
-    resetHasUserStartedTyping
+    resetHasUserStartedTyping,
+    addPresentJokerLetter
 } from './state.js';
 
 import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement } from './utils.js';
@@ -652,7 +653,10 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                 else if (i === currentRow && gameData.status === 'playing') {
                     const isMyTurn = (gameData.currentPlayerId === currentUserId) || isBR || (gameMode === 'league');
                     
-                    if (isMyTurn && !state.getHasUserStartedTyping()) {
+                    // DÜZELTME: Sadece 'isMyTurn' yeterli.
+                    // '!state.getHasUserStartedTyping()' şartını SİLDİK.
+                    // Böylece yazarken de, beklerken de yeşil harfler hep orada kalacak.
+                    if (isMyTurn) { 
                         const knownPositions = getKnownCorrectPositions();
                         if (knownPositions[j]) {
                             updateStaticTile(i, j, knownPositions[j], 'correct');
@@ -719,7 +723,14 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 }
 
 function updateKnownPositions(playerGuesses) {
-    const newPositions = {};
+    // DÜZELTME: Sadece tahminlerden gelenleri değil,
+    // daha önce Joker ile açılmış (state'te duran) harfleri de baz al.
+    
+    // 1. Mevcut hafızayı kopyala (Jokerleri korumak için)
+    const currentKnown = state.getKnownCorrectPositions() || {};
+    const newPositions = { ...currentKnown }; 
+
+    // 2. Tahminlerden gelen "Yeşil" harfleri üzerine ekle
     if (playerGuesses) {
         playerGuesses.forEach(guess => {
             guess.colors.forEach((color, index) => {
@@ -729,6 +740,8 @@ function updateKnownPositions(playerGuesses) {
             });
         });
     }
+    
+    // 3. Güncellenmiş hafızayı kaydet
     state.setKnownCorrectPositions(newPositions);
     return newPositions;
 }
@@ -1542,17 +1555,35 @@ function addLetter(letter) {
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
+    // Kullanıcı yazmaya başladığında flag'i set et
     if (!state.getHasUserStartedTyping()) {
-        clearStaticTiles(currentRow, wordLength);
         state.setHasUserStartedTyping(true);
     }
 
     for (let i = 0; i < wordLength; i++) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
-        if (tile && tile.querySelector('.front').textContent === '') {
-            tile.querySelector('.front').textContent = letter;
-            playSound('click');
-            break;
+        
+        if (tile) {
+            const front = tile.querySelector('.front');
+            const back = tile.querySelector('.back');
+            const isStatic = tile.classList.contains('static');
+            const isEmpty = front.textContent === '';
+
+            // Eğer kutu boşsa VEYA Statikse (Jokerse) -> Oraya yaz!
+            // (Önceki kodda '&& !isStatic' diyerek engelliyorduk, şimdi kaldırdık)
+            if (isEmpty || isStatic) {
+                
+                // Eğer statik bir kutunun üzerine yazıyorsak, statik özelliğini kaldır
+                if (isStatic) {
+                    tile.classList.remove('static', 'correct'); // Yeşil rengi ve statikliği sil
+                    back.className = 'tile-inner back'; // Arka yüzü temizle
+                    back.textContent = ''; 
+                }
+
+                front.textContent = letter;
+                playSound('click');
+                break; // Harfi yazdık, döngüden çık
+            }
         }
     }
 }
@@ -1563,42 +1594,19 @@ function deleteLetter() {
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
-    // Eğer kullanıcı henüz yazmaya başlamadıysa silecek bir şey yok
-    if (!state.getHasUserStartedTyping()) {
-        return; 
-    }
+    if (!state.getHasUserStartedTyping()) return; 
 
-    // Sondan başa doğru dolu olan ilk kutuyu bul ve sil
-    let deletedIndex = -1;
+    // Sondan başa doğru tarayıp, STATİK OLMAYAN ilk dolu kutuyu bulup silelim
     for (let i = wordLength - 1; i >= 0; i--) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
-        // Sadece 'static' (ipucu) OLMAYAN kutuları silebiliriz
+        
+        // Eğer kutu doluysa VE statik (joker) DEĞİLSE sil
         if (tile && tile.querySelector('.front').textContent !== '' && !tile.classList.contains('static')) {
             tile.querySelector('.front').textContent = '';
-            deletedIndex = i;
-            break;
-        }
-    }
-    
-    // Eğer silinecek normal harf bulamadıysa (hepsi statikse veya boşsa)
-    if (deletedIndex === -1) {
-        // Satır tamamen temizlendiyse "yazma modu"ndan çık ve hayaletleri geri yükle
-        let hasUserTyped = false;
-        for (let j = 0; j < wordLength; j++) {
-            const t = document.getElementById(`tile-${currentRow}-${j}`);
-            if (t && t.querySelector('.front').textContent !== '' && !t.classList.contains('static')) {
-                hasUserTyped = true;
-                break;
-            }
-        }
-        if (!hasUserTyped) {
-            state.setHasUserStartedTyping(false);
-            const knownPositions = getKnownCorrectPositions();
-            for (let j = 0; j < wordLength; j++) {
-                if (knownPositions[j]) {
-                    updateStaticTile(currentRow, j, knownPositions[j], 'correct');
-                }
-            }
+            
+            // Eğer sildiğimiz harften sonra hiç "kullanıcı harfi" kalmadıysa typing modunu kapatabiliriz
+            // (Bu opsiyonel ama temizlik için iyi)
+            return; // Sildik ve çıktık
         }
     }
 }
@@ -2286,7 +2294,8 @@ export async function usePresentJoker() {
         keyButton.style.transform = "scale(1.2)";
         keyButton.style.borderColor = "#f59e0b";
         setTimeout(() => { keyButton.style.transform = "scale(1)"; }, 300);
-        
+        state.addPresentJokerLetter(hintLetter);
+
         showToast(`İpucu: "${hintLetter}" harfi kelimede var!`, false);
         await updateJokerState('present');
     }
