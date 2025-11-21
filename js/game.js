@@ -133,15 +133,16 @@ export async function showScoreboard(gameData) {
 
     // 2. GÜNÜN KELİMESİ (DAILY)
     if (gameMode === 'daily') {
+        // Gereksiz elementleri gizle
         roundWinnerDisplay.style.display = 'none';
         correctWordDisplay.style.display = 'none';
         matchWinnerDisplay.style.display = 'none';
         finalScores.style.display = 'none';
         newRoundBtn.classList.add('hidden'); 
         newWordRematchBtn.classList.add('hidden');
-        
         defaultWordDisplayContainer.style.display = 'none'; 
 
+        // İstatistikleri getir
         const dailyStats = await getDailyLeaderboardStats(currentUserId, gameData.secretWord);
         dailyStatsContainer.classList.remove('hidden');
 
@@ -149,33 +150,77 @@ export async function showScoreboard(gameData) {
         const resultTitle = didWin ? "🎉 TEBRİKLER!" : "😔 MAALESEF";
         const resultColor = didWin ? "text-green-400" : "text-red-400";
 
+        // İstatistik Kartını Oluştur
         if (dailyStats) {
             dailyStatsContainer.innerHTML = `
                 <div class="w-full max-w-md mx-auto bg-gray-800/95 p-6 rounded-xl shadow-2xl border border-gray-600 flex flex-col items-center">
+                    
                     <h2 class="text-3xl font-extrabold ${resultColor} mb-2 tracking-wide">${resultTitle}</h2>
+                    
                     <div class="text-center mb-6">
                         <span class="text-gray-400 text-sm uppercase tracking-wider">Doğru Kelime</span>
                         <div class="text-4xl font-black text-white mt-1 bg-gray-700 px-6 py-2 rounded-lg tracking-widest shadow-inner">
                             ${gameData.secretWord}
                         </div>
                     </div>
+
+                    <div class="grid grid-cols-2 gap-3 w-full mb-6">
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-2xl font-bold text-yellow-400">${dailyStats.userScore}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Puanın</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-2xl font-bold text-indigo-300">${dailyStats.userPosition > 0 ? '#' + dailyStats.userPosition : '-'}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Sıralama</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-xl font-bold text-white">${dailyStats.userGuessCount}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Deneme</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
+                            <p class="text-xl font-bold text-white">${dailyStats.avgScore}</p>
+                            <p class="text-xs text-gray-400 uppercase font-semibold">Ort. Puan</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-4">Toplam ${dailyStats.totalPlayers} oyuncu bugün oynadı.</p>
+
                     <div class="w-full border-t border-gray-600 pt-4 mt-2 text-center">
-                        <p id="word-meaning-display-daily" class="text-sm text-gray-300 italic leading-relaxed">
+                        <p id="word-meaning-display-daily" class="text-sm text-gray-300 italic leading-relaxed mb-3">
                             Anlam yükleniyor...
                         </p>
-                        <div id="daily-dict-btn-container" class="mt-2"></div>
+                        
+                        <div id="daily-dict-btn-container" class="flex justify-center"></div>
                     </div>
                 </div>
             `;
             
+            // Anlamı yükle
             const meaningDisplayEl = document.getElementById('word-meaning-display-daily'); 
             const meaning = await fetchWordMeaning(gameData.secretWord);
             if(meaningDisplayEl) meaningDisplayEl.textContent = meaning;
 
-            // Günlük modda butonun yerini özel ayarlayalım (veya global butonu kullanalım)
-            // Basitlik adına global butonu aktifleştiriyoruz, daily container içinde görünmeyebilir ama 
-            // yapıyı bozmamak için setupDictionaryButton çağırıyoruz.
-            setupDictionaryButton(gameData.secretWord);
+            // --- DÜZELTME: Sözlük Butonunu Özel Konteynera Taşı ---
+            // Normal butonu alıyoruz
+            const originalBtn = document.getElementById('btn-add-word-to-dict');
+            if (originalBtn) {
+                // Butonu görünür yap ve özelliklerini ayarla
+                originalBtn.classList.remove('hidden');
+                originalBtn.classList.add('bg-amber-600');
+                originalBtn.disabled = false;
+                originalBtn.innerHTML = '<span>📖</span> Sözlüğe Ekle';
+                
+                // Event listener'ı temizle ve yenisini ekle
+                const newBtn = originalBtn.cloneNode(true);
+                newBtn.onclick = () => import('./game.js').then(m => m.addWordToDictionary(gameData.secretWord));
+                
+                // Butonu oluşturduğumuz özel konteynera taşı
+                const container = document.getElementById('daily-dict-btn-container');
+                if (container) {
+                    container.appendChild(newBtn);
+                }
+            }
+            // -----------------------------------------------------
 
         } else {
             dailyStatsContainer.innerHTML = `<p class="text-gray-400 text-center">Günlük sıralama bilgileri yüklenemedi.</p>`;
@@ -2836,6 +2881,8 @@ export async function buyItem(type, itemKey, price) {
         
         const { updateMarketUI } = await import('./ui.js');
         updateMarketUI();
+        const mainMenuGoldEl = document.getElementById('main-menu-gold-display');
+        if (mainMenuGoldEl) mainMenuGoldEl.textContent = newGold;
 
         showToast("Satın alma başarılı!", false);
         playSound('win'); 
@@ -2862,6 +2909,8 @@ export async function addGold(amount) {
         
         const { updateMarketUI } = await import('./ui.js');
         updateMarketUI();
+        const mainMenuGoldEl = document.getElementById('main-menu-gold-display');
+        if (mainMenuGoldEl) mainMenuGoldEl.textContent = newGold;
 
         showToast(`${amount} Altın hesabına eklendi!`, false);
         playSound('win');

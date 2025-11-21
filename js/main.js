@@ -96,6 +96,9 @@ function initAuthListener() {
                 
                 const username = profileData.username || 'Kullanıcı';
                 const avatarUrl = profileData.avatarUrl || getDefaultAvatar(); 
+                const userGold = profileData.gold || 0;
+                const mainMenuGoldEl = document.getElementById('main-menu-gold-display');
+                if (mainMenuGoldEl) mainMenuGoldEl.textContent = userGold;
 
                 // 1. Ana Menüdeki Başlığı Güncelle
                 document.getElementById('main-menu-username').textContent = username;

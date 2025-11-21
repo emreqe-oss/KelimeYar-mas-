@@ -41,6 +41,14 @@
                     <img id="main-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E" class="w-10 h-10 rounded-full border-2 border-gray-600 cursor-pointer">
                     <div>
                         <p id="main-menu-username" class="font-extrabold text-lg">kullanici_adi</p>
+                        
+                        <div class="flex items-center gap-1 font-bold text-sm my-0.5" style="color: #FFFF00; text-shadow: 0 0 3px rgba(0,0,0,0.8);">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5));">
+                                <circle cx="12" cy="12" r="10" fill="#FFFF00" stroke="#b45309" stroke-width="1" />
+                                <text x="12" y="16" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                            </svg>
+                            <span id="main-menu-gold-display">0</span>
+                        </div>
                         <p id="main-menu-stats" class="text-xs text-gray-400">Başarı: %0 | Seri: 0</p>
                     </div>
                 </div>
@@ -607,79 +615,114 @@
              </div>
         </div>
 
-        <div id="kirtasiye-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-900">
-            <header class="flex items-center mb-6 border-b border-gray-700 pb-4">
-                <button id="back-to-main-from-market-btn" class="back-button-hitbox">
+        <div id="kirtasiye-screen" class="hidden flex-1 flex flex-col p-3 bg-gray-900 h-full">
+            <header class="flex items-center mb-3 border-b border-gray-700 pb-2 flex-shrink-0">
+                <button id="back-to-main-from-market-btn" class="back-button-hitbox scale-90 origin-left">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 </button>
-                <h1 class="text-3xl font-black text-center flex-grow -ml-10 text-amber-500 tracking-wider flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
+                <h1 class="text-2xl font-black text-center flex-grow -ml-10 text-amber-500 tracking-wider flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
                     KIRTASİYE
                 </h1>
             </header>
 
-            <div class="bg-gray-800 rounded-xl p-4 mb-6 flex justify-between items-center shadow-lg border border-amber-500/30">
+            <div class="bg-gray-800 rounded-xl p-3 mb-4 flex justify-between items-center shadow-lg border border-amber-500/30 flex-shrink-0">
                 <div>
                     <p class="text-gray-400 text-xs uppercase font-bold">Cüzdanım</p>
-                    <p class="text-white text-lg font-medium">Hoşgeldin!</p>
+                    <p class="text-white text-md font-medium">Hoşgeldin!</p>
                 </div>
-                <div class="flex items-center gap-2 bg-gray-900 px-4 py-2 rounded-full border border-yellow-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /><path d="M10 2a8 8 0 100 16 8 8 0 000-16z" /><path fill-rule="evenodd" d="M10 4a6 6 0 100 12 6 6 0 000-12zm0 10a4 4 0 100-8 4 4 0 000 8z" clip-rule="evenodd" /></svg>
-                    <span id="user-gold-display" class="text-2xl font-bold text-yellow-400">0</span>
+                <div class="flex items-center gap-2 bg-gray-900 px-3 py-1.5 rounded-full border border-yellow-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                        <text x="12" y="16" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                    </svg>
+                    <span id="user-gold-display" class="text-xl font-bold text-yellow-400">0</span>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto space-y-8 custom-scrollbar pr-2">
+            <div class="flex-1 overflow-y-auto custom-scrollbar pr-1">
                 
-                <div>
-                    <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                        Jokerler
+                <div class="mb-5">
+                    <h2 class="text-sm font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                        Kırtasiye Malzemeleri
                     </h2>
-                    <div class="grid grid-cols-1 gap-3">
+                    <div class="grid grid-cols-1 gap-1.5">
                         
-                        <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between border border-gray-700">
+                        <div class="bg-gray-800 p-2.5 rounded-xl flex items-center justify-between border border-gray-700">
                             <div class="flex items-center gap-3">
-                                <div class="bg-yellow-500 w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">?</div>
+                                <div class="flex items-center justify-center rounded-full" style="background-color: rgba(245, 158, 11, 0.1); width: 44px; height: 44px; border: 1px solid #f59e0b;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 1px rgba(251, 191, 36, 0.5));">
+                                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
+                                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" />
+                                    </svg>
+                                </div>
                                 <div>
-                                    <h3 class="font-bold text-white">Harf İpucu</h3>
-                                    <p class="text-xs text-gray-400">Rastgele bir harf gösterir.</p>
-                                    <p class="text-xs text-indigo-400 mt-1">Stok: <span id="stock-present">0</span></p>
+                                    <h3 class="font-bold text-white text-sm">Turuncu Kalem</h3>
+                                    <p class="text-xs text-gray-400">Harf ipucu verir.</p>
+                                    <p class="text-xs text-indigo-400 mt-0.5">Stok: <span id="stock-present" class="font-bold text-white">0</span></p>
                                 </div>
                             </div>
-                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow flex flex-col items-center min-w-[80px]" data-type="joker" data-item="present" data-price="100">
-                                <span>100 🪙</span>
-                                <span class="text-[10px] font-normal opacity-80">Satın Al</span>
+                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow flex flex-col items-center justify-center min-w-[70px]" data-type="joker" data-item="present" data-price="100">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-sm font-bold">100</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="2" />
+                                        <text x="12" y="17" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                    </svg>
+                                </div>
+                                <span class="text-[10px] font-normal opacity-90">Satın Al</span>
                             </button>
                         </div>
 
-                        <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between border border-gray-700">
+                        <div class="bg-gray-800 p-2.5 rounded-xl flex items-center justify-between border border-gray-700">
                             <div class="flex items-center gap-3">
-                                <div class="bg-green-500 w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">✓</div>
+                                <div class="flex items-center justify-center rounded-full" style="background-color: rgba(16, 185, 129, 0.1); width: 44px; height: 44px; border: 1px solid #10b981;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 1px rgba(52, 211, 153, 0.5));">
+                                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
+                                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" />
+                                    </svg>
+                                </div>
                                 <div>
-                                    <h3 class="font-bold text-white">Kesin Harf</h3>
-                                    <p class="text-xs text-gray-400">Harfi yerine yerleştirir.</p>
-                                    <p class="text-xs text-indigo-400 mt-1">Stok: <span id="stock-correct">0</span></p>
+                                    <h3 class="font-bold text-white text-sm">Yeşil Kalem</h3>
+                                    <p class="text-xs text-gray-400">Harfi yerine yazar.</p>
+                                    <p class="text-xs text-indigo-400 mt-0.5">Stok: <span id="stock-correct" class="font-bold text-white">0</span></p>
                                 </div>
                             </div>
-                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow flex flex-col items-center min-w-[80px]" data-type="joker" data-item="correct" data-price="250">
-                                <span>250 🪙</span>
-                                <span class="text-[10px] font-normal opacity-80">Satın Al</span>
+                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow flex flex-col items-center justify-center min-w-[70px]" data-type="joker" data-item="correct" data-price="250">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-sm font-bold">250</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="2" />
+                                        <text x="12" y="17" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                    </svg>
+                                </div>
+                                <span class="text-[10px] font-normal opacity-90">Satın Al</span>
                             </button>
                         </div>
 
-                        <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between border border-gray-700">
+                        <div class="bg-gray-800 p-2.5 rounded-xl flex items-center justify-between border border-gray-700">
                             <div class="flex items-center gap-3">
-                                <div class="bg-gray-500 w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">✕</div>
+                                <div class="flex items-center justify-center rounded-full" style="background-color: rgba(156, 163, 175, 0.1); width: 44px; height: 44px; border: 1px solid #9ca3af;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
+                                        <path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" />
+                                        <path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" />
+                                    </svg>
+                                </div>
                                 <div>
-                                    <h3 class="font-bold text-white">Harf Elet</h3>
-                                    <p class="text-xs text-gray-400">Gereksiz harfleri siler.</p>
-                                    <p class="text-xs text-indigo-400 mt-1">Stok: <span id="stock-remove">0</span></p>
+                                    <h3 class="font-bold text-white text-sm">Silgi</h3>
+                                    <p class="text-xs text-gray-400">Gereksizleri siler.</p>
+                                    <p class="text-xs text-indigo-400 mt-0.5">Stok: <span id="stock-remove" class="font-bold text-white">0</span></p>
                                 </div>
                             </div>
-                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow flex flex-col items-center min-w-[80px]" data-type="joker" data-item="remove" data-price="150">
-                                <span>150 🪙</span>
-                                <span class="text-[10px] font-normal opacity-80">Satın Al</span>
+                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow flex flex-col items-center justify-center min-w-[70px]" data-type="joker" data-item="remove" data-price="150">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-sm font-bold">150</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="2" />
+                                        <text x="12" y="17" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                    </svg>
+                                </div>
+                                <span class="text-[10px] font-normal opacity-90">Satın Al</span>
                             </button>
                         </div>
 
@@ -687,27 +730,53 @@
                 </div>
 
                 <div>
-                    <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
                         Altın Kasası
                     </h2>
                     <div class="grid grid-cols-2 gap-3">
-                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-700 border border-yellow-600 p-4 rounded-xl flex flex-col items-center transition transform active:scale-95" data-amount="500">
-                            <span class="text-3xl mb-2">🪙</span>
-                            <span class="font-bold text-white text-lg">500 Altın</span>
-                            <span class="text-green-400 text-sm mt-1">ÜCRETSİZ (Reklam)</span>
+                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-700 border border-yellow-600 p-3 rounded-xl flex flex-col items-center transition transform active:scale-95" data-amount="500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-1" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
+                                <circle cx="8" cy="14" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="8" y="16" font-size="5" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="16" cy="14" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="16" y="16" font-size="5" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="12" cy="9" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="12" y="11" font-size="5" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                            </svg>
+                            <span class="font-bold text-white text-sm">500 Altın</span>
+                            <span class="text-green-400 text-[10px] mt-0.5">ÜCRETSİZ (Reklam)</span>
                         </button>
-                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-700 border border-yellow-600 p-4 rounded-xl flex flex-col items-center transition transform active:scale-95" data-amount="2000">
-                            <span class="text-3xl mb-2">💰</span>
-                            <span class="font-bold text-white text-lg">2.000 Altın</span>
-                            <span class="text-gray-400 text-sm mt-1 line-through">20₺</span>
-                            <span class="text-green-400 text-sm font-bold">BEDAVA (Beta)</span>
+                        
+                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-700 border border-yellow-600 p-3 rounded-xl flex flex-col items-center transition transform active:scale-95" data-amount="2000">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-1" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
+                                <circle cx="5" cy="17" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="5" y="18.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="12" cy="17" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="12" y="18.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="19" cy="17" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="19" y="18.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="8.5" cy="12" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="8.5" y="13.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="15.5" cy="12" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="15.5" y="13.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                                
+                                <circle cx="12" cy="7" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+                                <text x="12" y="8.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
+                            </svg>
+                            <span class="font-bold text-white text-sm">2.000 Altın</span>
+                            <span class="text-green-400 text-[10px] font-bold mt-0.5">BEDAVA (Beta)</span>
                         </button>
                     </div>
                 </div>
 
             </div>
-        </div> 
+        </div>
 
         <div id="dictionary-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-800">
             <header class="flex items-center mb-4 border-b border-gray-700 pb-3">
