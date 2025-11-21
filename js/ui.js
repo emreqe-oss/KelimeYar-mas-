@@ -1,10 +1,12 @@
-// js/ui.js - TAM DOSYA (Kelimelig, BR Puanlama, Klavye Düzeltmesi, Rozetler)
-
-// js/ui.js EN BAŞI
+// js/ui.js - TAM DOSYA (Sözlük Özelliği Eklendi)
 
 import * as state from './state.js'; 
 import { getStatsFromProfile, createElement } from './utils.js';
-import { joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame, checkLeagueStatus, joinCurrentLeague } from './game.js';
+import { 
+    joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame, 
+    checkLeagueStatus, joinCurrentLeague, buyItem, addGold,
+    loadDictionary, removeWordFromDictionary // <-- Sözlük için eklendi
+} from './game.js';
 
 // Değişkenler
 export let 
@@ -46,24 +48,18 @@ export let
     
     // My Games Tabs
     showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn, 
-    gameInviteCount, // <-- BUNU EKLEMİŞTİK, KALSIN
+    gameInviteCount,
     
     // Game Over
     newRoundBtn, mainMenuBtn, shareResultsBtn,
     
     // Misc
     userDisplay, invitationModal, 
-    copyGameIdBtn; // <-- İŞTE EKSİK OLAN BU VE ARKADAŞLARI!
+    copyGameIdBtn,
 
-    // initUI fonksiyonunun içine:
-
-    // Market UI
-    marketBtn = document.getElementById('market-btn');
-    backToMainFromMarketBtn = document.getElementById('back-to-main-from-market-btn');
-    userGoldDisplay = document.getElementById('user-gold-display');
-    stockPresent = document.getElementById('stock-present');
-    stockCorrect = document.getElementById('stock-correct');
-    stockRemove = document.getElementById('stock-remove');
+    // --- SÖZLÜK ELEMENTLERİ (YENİ) ---
+    dictionaryMenuBtn, dictionaryScreen, backToMainFromDictionaryBtn, 
+    dictionaryListContainer, dictionaryEmptyMsg, btnAddWordToDict;
 
 const brPlayerSlots = []; 
 let currentScreen = '';
@@ -173,6 +169,22 @@ export function initUI() {
     userDisplay = document.getElementById('user-display');
     invitationModal = document.getElementById('invitation-modal');
     copyGameIdBtn = document.getElementById('copy-game-id-btn');
+
+    // Market UI
+    marketBtn = document.getElementById('market-btn');
+    backToMainFromMarketBtn = document.getElementById('back-to-main-from-market-btn');
+    userGoldDisplay = document.getElementById('user-gold-display');
+    stockPresent = document.getElementById('stock-present');
+    stockCorrect = document.getElementById('stock-correct');
+    stockRemove = document.getElementById('stock-remove');
+
+    // --- SÖZLÜK ELEMENTLERİ (YENİ) ---
+    dictionaryMenuBtn = document.getElementById('dictionary-menu-btn');
+    dictionaryScreen = document.getElementById('dictionary-screen');
+    backToMainFromDictionaryBtn = document.getElementById('back-to-main-from-dictionary-btn');
+    dictionaryListContainer = document.getElementById('dictionary-list-container');
+    dictionaryEmptyMsg = document.getElementById('dictionary-empty-msg');
+    btnAddWordToDict = document.getElementById('btn-add-word-to-dict');
 }
 
 export function showScreen(screenId, isBackNavigation = false) {
@@ -180,7 +192,8 @@ export function showScreen(screenId, isBackNavigation = false) {
         'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
         'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
         'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
-        'edit-profile-screen', 'kelimelig-screen', 'kirtasiye-screen'
+        'edit-profile-screen', 'kelimelig-screen', 'kirtasiye-screen',
+        'dictionary-screen' // <-- Sözlük Ekranı Eklendi
     ];
     
     if (currentScreen === screenId) return;
@@ -260,7 +273,6 @@ export function updateKeyboard(gameData) {
 
     const keyStates = {};
 
-    // SADECE KENDİ TAHMİNLERİMİZ (Rakip ipucu yok)
     const myGuesses = gameData.players[currentUserId]?.guesses || [];
     myGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
@@ -283,7 +295,6 @@ export function updateKeyboard(gameData) {
     });
 }
 
-// --- YENİ: Hayalet Harfler İçin Statik Kutu Güncelleme ---
 export function updateStaticTile(row, col, letter, colorClass) {
     const tileId = `tile-${row}-${col}`;
     const tile = document.getElementById(tileId);
@@ -678,7 +689,6 @@ export function updateJokerUI(jokersUsed, isMyTurn, gameStatus) {
 export async function openKelimeligScreen() {
     showScreen('kelimelig-screen');
     
-    // UI'ı sıfırla
     const intro = document.getElementById('league-intro-section');
     const dashboard = document.getElementById('league-dashboard-section');
     const joinStatus = document.getElementById('league-join-status');
@@ -723,14 +733,11 @@ export function renderLeagueMatches(matches, currentUserId) {
         let scoreDisplay = '';
 
         if (hasIPlayed) {
-            // Ben oynamışım
             if (!hasOppPlayed) {
-                // Rakip oynamamış
                 buttonHTML = '<button class="bg-gray-600 text-gray-400 cursor-not-allowed py-1 px-3 rounded text-xs font-bold" disabled>Bekleniyor...</button>';
                 statusBadge = '<span class="text-[10px] bg-yellow-900/50 text-yellow-500 px-2 py-0.5 rounded uppercase tracking-wide">Rakip Bekleniyor</span>';
                 cardClass = 'bg-gray-800/80 border-yellow-900/30';
             } else {
-                // İkimiz de oynamışız
                 const myGuesses = myData.guesses.length;
                 const oppGuesses = oppData.guesses.length;
                 const myFail = myData.failed;
@@ -755,7 +762,6 @@ export function renderLeagueMatches(matches, currentUserId) {
                 cardClass = myPoints === 3 ? 'bg-green-900/20 border-green-900/50' : (myPoints === 1 ? 'bg-blue-900/20 border-blue-900/50' : 'bg-red-900/10 border-red-900/30');
             }
         } else {
-            // Ben oynamamışım
             buttonHTML = `<button class="play-league-match-btn bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-lg transition active:scale-95 flex items-center gap-1">
                             <span>▶</span> OYNA
                           </button>`;
@@ -924,7 +930,6 @@ export async function playTutorialAnimation() {
     cleanTutorialBoard(); 
     
     try {
-        // ADIM 1: TAHMİN "ÖLÇÜT"
         const guess1 = { word: ['Ö', 'L', 'Ç', 'Ü', 'T'], colors: ['correct', 'absent', 'absent', 'absent', 'absent'], keys: { correct: ['Ö'], absent: ['L', 'Ç', 'Ü', 'T'] } };
         await typeTutorialTile(0, 0, guess1.word[0], 50); 
         await typeTutorialTile(0, 1, guess1.word[1], 150);
@@ -937,7 +942,6 @@ export async function playTutorialAnimation() {
         await updateTutorialKeyboard(guess1.keys.absent, 'absent', 0);
         await wait(2000); 
 
-        // ADIM 2: TAHMİN "ÖZLEM"
         const guess2 = { word: ['Ö', 'Z', 'L', 'E', 'M'], colors: ['correct', 'absent', 'absent', 'correct', 'absent'], keys: { correct: ['E'], absent: ['Z', 'M'] } };
         await wait(500); 
         await typeTutorialTile(1, 0, 'Ö', 0); 
@@ -953,7 +957,6 @@ export async function playTutorialAnimation() {
         await updateTutorialKeyboard(guess2.keys.absent, 'absent', 0);
         await wait(2000); 
 
-        // ADIM 3: SARI JOKER + TAHMİN "ÖNDER"
         await wait(500); 
         await typeTutorialTile(2, 0, 'Ö', 0); 
         await flipTutorialTile(2, 0, 'correct', 0);
@@ -980,7 +983,6 @@ export async function playTutorialAnimation() {
         await updateTutorialKeyboard(guess3.keys.absent, 'absent', 0);
         await wait(2000); 
 
-        // ADIM 4: KLAVYE JOKERİ
         await wait(500); 
         await typeTutorialTile(3, 0, 'Ö', 0); 
         await flipTutorialTile(3, 0, 'correct', 0);
@@ -993,7 +995,6 @@ export async function playTutorialAnimation() {
         await animateJokerRemove(1000); 
         await wait(2000); 
 
-        // ADIM 5: YEŞİL JOKER + "ÖRNEK"
         await wait(500); 
         await highlightTutorialJoker('tutorial-joker-correct', 0, 1000);
         await disableTutorialJoker('tutorial-joker-correct', 1000);
@@ -1024,8 +1025,6 @@ export function stopTutorialAnimation() {
     isTutorialRunning = false; 
     cleanTutorialBoard();
 }
-
-// --- KELİMELİG SEKME YÖNETİMİ ---
 
 export function switchLeagueTab(tabName) {
     const fixturesBtn = document.getElementById('btn-show-fixtures');
@@ -1086,30 +1085,23 @@ export function renderLeagueStandings(standingsData, currentUserId) {
     });
 }
 
-// --- KIRTASİYE (MARKET) FONKSİYONLARI ---
-
-import { buyItem, addGold } from './game.js'; // Birazdan game.js'e yazacağız
-
 export function updateMarketUI() {
     const profile = state.getCurrentUserProfile();
     if (!profile) return;
 
-    // Altın (Yoksa 0 varsay)
     const gold = profile.gold || 0;
     if (userGoldDisplay) userGoldDisplay.textContent = gold;
 
-    // Envanter (Yoksa boş obje varsay)
     const inventory = profile.inventory || { present: 0, correct: 0, remove: 0 };
     
     if (stockPresent) stockPresent.textContent = inventory.present || 0;
     if (stockCorrect) stockCorrect.textContent = inventory.correct || 0;
     if (stockRemove) stockRemove.textContent = inventory.remove || 0;
 
-    // Satın Alma Butonları Dinleyicileri (Her açılışta yenilememek için kontrol edilebilir ama basitlik için tekrar atıyoruz)
     document.querySelectorAll('.buy-item-btn').forEach(btn => {
         btn.onclick = () => {
-            const type = btn.dataset.type; // 'joker'
-            const item = btn.dataset.item; // 'present', 'correct', 'remove'
+            const type = btn.dataset.type; 
+            const item = btn.dataset.item; 
             const price = parseInt(btn.dataset.price);
             buyItem(type, item, price);
         };
@@ -1126,4 +1118,57 @@ export function updateMarketUI() {
 export function openKirtasiyeScreen() {
     showScreen('kirtasiye-screen');
     updateMarketUI();
+}
+
+// --- SÖZLÜK (DICTIONARY) FONKSİYONLARI (YENİ) ---
+
+export async function openDictionaryScreen() {
+    showScreen('dictionary-screen');
+    
+    if (dictionaryListContainer) {
+        dictionaryListContainer.innerHTML = '<p class="text-center text-gray-500 mt-10 animate-pulse">Sözlük yükleniyor...</p>';
+    }
+
+    await loadDictionary();
+}
+
+export function renderDictionaryList(words) {
+    if (!dictionaryListContainer) return;
+    dictionaryListContainer.innerHTML = '';
+
+    if (!words || words.length === 0) {
+        dictionaryListContainer.innerHTML = '<p id="dictionary-empty-msg" class="text-gray-500 text-center mt-10 italic">Sözlüğün henüz boş.</p>';
+        return;
+    }
+
+    words.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'dictionary-card';
+        
+        const meaning = item.meaning ? item.meaning : 'Anlam bulunamadı.';
+
+        card.innerHTML = `
+            <div class="dictionary-header">
+                <span class="dictionary-word">${item.word}</span>
+                <button class="btn-delete-word" title="Sözlükten Sil">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
+            <div class="dictionary-meaning">${meaning}</div>
+        `;
+
+        const deleteBtn = card.querySelector('.btn-delete-word');
+        if (deleteBtn) {
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm(`"${item.word}" kelimesini sözlüğünden silmek istiyor musun?`)) {
+                    removeWordFromDictionary(item.word, card);
+                }
+            };
+        }
+
+        dictionaryListContainer.appendChild(card);
+    });
 }

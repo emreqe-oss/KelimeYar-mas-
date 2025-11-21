@@ -1,4 +1,4 @@
-// js/main.js - TAM DOSYA (Tüm düzeltmeler ve özellikler dahil - 10.11.2025)
+// js/main.js - TAM DOSYA (Sözlük Özelliği Eklendi ve Temizlendi)
 
 import { 
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
@@ -35,9 +35,7 @@ import {
     backToMainFromFriendsBtn,
     randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
     dailyWordBtn,
-    // --- YENİ EKLENENLER BAŞLANGIÇ ---
     kelimeligBtn, backToMainFromLeagueBtn, openKelimeligScreen,
-    // --- YENİ EKLENENLER BİTİŞ ---
     showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
     showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
     closeProfileBtn,
@@ -47,8 +45,14 @@ import {
     newRoundBtn, mainMenuBtn, shareResultsBtn,
     jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
     playTutorialAnimation,
-    stopTutorialAnimation, marketBtn, backToMainFromMarketBtn, openKirtasiyeScreen
+    stopTutorialAnimation, marketBtn, backToMainFromMarketBtn, openKirtasiyeScreen,
+    
+    // --- SÖZLÜK İMPORTLARI (YENİ) ---
+    dictionaryMenuBtn, 
+    backToMainFromDictionaryBtn,
+    openDictionaryScreen
 } from './ui.js';
+
 import { 
     startNewGame, 
     findOrCreateRandomGame, 
@@ -63,7 +67,7 @@ import {
     usePresentJoker, 
     useCorrectJoker, 
     useRemoveJoker,
-    startRematch // Rövanş için eklendi
+    startRematch 
 } from './game.js';
 import { showToast } from './utils.js';
 
@@ -131,19 +135,16 @@ function initAuthListener() {
                     } else {
                         localStorage.removeItem('activeGameId');
                         showScreen('main-menu-screen');
-                        // Geri tuşu için ana menüyü ayarla
                         history.replaceState({ screen: 'main-menu-screen' }, 'Ana Menü', '#main-menu-screen');
                     }
                 } catch (error) {
                     console.error("Yarım kalan oyuna girerken hata:", error);
                     localStorage.removeItem('activeGameId');
                     showScreen('main-menu-screen');
-                    // Geri tuşu için ana menüyü ayarla
                     history.replaceState({ screen: 'main-menu-screen' }, 'Ana Menü', '#main-menu-screen');
                 }
             } else {
                 showScreen('main-menu-screen');
-                // Geri tuşu için ana menüyü ayarla
                 history.replaceState({ screen: 'main-menu-screen' }, 'Ana Menü', '#main-menu-screen');
             }
             
@@ -162,7 +163,7 @@ function initAuthListener() {
     });
 }
 
-// Global Sıralama (Meydan Oku Butonlu)
+// Global Sıralama
 async function fetchAndDisplayGlobalRanking() {
     const listElement = document.getElementById('global-ranking-list');
     const loadingElement = document.getElementById('global-ranking-loading');
@@ -242,7 +243,7 @@ async function fetchAndDisplayGlobalRanking() {
     }
 }
 
-// İstatistik ekranındaki sekmeleri (tab) yöneten fonksiyon
+// İstatistik Sekmeleri
 function switchStatsTab(tabName) {
     const personalTab = document.getElementById('personal-stats-tab');
     const globalTab = document.getElementById('global-ranking-tab');
@@ -257,7 +258,7 @@ function switchStatsTab(tabName) {
         globalBtn.classList.add('text-white', 'border-indigo-500');
         globalBtn.classList.remove('text-gray-400');
         fetchAndDisplayGlobalRanking(); 
-    } else { // 'personal'
+    } else { 
         personalTab.classList.remove('hidden');
         globalTab.classList.add('hidden');
         personalBtn.classList.add('text-white', 'border-indigo-500');
@@ -267,7 +268,6 @@ function switchStatsTab(tabName) {
     }
 }
 
-// SADECE istatistikleri açan fonksiyon
 const openStatsScreen = () => {
     const profile = getCurrentUserProfile();
     if (!profile) return; 
@@ -278,7 +278,6 @@ const openStatsScreen = () => {
     switchStatsTab('personal');
 };
 
-// Profili Düzenleme ekranını açan fonksiyon
 const openEditProfileScreen = () => {
     const profile = getCurrentUserProfile();
     if (!profile) return;
@@ -291,13 +290,11 @@ const openEditProfileScreen = () => {
     showScreen('edit-profile-screen');
 };
 
-// Tüm butonlara tıklama olaylarını (event listener) ekleyen fonksiyon
+// Tüm butonlara tıklama olaylarını ekleyen fonksiyon
 function addEventListeners() {
 
     // Kırtasiye Butonları
     if (marketBtn) {
-        marketBtn.addEventListener('click', () => openKelimeligScreen()); // HATA: Burada openKirtasiyeScreen olmalı
-        // DÜZELTME:
         marketBtn.addEventListener('click', () => {
              import('./ui.js').then(module => module.openKirtasiyeScreen());
         });
@@ -321,13 +318,14 @@ function addEventListeners() {
     logoutBtn.addEventListener('click', handleLogout);
     registerBtn.addEventListener('click', handleRegister);
     goToRegisterBtn.addEventListener('click', () => showScreen('register-screen'));
-    backToLoginBtn.addEventListener('click', () => showScreen('login-screen')); // Bu Geri Tuşu değil, normal link
+    backToLoginBtn.addEventListener('click', () => showScreen('login-screen'));
 
     // Ana Menü
     newGameBtn.addEventListener('click', () => showScreen('new-game-screen'));
     myGamesBtn.addEventListener('click', () => showScreen('my-games-screen'));
     friendsBtn.addEventListener('click', () => showScreen('friends-screen'));
-// --- KELİMELİG BUTONLARI (Main.js içine eklenecek) ---
+
+    // Kelimelig Butonları
     if (kelimeligBtn) {
         kelimeligBtn.addEventListener('click', () => {
             openKelimeligScreen();
@@ -339,7 +337,20 @@ function addEventListeners() {
             showScreen('main-menu-screen');
         });
     }
-    // -----------------------------------------------------
+
+    // --- SÖZLÜK BUTONLARI (YENİ) ---
+    if (dictionaryMenuBtn) {
+        dictionaryMenuBtn.addEventListener('click', () => {
+            openDictionaryScreen();
+        });
+    }
+
+    if (backToMainFromDictionaryBtn) {
+        backToMainFromDictionaryBtn.addEventListener('click', () => {
+            showScreen('main-menu-screen');
+        });
+    }
+    // --------------------------------
 
     // Kelimelig Sekme Butonları
     if (btnShowFixtures) {
@@ -367,7 +378,7 @@ function addEventListeners() {
         stopTutorialAnimation(); 
     });
 
-    // Kapatma Butonları (history.back() kullanır)
+    // Kapatma Butonları
     closeProfileBtn.addEventListener('click', () => history.back());
     document.getElementById('back-to-main-from-edit-profile-btn').addEventListener('click', () => history.back());
 
@@ -375,7 +386,7 @@ function addEventListeners() {
     themeLightBtn.addEventListener('click', () => switchTheme('light'));
     themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
 
-    // Geri Butonları (history.back() kullanır)
+    // Geri Butonları
     backToMainMenuBtn.addEventListener('click', () => history.back());
     backToMainMenuFromGamesBtn.addEventListener('click', () => history.back()); 
     backToMainFromFriendsBtn.addEventListener('click', () => history.back());
@@ -384,14 +395,14 @@ function addEventListeners() {
     vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
     dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
     
-    // Gevşek Oyun (1 Tur)
+    // Gevşek Oyun
     randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ 
         timeLimit: 43200, 
         matchLength: 1,
         gameType: 'random_loose' 
     }));
     
-    // Seri Oyun (5 Tur)
+    // Seri Oyun
     seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
 
     // Online Oyun Kurma / Katılma
@@ -537,7 +548,6 @@ function initTheme() {
 // ===================================================
 
 const AVATAR_LIST = [
-    // (Avatarları ertelediğimiz için varsayılan liste)
     'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar1&background=%236b7280',
     'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar2&background=%23ef4444',
     'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar3&background=%23f59e0b',
@@ -590,7 +600,6 @@ function openAvatarModal() {
     document.getElementById('avatar-selection-modal').classList.remove('hidden');
 }
 
-// "Kaydediliyor..." ve "PointerEvent" hatalarını çözen fonksiyon
 async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
     const userId = getUserId();
     if (!userId) return;
@@ -637,9 +646,6 @@ async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
     }
 }
 
-// ===================================================
-// === MEYDAN OKUMA FONKSİYONU ===
-// ===================================================
 async function handleChallengeClick(event) {
     const button = event.currentTarget;
     const opponentId = button.dataset.opponentId;
@@ -654,11 +660,10 @@ async function handleChallengeClick(event) {
     button.textContent = '...';
 
     try {
-        // "Gevşek Oyun" ayarları (12 saat, 1 tur)
         await createGame({ 
             invitedFriendId: opponentId,
-            timeLimit: 43200, // 12 Saat
-            matchLength: 1,   // 1 Tur
+            timeLimit: 43200, 
+            matchLength: 1,   
             isHardMode: false,
             gameType: 'friend'
         });

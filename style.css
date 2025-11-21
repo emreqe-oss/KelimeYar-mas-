@@ -17,26 +17,16 @@ body {
     overflow: hidden; /* EKLENDİ: #app'in dışarı taşmasını engeller */
 }
 /* *** DÜZELTME 3: OYUN EKRANI YÜKSEKLİK HESAPLAMASI *** */
-/* Klavye yüksekliği yaklaşık 205px'tir (4 satır * 48px yükseklik + 3 * 4px boşluk).
-  Oyun ekranına diyoruz ki: Toplam yüksekliğin ne olursa olsun,
-  klavyenin (flex-shrink-0) ve skor tablosunun (flex-shrink-0) kapladığı
-  alan dışındaki TÜM ALANI SEN AL (flex: 1).
-  Ayrıca kelime kutularının (flex-grow) kaydırılabilir olmasını
-  sağlamak için min-height: 0 ekliyoruz.
-*/
 #game-screen {
     flex: 1 1 0%;
     min-height: 0;
 }
-/* *** Düzeltmelerin sonu *** */
-
 
 .tile { 
     width: 100%; 
     padding-bottom: 100%; 
     position: relative; 
-    /* Kenarlık rengini #4b5563 (gray-600) yerine #6b7280 (gray-500) yaptık. */
-    border: 2px solid #ffffff; /* <-- DÜZELTİLDİ */
+    border: 2px solid #ffffff; /* Kenarlık */
     display: flex;
     justify-content: center; 
     align-items: center;
@@ -96,18 +86,12 @@ body {
 @keyframes pulsate-bck { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* --- KARANLIK TEMA ARKA PLANI (YENİ) --- */
+/* --- KARANLIK TEMA ARKA PLANI --- */
 body:not(.theme-light) {
-    /* !!! DİKKAT: 'public' klasörüne koyduğunuz 
-      siyah ağırlıklı resminizin adını buraya yazın.
-    */
-    background-image: url('/arkaplan-koyu.jpeg'); /* <-- DOSYA ADINI DEĞİŞTİRİN */
-    
+    background-image: url('/arkaplan-koyu.jpeg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    
-    /* Resim yüklenemezse diye fallback rengi (bg-gray-900) */
     background-color: #111827; 
 }
 
@@ -145,10 +129,10 @@ body.theme-light .tile.correct, body.theme-light .tile.present, body.theme-light
     transition: background-color 0.2s;
 }
 .back-button-hitbox:hover {
-    background-color: #4b5563; /* koyu temada hover rengi */
+    background-color: #4b5563; 
 }
 body.theme-light .back-button-hitbox:hover {
-    background-color: #e5e7eb; /* açık temada hover rengi */
+    background-color: #e5e7eb; 
 }
 
 /* --- KAYDIRMA ÇUBUĞUNU GİZLEME --- */
@@ -158,95 +142,50 @@ body.theme-light .back-button-hitbox:hover {
 /* =================================== */
 /* === JOKER (YARDIM) BUTON STİLLERİ === */
 /* =================================== */
-
-/*
- * 1. Konteyner: Butonları yatayda ortalar ve aralarına boşluk verir.
- */
 .joker-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 16px; /* Butonlar arası boşluk */
-    padding: 8px 0; /* Üstten ve alttan boşluk */
-    flex-shrink: 0; /* EKLENDİ: Bu konteynerin küçülmesini engelle */
+    gap: 16px; 
+    padding: 8px 0; 
+    flex-shrink: 0; 
 }
-
-/*
- * 2. Genel Buton Stili (Yuvarlak Halka)
- */
 .joker-button {
-    position: relative;     /* Rozetin konumlanması için gerekli */
-    width: 52px;            /* Genişlik (Halka boyutu) */
-    height: 52px;           /* Yükseklik (Halka boyutu) */
-    border-radius: 50%;     /* Butonu yuvarlak yapar */
-    border: 2px solid #6b7280; /* Dış halkanın rengi (gri) */
-    
-    /* İçindeki ikonu (SVG) ortalamak için */
+    position: relative;
+    width: 52px; 
+    height: 52px; 
+    border-radius: 50%; 
+    border: 2px solid #6b7280;
     display: flex;
     align-items: center;
     justify-content: center;
-    
     cursor: pointer;
     transition: all 0.2s ease-in-out;
 }
-
-/* Butonun üzerine gelince hafif büyüme efekti */
 .joker-button:hover:not(:disabled) {
     transform: scale(1.05);
     opacity: 0.9;
 }
-
-/* Kullanılmış (devre dışı) butonların görünümü */
 .joker-button:disabled {
-    background-color: #374151; /* Koyu gri (Tailwind gray-700) */
+    background-color: #374151;
     opacity: 0.4;
     cursor: not-allowed;
     border-color: #4b5563;
 }
-
-/* Butonların içindeki SVG ikonlarının boyutu ve rengi */
 .joker-button svg {
     width: 28px;
     height: 28px;
-    color: #ffffff; /* İkon rengi beyaz */
+    color: #ffffff; 
 }
+#joker-correct { background-color: #16a34a; border-color: #22c55e; }
+#joker-present { background-color: #eab308; border-color: #fde047; }
+#joker-remove { background-color: #4b5563; border-color: #9ca3af; }
 
-/*
- * 3. Özel Renkler (İsteğiniz doğrultusunda)
- */
-
-/* * YEŞİL HARF VEREN (Doğru Konum İpucu)
- * Arka Plan: Yeşil (Tailwind green-600)
- */
-#joker-correct {
-    background-color: #16a34a;
-    border-color: #22c55e; /* Halka rengi (green-500) */
-}
-
-/* * SARI HARF VEREN (Yanlış Konum İpucu)
- * Arka Plan: Sarı (Tailwind yellow-500)
- */
-#joker-present {
-    background-color: #eab308;
-    border-color: #fde047; /* Halka rengi (yellow-300) */
-}
-
-/* * KLAVYE TEMİZLEYİCİ (Harf Eleme)
- * Arka Plan: Gri (Tailwind gray-600)
- */
-#joker-remove {
-    background-color: #4b5563;
-    border-color: #9ca3af; /* Halka rengi (gray-400) */
-}
-
-/* * 4. Rozet (x1 yazısı) Stili
- * (Bu muhtemelen sizde zaten vardı, ancak konumunu halkaya göre ayarladık)
- */
 .joker-badge {
     position: absolute;
-    top: -4px;   /* Halkanın biraz üstüne */
-    right: -4px; /* Halkanın biraz sağına */
-    background-color: #ef4444; /* Kırmızı */
+    top: -4px;
+    right: -4px; 
+    background-color: #ef4444; 
     color: white;
     border-radius: 50%;
     width: 22px;
@@ -259,43 +198,38 @@ body.theme-light .back-button-hitbox:hover {
     border: 2px solid white;
     z-index: 10;
 }
+.joker-button:disabled .joker-badge { display: none; }
 
-/* Kullanılmış butonun rozetini gizle */
-.joker-button:disabled .joker-badge {
-    display: none;
-}
-
-/* style.css dosyasının sonuna ekleyin */
-
-/* --- Nasıl Oynanır? Tutorial Animasyonu --- */
+/* ============================================== */
+/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ === */
+/* ============================================== */
+#how-to-play-screen { padding: 0.75rem; }
 .tutorial-container {
     display: flex;
+    flex-direction: column; 
     justify-content: center;
     align-items: center;
     padding: 10px 0;
-    min-height: 55px; /* Animasyon için boş alan */
 }
-
 .tutorial-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
-    /* Izgara boyutunu oyununuzdakiyle eşleşmesi için ayarlayabilirsiniz */
-    width: 250px; 
-    max-width: 250px;
+    grid-template-rows: repeat(6, 1fr); 
+    gap: 4px;
+    width: 226px; 
+    height: 268px; 
+    max-width: 226px;
+    margin-bottom: 8px; 
 }
-
 .tutorial-tile {
-    width: 45px;
-    height: 45px;
-    font-size: 2rem;
+    width: 42px; 
+    height: 42px; 
+    font-size: 1.75rem; 
     font-weight: bold;
     text-transform: uppercase;
     position: relative;
     color: white;
 }
-
-/* Karelerin ön ve arka yüzleri */
 .tutorial-tile .front, .tutorial-tile .back {
     position: absolute;
     width: 100%;
@@ -309,133 +243,28 @@ body.theme-light .back-button-hitbox:hover {
     transition: transform 0.6s ease;
     border-radius: 4px;
 }
-
-/* Ön yüz (Harfin yazıldığı yer) */
 .tutorial-tile .front {
-    border: 2px solid #565758; /* Başlangıçta boş kare rengi */
+    border: 2px solid #565758; 
     transform: rotateX(0deg);
 }
-
-/* Arka yüz (Rengin göründüğü yer) */
 .tutorial-tile .back {
-    transform: rotateX(-180deg); /* Başlangıçta arkası dönük */
+    transform: rotateX(-180deg); 
     border: 2px solid transparent;
 }
-
-/* Harf yazma (pop-in) animasyonu */
 @keyframes tutorial-pop {
     from { transform: scale(0.8); opacity: 0.8; }
     to   { transform: scale(1); opacity: 1; }
 }
-
 .tutorial-tile .front.pop {
     animation: tutorial-pop 0.1s ease-out;
-    border-color: #888; /* Yazı yazılınca kenarlık rengi */
+    border-color: #888; 
 }
-
-/* Çevrilme (flip) animasyonu */
 .tutorial-tile.flip .front {
     transform: rotateX(180deg);
 }
 .tutorial-tile.flip .back {
     transform: rotateX(0deg);
 }
-
-/* Renklerin mini gösterimi (Açıklama listesi için) */
-.tutorial-tile-mini {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
-    border-radius: 3px;
-    vertical-align: middle;
-    margin-right: 8px;
-    font-size: 1rem;
-    text-align: center;
-    line-height: 24px;
-    font-weight: bold;
-    color: white;
-}
-
-/* style.css dosyasının sonuna ekleyin */
-
-/* --- Nasıl Oynanır? Tutorial Animasyonu (Gelişmiş) --- */
-.tutorial-container {
-    display: flex;
-    flex-direction: column; /* Izgarayı ve klavyeyi alt alta dizer */
-    justify-content: center;
-    align-items: center;
-    padding: 10px 0;
-}
-
-.tutorial-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(6, 1fr); /* 6 satır */
-    gap: 5px;
-    width: 260px; /* 5x50px + 4x5px gap */
-    height: 315px; /* 6x50px + 5x5px gap */
-    max-width: 260px;
-    margin-bottom: 10px;
-}
-
-/* Izgaradaki her bir kare */
-.tutorial-tile {
-    /* Boyutları ana oyun ızgaranızla (js/ui.js createGrid) eşleştirin */
-    width: 50px; 
-    height: 50px;
-    font-size: 2rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    position: relative;
-    color: white;
-}
-
-/* Karelerin ön ve arka yüzleri */
-.tutorial-tile .front, .tutorial-tile .back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-sizing: border-box;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transition: transform 0.6s ease;
-    border-radius: 4px;
-}
-
-.tutorial-tile .front {
-    border: 2px solid #565758; /* Başlangıçtaki boş kare rengi */
-    transform: rotateX(0deg);
-}
-
-.tutorial-tile .back {
-    transform: rotateX(-180deg); /* Başlangıçta arkası dönük */
-    border: 2px solid transparent;
-    /* Renkler ana style.css'teki .correct, .present, .absent'den gelir */
-}
-
-/* Harf yazma (pop-in) animasyonu */
-@keyframes tutorial-pop {
-    from { transform: scale(0.8); opacity: 0.8; }
-    to   { transform: scale(1); opacity: 1; }
-}
-
-.tutorial-tile .front.pop {
-    animation: tutorial-pop 0.1s ease-out;
-    border-color: #888; /* Yazı yazılınca kenarlık rengi */
-}
-
-/* Çevrilme (flip) animasyonu */
-.tutorial-tile.flip .front {
-    transform: rotateX(180deg);
-}
-.tutorial-tile.flip .back {
-    transform: rotateX(0deg);
-}
-
-/* Renklerin mini gösterimi (Açıklama listesi için) */
 .tutorial-tile-mini {
     display: inline-flex;
     justify-content: center;
@@ -451,541 +280,92 @@ body.theme-light .back-button-hitbox:hover {
     font-weight: bold;
     color: white;
 }
-
-/* Sahte klavye için stiller */
-#tutorial-keyboard {
-    padding: 8px 2px 2px 2px;
-    box-sizing: border-box;
-}
-.tutorial-key-row {
-    display: flex;
-    justify-content: center;
-    gap: 4px; /* Tuşlar arası boşluk */
-    margin-bottom: 4px;
-}
+#tutorial-keyboard { padding: 4px 2px 2px 2px; box-sizing: border-box; }
+.tutorial-key-row { display: flex; justify-content: center; gap: 4px; margin-bottom: 4px; }
 .tutorial-key {
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    /* Klavye renklerini oyununuzdaki .keyboard-key'den alıyoruz */
     background-color: #818384; 
     color: white;
     border: 0;
     border-radius: 4px;
-    height: 45px; /* Yükseklik */
-    min-width: 28px; /* Genişlik */
-    padding: 0 6px;
+    height: 40px; 
+    min-width: 26px; 
+    padding: 0 5px;
+    font-size: 0.9rem;
     text-transform: uppercase;
     transition: background-color 0.2s ease;
 }
-/* Renkler (oyunla aynı) */
 .tutorial-key.correct { background-color: #538d4e; }
 .tutorial-key.present { background-color: #b59f3b; }
 .tutorial-key.absent { background-color: #3a3a3c; }
 
-/* ============================================== */
-/* === "NASIL OYNANIR?" ANİMASYON DÜZELTMESİ === */
-/* ============================================== */
+.tutorial-tile .back.correct { background-color: #10b981; border-color: #10b981; color: white; }
+.tutorial-tile .back.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
+.tutorial-tile .back.absent { background-color: #374151; border-color: #374151; color: white; }
+.tutorial-tile-mini.correct { background-color: #10b981; }
+.tutorial-tile-mini.present { background-color: #f59e0b; }
+.tutorial-tile-mini.absent { background-color: #374151; }
 
-/* * Bu kurallar, animasyondaki kutuların (tile)
- * ARKA YÜZLERİNİ renklendirir.
- * Renk kodları, ana oyununuzdaki (.tile.correct)
- * renk kodları ile aynıdır.
- */
-
-.tutorial-tile .back.correct {
-    background-color: #10b981; /* Ana CSS'inizdeki yeşil */
-    border-color: #10b981;
-    color: white;
-}
-
-.tutorial-tile .back.present {
-    background-color: #f59e0b; /* Ana CSS'inizdeki sarı */
-    border-color: #f59e0b;
-    color: white;
-}
-
-.tutorial-tile .back.absent {
-    background-color: #374151; /* Ana CSS'inizdeki gri */
-    border-color: #374151;
-    color: white;
-}
-
-/* * Bonus: Bu kurallar, açıklama listesindeki mini kutuları
- * (Ö, N, R harfleri) renklendirir.
- */
-.tutorial-tile-mini.correct {
-    background-color: #10b981;
-}
-.tutorial-tile-mini.present {
-    background-color: #f59e0b;
-}
-.tutorial-tile-mini.absent {
-    background-color: #374151;
-}
-
-/* ============================================== */
-/* === "NASIL OYNANIR?" JOKER ANİMASYONU CSS === */
-/* ============================================== */
-
-/* Tutorial'daki joker butonlarına geçiş efekti ekle */
-#tutorial-joker-container .joker-button {
-    transition: all 0.3s ease, transform 0.2s ease;
-}
-
-/* Jokeri "basılmış" gibi göstermek için vurgulama sınıfı */
-#tutorial-joker-container .tutorial-highlight {
-    transform: scale(1.15) !important;
-    /* Ana oyununuzdaki "present" rengi (sarı) ile parlama */
-    box-shadow: 0 0 15px 5px #f59e0b; 
-}
-
-/* Kullanılmış (devre dışı) tutorial jokerleri */
-#tutorial-joker-container .joker-button:disabled {
-    background-color: #374151;
-    opacity: 0.4;
-    border-color: #4b5563;
-}
-
-/* Kullanılmış jokerin rozetini gizle */
-#tutorial-joker-container .joker-button:disabled .joker-badge {
-    display: none;
-}
-
-/* ============================================== */
-/* === TUTORIAL KLAVYE POP ANİMASYONU === */
-/* ============================================== */
-@keyframes tutorial-key-pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
-/* Bu sınıf JavaScript tarafından anlık olarak eklenecek */
-.tutorial-key.key-pop {
-    animation: tutorial-key-pop 0.2s ease-out;
-}
-
-/* ======================================================= */
-/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ (FİNAL) === */
-/* ======================================================= */
-
-/* --- 1. JOKER RENKLERİ --- */
-/* Tutorial'daki sahte joker butonlarına ana oyundaki renkleri verir */
-
-#tutorial-joker-correct {
-    background-color: #16a34a; /* Yeşil */
-    border-color: #22c55e;
-}
-#tutorial-joker-present {
-    background-color: #eab308; /* Sarı */
-    border-color: #fde047;
-}
-#tutorial-joker-remove {
-    background-color: #4b5563; /* Gri */
-    border-color: #9ca3af;
-}
-
-/* --- 2. JOKER VURGULAMA VE KULLANIM --- */
-
-#tutorial-joker-container .joker-button {
-    transition: all 0.3s ease, transform 0.2s ease;
-}
-
-/* Jokere "basılma" efekti (parlama) */
-#tutorial-joker-container .tutorial-highlight {
-    transform: scale(1.15) !important;
-    box-shadow: 0 0 15px 5px #f59e0b; /* Sarı parlama */
-}
-
-/* Kullanılmış (devre dışı) tutorial jokerleri */
-#tutorial-joker-container .joker-button:disabled {
-    background-color: #374151;
-    opacity: 0.4;
-    border-color: #4b5563;
-}
-#tutorial-joker-container .joker-button:disabled .joker-badge {
-    display: none;
-}
-
-/* --- 3. KLAVYE "PATLAMA" (POP) EFEKTİ --- */
-@keyframes tutorial-key-pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
-/* Bu sınıf JavaScript tarafından anlık olarak eklenecek */
-.tutorial-key.key-pop {
-    animation: tutorial-key-pop 0.2s ease-out;
-}
-
-/* ======================================================= */
-/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ (FİNAL) === */
-/* ======================================================= */
-
-/* --- 1. JOKER RENKLERİ --- */
-/* Tutorial'daki sahte joker butonlarına ana oyundaki renkleri verir */
-
-#tutorial-joker-correct {
-    background-color: #16a34a; /* Yeşil */
-    border-color: #22c55e;
-}
-#tutorial-joker-present {
-    background-color: #eab308; /* Sarı */
-    border-color: #fde047;
-}
-#tutorial-joker-remove {
-    background-color: #4b5563; /* Gri */
-    border-color: #9ca3af;
-}
-
-/* --- 2. JOKER VURGULAMA VE KULLANIM --- */
-
-#tutorial-joker-container .joker-button {
-    transition: all 0.3s ease, transform 0.2s ease;
-}
-
-/* Jokere "basılma" efekti (parlama) */
-#tutorial-joker-container .tutorial-highlight {
-    transform: scale(1.15) !important;
-    box-shadow: 0 0 15px 5px #f59e0b; /* Sarı parlama */
-}
-
-/* Kullanılmış (devre dışı) tutorial jokerleri */
-#tutorial-joker-container .joker-button:disabled {
-    background-color: #374151;
-    opacity: 0.4;
-    border-color: #4b5563;
-}
-#tutorial-joker-container .joker-button:disabled .joker-badge {
-    display: none;
-}
-
-/* --- 3. KLAVYE "PATLAMA" (POP) EFEKTİ --- */
-@keyframes tutorial-key-pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
-/* Bu sınıf JavaScript tarafından anlık olarak eklenecek */
-.tutorial-key.key-pop {
-    animation: tutorial-key-pop 0.2s ease-out;
-}
-
-/* ======================================================= */
-/* === "NASIL OYNANIR?" ANİMASYON STİLLERİ (FİNAL) === */
-/* ======================================================= */
-
-/* --- 1. JOKER RENKLERİ --- */
+/* Tutorial Joker Stilleri */
+#tutorial-joker-container { padding: 4px 0 !important; gap: 12px; }
+#tutorial-joker-container .joker-button { width: 48px; height: 48px; }
+#tutorial-joker-container .joker-button svg { width: 24px; height: 24px; }
+#tutorial-joker-container .joker-badge { width: 20px; height: 20px; font-size: 11px; top: -3px; right: -3px; }
 #tutorial-joker-correct { background-color: #16a34a; border-color: #22c55e; }
 #tutorial-joker-present { background-color: #eab308; border-color: #fde047; }
 #tutorial-joker-remove { background-color: #4b5563; border-color: #9ca3af; }
+#tutorial-joker-container .joker-button { transition: all 0.3s ease, transform 0.2s ease; }
+#tutorial-joker-container .tutorial-highlight { transform: scale(1.15) !important; box-shadow: 0 0 15px 5px #f59e0b; }
+#tutorial-joker-container .joker-button:disabled { background-color: #374151; opacity: 0.4; border-color: #4b5563; }
+#tutorial-joker-container .joker-button:disabled .joker-badge { display: none; }
 
-/* --- 2. JOKER VURGULAMA VE KULLANIM --- */
-#tutorial-joker-container .joker-button {
-    transition: all 0.3s ease, transform 0.2s ease;
-}
-#tutorial-joker-container .tutorial-highlight {
-    transform: scale(1.15) !important;
-    box-shadow: 0 0 15px 5px #f59e0b; /* Sarı parlama */
-}
-#tutorial-joker-container .joker-button:disabled {
-    background-color: #374151; opacity: 0.4; border-color: #4b5563;
-}
-#tutorial-joker-container .joker-button:disabled .joker-badge {
-    display: none;
-}
-
-/* --- 3. KLAVYE "PATLAMA" (POP) EFEKTİ --- */
 @keyframes tutorial-key-pop {
     0%   { transform: scale(1); }
     50%  { transform: scale(1.25); }
     100% { transform: scale(1); }
 }
-.tutorial-key.key-pop {
-    animation: tutorial-key-pop 0.2s ease-out;
-}
+.tutorial-key.key-pop { animation: tutorial-key-pop 0.2s ease-out; }
+
+#how-to-play-screen ul { margin-top: 8px; space-y: 0; }
+#how-to-play-screen ul li { margin-bottom: 8px; }
+#close-how-to-play-btn { margin-top: 1rem; flex-shrink: 0; }
 
 /* ======================================================= */
-/* === "NASIL OYNANIR?" EKRANA SIĞDIRMA DÜZELTMELERİ === */
+/* === YATAY EKRAN DÜZELTMESİ === */
 /* ======================================================= */
-
-/* Ana modalın padding'ini azaltarak yer kazan */
-#how-to-play-screen {
-    padding: 0.75rem; /* p-4 (1rem) yerine p-3 (0.75rem) */
-}
-
-/* Izgara'yı küçült (Kullanıcının önerisi) */
-.tutorial-grid {
-    gap: 4px; /* Boşluğu 5px'ten 4px'e düşür */
-    width: 226px;  /* YENİ: (5 * 42px) + (4 * 4px) = 226px */
-    height: 268px; /* YENİ: (6 * 42px) + (5 * 4px) = 268px */
-    max-width: 226px;
-    margin-bottom: 8px; /* Boşluğu 10px'ten 8px'e azalt */
-}
-
-/* Izgara karelerini küçült */
-.tutorial-tile {
-    width: 42px;  /* YENİ: 50px veya 45px yerine */
-    height: 42px; /* YENİ: 50px veya 45px yerine */
-    font-size: 1.75rem; /* Yazı tipini biraz küçült */
-}
-
-/* Joker konteynerinin boşluğunu azalt */
-#tutorial-joker-container {
-    padding: 4px 0 !important; /* Dikey boşluğu azalt */
-    gap: 12px; /* Buton arasını azalt */
-}
-
-/* Joker butonlarını küçült */
-#tutorial-joker-container .joker-button {
-    width: 48px;  /* YENİ: 52px yerine */
-    height: 48px; /* YENİ: 52px yerine */
-}
-#tutorial-joker-container .joker-button svg {
-    width: 24px; /* YENİ: 28px yerine */
-    height: 24px;
-}
-#tutorial-joker-container .joker-badge {
-    width: 20px;
-    height: 20px;
-    font-size: 11px;
-    top: -3px;
-    right: -3px;
-}
-
-/* Sahte klavyeyi küçült */
-#tutorial-keyboard {
-    padding: 4px 2px 2px 2px;
-}
-.tutorial-key {
-    height: 40px; /* YENİ: 45px yerine */
-    min-width: 26px;
-    padding: 0 5px;
-    font-size: 0.9rem;
-}
-.tutorial-key-row {
-    gap: 4px;
-    margin-bottom: 4px;
-}
-
-/* Açıklama listesinin boşluklarını azalt */
-#how-to-play-screen ul {
-    margin-top: 8px; /* mt-4 yerine */
-    space-y-3: 0; 
-}
-#how-to-play-screen ul li {
-     margin-bottom: 8px; /* space-y-3 (12px) yerine 8px */
-}
-
-/* "Anladım" butonunun üst boşluğunu azalt */
-#close-how-to-play-btn {
-    margin-top: 1rem; /* mt-6 (24px) yerine mt-4 (16px) */
-    flex-shrink: 0; /* Butonun küçülmesini engelle */
-}
-
-/* ======================================================= */
-/* === YATAY EKRAN ("SQUASH" / YASSILAŞTIRMA) DÜZELTMESİ === */
-/* ======================================================= */
-
-/* Sadece ekran genişliği yüksekliğinden fazlaysa (yatay mod) çalışır */
 @media (orientation: landscape) {
-
-    /* * 1. Izgara konteynerine (guess-grid) esnek (flex) 
-     * atasının tüm yüksekliğini (kalan boşluğu) doldurmasını söylüyoruz.
-     */
-    #guess-grid {
-        height: 100%;
-        /* * 2. Izgaranın 6 satırını, genişliğe göre değil,
-         * bu yeni yüksekliğe göre 6 eşit parçaya bölmesini söylüyoruz.
-         * (1fr = 1 esnek parça)
-         */
-        grid-template-rows: repeat(6, 1fr);
-    }
-
-    /* * 3. Kutuların (tile) "kare" olmasını sağlayan
-     * padding-bottom hilesini kaldırıyoruz.
-     */
-    .tile {
-        padding-bottom: 0; /* padding-bottom: 100% hilesini iptal et */
-        height: 100%;      /* Satırın (1fr) tam yüksekliğini doldur */
-    }
-
-    /* * Not: .tile-inner (harfin olduğu katman) zaten 
-     * position:absolute olduğu için otomatik olarak 
-     * bu yeni yassılaşmış yüksekliğe uyum sağlayacaktır.
-     */
+    #guess-grid { height: 100%; grid-template-rows: repeat(6, 1fr); }
+    .tile { padding-bottom: 0; height: 100%; }
 }
 
 /* ============================================== */
-/* === GENEL SIRALAMA LİSTESİ STİLLERİ (FİNAL) === */
+/* === GENEL SIRALAMA LİSTESİ STİLLERİ === */
 /* ============================================== */
-
-/* 1. Her bir satırın temel yapısı */
 .ranking-row {
-    display: flex; /* !! EN ÖNEMLİ KURAL: İçerikleri yan yana diz. */
-    align-items: center; /* Dikey olarak ortala */
-    justify-content: space-between; /* İki uca yasla (isim ve skor) */
-    
-    /* İnce görünüm için iç boşluk */
-    padding: 12px 10px; 
-    
-    /* Ayırıcı çizgi */
-    border-bottom: 1px solid #374151; /* Tailwind gray-700 */
-    
-    font-size: 0.95rem;
-    color: #D1D5DB; /* Tailwind gray-300 */
-}
-
-/* Listenin son elemanının alt çizgisini kaldırır */
-.ranking-row:last-child {
-    border-bottom: none;
-}
-
-/* 2. Mevcut Kullanıcı Vurgulaması */
-.ranking-row.current-user {
-    background-color: #312E81; /* Tailwind indigo-800 */
-    border-radius: 8px; /* Köşeleri yuvarlat */
-    color: #FFFFFF; /* Beyaz yazı */
-    font-weight: bold;
-    border-bottom: none; /* Vurgulu satırda çizgi olmasın */
-}
-
-/* 3. Satır içi elemanlar için yardımcı sınıflar */
-.rank-details {
-    display: flex;
-    align-items: center;
-    gap: 12px; /* Sıra no ve kullanıcı adı arası boşluk */
-}
-
-.rank-number {
-    font-weight: 900;
-    font-size: 1rem;
-    color: #9CA3AF; /* Tailwind gray-400 */
-    width: 25px; /* Numaraların hizalı durması için genişlik */
-    text-align: right;
-}
-
-/* Vurgulu satırın sıra numarasını sarı yap */
-.ranking-row.current-user .rank-number {
-    color: #f59e0b; /* Tailwind amber-500 */
-}
-
-.rank-username {
-    font-weight: 600;
-}
-
-.rank-score {
-    text-align: right;
-    font-size: 0.9rem;
-    color: #9CA3AF; /* Tailwind gray-400 */
-}
-
-/* Vurgulu satırın skor yazısını beyaz yap */
-.ranking-row.current-user .rank-score {
-    color: #FFFFFF;
-}
-
-/* ============================================== */
-/* === AVATAR SEÇİM MODALI STİLLERİ === */
-/* ============================================== */
-
-/* Seçilebilir avatar seçeneği */
-.avatar-option {
-    cursor: pointer;
-    border-radius: 50%; /* Tam yuvarlak */
-    border: 4px solid transparent; /* Başlangıçta görünmez çerçeve */
-    transition: all 0.2s ease;
-}
-
-/* Üzerine gelince hafif büyüme */
-.avatar-option:hover {
-    transform: scale(1.1);
-    border-color: #4F46E5; /* Indigo-600 */
-}
-
-/* Aktif/Seçili avatarın çerçevesi */
-.avatar-option.selected {
-    border-color: #10B981; /* Green-500 */
-    transform: scale(1.1);
-}
-
-/* ============================================== */
-/* === GENEL SIRALAMA STİLLERİ (GÜNCELLENDİ) === */
-/* (Sağa kaydırmayı çözer ve istatistikleri alt alta dizer) */
-/* ============================================== */
-
-/* 1. Ana Satır (.ranking-row) */
-.ranking-row {
-    display: flex;
-    align-items: center; /* Dikeyde ortala */
-    justify-content: space-between; /* İki uca yasla */
-    padding: 10px 10px; /* Dikey boşluğu biraz azalttık */
-    border-bottom: 1px solid #374151;
-    
-    /* YATAY KAYDIRMAYI ÖNLER */
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 10px 10px; 
+    border-bottom: 1px solid #374151; 
     overflow: hidden; 
 }
 .ranking-row:last-child { border-bottom: none; }
-
-/* 2. Sol Taraf (Sıra + İsim) */
-.rank-details {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    
-    /* YATAY KAYDIRMAYI ÖNLER: Bu bölümün esnemesine izin ver */
-    flex: 1; 
-    min-width: 0; /* Flex-box'ın küçülme (truncate) için ihtiyaç duyduğu kural */
+.ranking-row.current-user {
+    background-color: #312E81; 
+    border-radius: 8px; 
+    color: #FFFFFF; 
+    font-weight: bold;
+    border-bottom: none; 
 }
-
-/* 3. Sıra Numarası (Aynı kaldı) */
-.rank-number {
-    font-weight: 900;
-    font-size: 1rem;
-    color: #9CA3AF;
-    width: 25px;
-    text-align: right;
-    flex-shrink: 0; /* Numara asla küçülmesin */
-}
-
-/* 4. Kullanıcı Adı (GÜNCELLENDİ) */
-.rank-username {
-    font-weight: 600;
-    
-    /* YATAY KAYDIRMAYI ÖNLER: Gerekirse kısalt (örn: hüso...) */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* 5. Sağ Taraf (Skor + Buton) (GÜNCELLENDİ) */
-.rank-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0; /* Bu alan asla küçülmesin */
-}
-
-/* 6. Skor Bölümü (GÜNCELLENDİ) */
-.rank-score {
-    display: flex;
-    flex-direction: column;  /* İsteğiniz: Başarı ve Kazanma'yı alt alta diz */
-    align-items: flex-end; /* Sağa hizala */
-    
-    text-align: right;
-    font-size: 0.8rem; /* Sığması için biraz küçülttüm (12.8px) */
-    color: #9CA3AF;
-    white-space: nowrap; /* "Başarı: %64" yazısı bölünmesin */
-}
-/* Skor satırlarının arasını aç */
-.rank-score span:first-child {
-    margin-bottom: 2px;
-}
-
-
-/* 7. Buton (Aynı kaldı) */
+.rank-details { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.rank-number { font-weight: 900; font-size: 1rem; color: #9CA3AF; width: 25px; text-align: right; flex-shrink: 0; }
+.ranking-row.current-user .rank-number { color: #f59e0b; }
+.rank-username { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.rank-score { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 0.8rem; color: #9CA3AF; white-space: nowrap; }
+.rank-score span:first-child { margin-bottom: 2px; }
+.ranking-row.current-user .rank-score { color: #FFFFFF; }
 .challenge-btn {
     background-color: #3B82F6;
     color: white;
@@ -1000,13 +380,101 @@ body.theme-light .back-button-hitbox:hover {
 }
 .challenge-btn:hover { background-color: #2563EB; }
 
-/* 8. Vurgulama Stilleri (GÜNCELLENDİ) */
-.ranking-row.current-user {
-    background-color: #312E81;
-    border-radius: 8px;
-    color: #FFFFFF;
-    font-weight: bold;
-    border-bottom: none; 
+/* ============================================== */
+/* === AVATAR SEÇİM MODALI STİLLERİ === */
+/* ============================================== */
+.avatar-option {
+    cursor: pointer;
+    border-radius: 50%; 
+    border: 4px solid transparent; 
+    transition: all 0.2s ease;
 }
-.ranking-row.current-user .rank-number { color: #f59e0b; }
-.ranking-row.current-user .rank-score { color: #FFFFFF; }
+.avatar-option:hover { transform: scale(1.1); border-color: #4F46E5; }
+.avatar-option.selected { border-color: #10B981; transform: scale(1.1); }
+
+/* ============================================== */
+/* === SÖZLÜK (DICTIONARY) MODÜLÜ STİLLERİ === */
+/* ============================================== */
+
+/* 1. Sözlük Kartı (Her bir kelime kutusu) */
+.dictionary-card {
+    background-color: #374151; /* Koyu mod arkaplan */
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Kartın üzerine gelince efekt */
+.dictionary-card:hover {
+    transform: translateY(-2px);
+    border-color: #f59e0b; /* Amber rengi vurgu */
+}
+
+/* 2. Kartın İç Düzeni */
+.dictionary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.dictionary-word {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #f3f4f6;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* 3. Anlam Kısmı */
+.dictionary-meaning {
+    font-size: 0.9rem;
+    color: #9ca3af; /* Gri metin */
+    font-style: italic;
+    border-top: 1px solid #4b5563; /* İnce çizgi ayırıcı */
+    padding-top: 6px;
+    line-height: 1.4;
+}
+
+/* 4. Silme Butonu (Çöp Kutusu) */
+.btn-delete-word {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete-word:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+/* 5. AÇIK TEMA (LIGHT MODE) UYUMU */
+body.theme-light .dictionary-card {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .dictionary-word {
+    color: #1f2937; /* Koyu gri yazı */
+}
+
+body.theme-light .dictionary-meaning {
+    color: #4b5563;
+    border-top-color: #e5e7eb;
+}
+
+/* Sonuç ekranındaki 'Sözlüğe Ekle' butonu animasyonu */
+#btn-add-word-to-dict:active {
+    transform: scale(0.95);
+}

@@ -74,6 +74,13 @@
             <div class="flex-grow"></div>
             <div class="flex justify-between items-center text-sm text-gray-400">
                 <button id="how-to-play-btn" class="hover:text-white transition text-red-500 font-bold">Nasıl Oynanır?</button>
+                
+                <button id="dictionary-menu-btn" class="hover:text-white transition text-amber-500 font-bold flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                    </svg>
+                    <span>Sözlük</span>
+                </button>
                 <div class="flex items-center gap-2">
                     <span class="text-red-500 font-bold">Tema:</span>
                     <button id="theme-light-btn" class="w-6 h-6 rounded-full border-2 border-gray-500" style="background-color: #faedcd;"></button>
@@ -475,7 +482,11 @@
                 <div class="mb-4" id="default-word-display-container">
                     <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
                     <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
-                </div>
+                    
+                    <button id="btn-add-word-to-dict" class="hidden mt-3 text-xs bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-full items-center gap-2 justify-center mx-auto transition shadow-md border border-amber-500/50">
+                        <span>📖</span> Sözlüğe Ekle
+                    </button>
+                    </div>
                 
                 <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
                 
@@ -676,8 +687,29 @@
 
             </div>
         </div> 
-    
-    <div id="avatar-selection-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+
+        <div id="dictionary-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-800">
+            <header class="flex items-center mb-4 border-b border-gray-700 pb-3">
+                <button id="back-to-main-from-dictionary-btn" class="back-button-hitbox">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                </button>
+                <h1 class="text-2xl font-bold text-center flex-grow -ml-10 text-amber-500 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                    </svg>
+                    SÖZLÜĞÜM
+                </h1>
+            </header>
+
+            <div class="text-center mb-4">
+                <p class="text-gray-400 text-sm">Oyunda ilgini çeken kelimeleri buraya kaydedebilirsin.</p>
+            </div>
+
+            <div id="dictionary-list-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                <p id="dictionary-empty-msg" class="text-gray-500 text-center mt-10 italic">Sözlüğün henüz boş.</p>
+            </div>
+        </div>
+        <div id="avatar-selection-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
             <h3 class="text-2xl font-bold text-white mb-4">Avatar Seç</h3>
             
