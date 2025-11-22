@@ -2261,52 +2261,63 @@ export async function joinBRGame(gameId) {
 }
 
 // ===================================
-// === JOKER MANTIK FONKSİYONLARI ===
+// === JOKER MANTIK FONKSİYONLARI (ENVANTER SİSTEMİ) ===
 // ===================================
 
-async function updateJokerState(jokerKey) {
-    const gameMode = state.getGameMode(); 
-    const gameData = state.getLocalGameData(); 
-    const gameId = state.getCurrentGameId();
+// Joker kullanıldığında envanterden düşen fonksiyon
+async function consumeJokerItem(itemKey) {
     const currentUserId = state.getUserId();
-    const jokerUpdatePath = `players.${currentUserId}.jokersUsed.${jokerKey}`;
-
-    if (!gameData) return;
+    const profile = state.getCurrentUserProfile();
     
-    const playerState = gameData.players[currentUserId]; 
-    if (!playerState) return;
-    
-    // Joker kullanımını işaretle
-    if (!playerState.jokersUsed) playerState.jokersUsed = { present: false, correct: false, remove: false };
-    playerState.jokersUsed[jokerKey] = true;
+    if (!profile || !profile.inventory) return false;
 
-    // Online ise sunucuya bildir
-    if (gameMode === 'multiplayer' || gameMode === 'multiplayer-br') {
-        if (gameId) {
-            try {
-                await updateDoc(doc(db, "games", gameId), { [jokerUpdatePath]: true });
-            } catch (error) {
-                console.error("Joker sunucu hatası:", error);
-            }
-        }
+    const currentAmount = profile.inventory[itemKey] || 0;
+    
+    if (currentAmount <= 0) {
+        return false; // Yetersiz bakiye
+    }
+
+    const newInventory = { ...profile.inventory };
+    newInventory[itemKey] = currentAmount - 1;
+
+    // 1. Önce yerel state'i güncelle (Hızlı tepki için)
+    const newProfile = { ...profile, inventory: newInventory };
+    state.setCurrentUserProfile(newProfile);
+
+    // 2. UI'ı güncelle
+    import('./ui.js').then(ui => {
+        ui.updateMarketUI(); // Market stok yazısını güncelle
+        // Oyun içi buton durumlarını güncelle
+        const gameData = state.getLocalGameData();
+        const isMyTurn = (gameData.currentPlayerId === currentUserId);
+        ui.updateJokerUI(null, isMyTurn, 'playing'); 
+    });
+
+    // 3. Veritabanını güncelle (Arka planda)
+    try {
+        const userRef = doc(db, "users", currentUserId);
+        await updateDoc(userRef, { inventory: newInventory });
+    } catch (error) {
+        console.error("Joker harcama hatası:", error);
+        // Hata olursa geri al (opsiyonel, şimdilik basit tutalım)
     }
     
-    // UI güncelle
-    const isBR = isBattleRoyale(gameMode);
-    const isMyTurn = isBR ? 
-        (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
-        (gameData.currentPlayerId === currentUserId);
-
-    updateJokerUI(playerState.jokersUsed, isMyTurn, gameData.status);
+    return true;
 }
 
 // 1. TURUNCU KALEM (Harf İpucu)
 export async function usePresentJoker() {
     const gameData = state.getLocalGameData();
-    const currentUserId = state.getUserId();
-    const playerState = gameData.players[currentUserId];
+    if (!gameData || gameData.status !== 'playing') return;
+
+    // Stok Kontrolü
+    const profile = state.getCurrentUserProfile();
+    const stock = profile?.inventory?.present || 0;
     
-    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.present)) return;
+    if (stock <= 0) {
+        showToast("Turuncu Kalem stokta yok! Kırtasiyeden alabilirsin.", true);
+        return;
+    }
 
     const secretWord = gameData.secretWord;
     const knownLetters = new Set();
@@ -2329,6 +2340,10 @@ export async function usePresentJoker() {
         return;
     }
 
+    // Stoktan düş
+    const consumed = await consumeJokerItem('present');
+    if (!consumed) return;
+
     const hintLetter = hintCandidates[Math.floor(Math.random() * hintCandidates.length)];
     
     const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
@@ -2339,22 +2354,30 @@ export async function usePresentJoker() {
         keyButton.style.transform = "scale(1.2)";
         keyButton.style.borderColor = "#f59e0b";
         setTimeout(() => { keyButton.style.transform = "scale(1)"; }, 300);
-        state.addPresentJokerLetter(hintLetter);
-
-        showToast(`İpucu: "${hintLetter}" harfi kelimede var!`, false);
-        await updateJokerState('present');
+        
+        // Hafızaya al (Sarı yanmaya devam etsin)
+        import('./state.js').then(s => s.addPresentJokerLetter(hintLetter));
+        
+        showToast(`İpucu: "${hintLetter}" harfi kelimede var! (Kalan: ${stock-1})`, false);
     }
 }
 
 // 2. YEŞİL KALEM (Kesin Harf)
 export async function useCorrectJoker() {
     const gameData = state.getLocalGameData();
-    const currentUserId = state.getUserId();
-    const playerState = gameData.players[currentUserId];
+    if (!gameData || gameData.status !== 'playing') return;
+
+    // Stok Kontrolü
+    const profile = state.getCurrentUserProfile();
+    const stock = profile?.inventory?.correct || 0;
     
-    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.correct)) return;
+    if (stock <= 0) {
+        showToast("Yeşil Kalem stokta yok! Kırtasiyeden alabilirsin.", true);
+        return;
+    }
 
     const secretWord = gameData.secretWord;
+    const playerState = gameData.players[state.getUserId()];
     const currentRow = playerState.guesses ? playerState.guesses.length : 0;
     
     const knownPositions = getKnownCorrectPositions(); 
@@ -2371,17 +2394,18 @@ export async function useCorrectJoker() {
         return;
     }
 
+    // Stoktan düş
+    const consumed = await consumeJokerItem('correct');
+    if (!consumed) return;
+
     const hintIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
     const hintLetter = secretWord[hintIndex];
 
-    // HAFIZAYA AL
     knownPositions[hintIndex] = hintLetter;
     setKnownCorrectPositions(knownPositions);
 
-    // KUTUYU GÜNCELLE
     updateStaticTile(currentRow, hintIndex, hintLetter, 'correct');
 
-    // KLAVYEYİ GÜNCELLE
     const keyButton = document.querySelector(`.keyboard-key[data-key="${hintLetter}"]`);
     if (keyButton) {
         keyButton.classList.remove('present', 'absent');
@@ -2390,17 +2414,22 @@ export async function useCorrectJoker() {
         setTimeout(() => { keyButton.style.transform = "scale(1)"; }, 300);
     }
 
-    showToast(`İpucu: ${hintIndex + 1}. harf "${hintLetter}"!`, false);
-    await updateJokerState('correct');
+    showToast(`İpucu: ${hintIndex + 1}. harf "${hintLetter}"! (Kalan: ${stock-1})`, false);
 }
 
 // 3. SİLGİ (Harf Elet)
 export async function useRemoveJoker() {
     const gameData = state.getLocalGameData();
-    const currentUserId = state.getUserId();
-    const playerState = gameData.players[currentUserId];
+    if (!gameData || gameData.status !== 'playing') return;
+
+    // Stok Kontrolü
+    const profile = state.getCurrentUserProfile();
+    const stock = profile?.inventory?.remove || 0;
     
-    if (!gameData || !playerState || (playerState.jokersUsed && playerState.jokersUsed.remove)) return;
+    if (stock <= 0) {
+        showToast("Silgi stokta yok! Kırtasiyeden alabilirsin.", true);
+        return;
+    }
 
     const secretWord = gameData.secretWord;
     
@@ -2423,6 +2452,10 @@ export async function useRemoveJoker() {
         return;
     }
 
+    // Stoktan düş
+    const consumed = await consumeJokerItem('remove');
+    if (!consumed) return;
+
     const countToRemove = Math.min(candidates.length, 4);
     const toRemove = candidates.sort(() => 0.5 - Math.random()).slice(0, countToRemove);
 
@@ -2432,8 +2465,7 @@ export async function useRemoveJoker() {
         btn.style.pointerEvents = "none"; 
     });
 
-    showToast(`${countToRemove} adet yanlış harf elendi!`, false);
-    await updateJokerState('remove');
+    showToast(`${countToRemove} adet yanlış harf elendi! (Kalan: ${stock-1})`, false);
 }
 
 export async function acceptInvite(gameId) {

@@ -692,22 +692,41 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     }
 }
 
-export function updateJokerUI(jokersUsed, isMyTurn, gameStatus) {
+export function updateJokerUI(unusedParam, isMyTurn, gameStatus) {
     const jokers = [jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn];
     const jokerKeys = ['present', 'correct', 'remove'];
 
-    const canUseJokers = isMyTurn && gameStatus === 'playing';
+    // Profil bilgisinden stok durumunu al
+    const profile = state.getCurrentUserProfile();
+    const inventory = profile ? (profile.inventory || {}) : {};
+
+    const canPlay = isMyTurn && gameStatus === 'playing';
 
     jokers.forEach((btn, index) => {
         if (!btn) return;
         
         const key = jokerKeys[index];
-        const isUsed = (jokersUsed && jokersUsed[key]) ? true : false;
+        const stock = inventory[key] || 0;
 
-        if (isUsed || !canUseJokers) {
-            btn.disabled = true;
-        } else {
+        // Rozeti güncelle (Stok sayısını yaz)
+        const badge = btn.querySelector('.joker-badge');
+        if (badge) {
+            badge.textContent = `x${stock}`;
+            // Stok yoksa rozeti gri yap, varsa kırmızı
+            badge.style.backgroundColor = stock > 0 ? '#ef4444' : '#6b7280';
+        }
+
+        // Butonu aktif/pasif yap
+        // Kural: Sıra sendeyse VE stok varsa aktiftir.
+        if (canPlay && stock > 0) {
             btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
+        } else {
+            btn.disabled = true;
+            // Eğer stok yoksa biraz daha silik görünsün
+            btn.style.opacity = stock <= 0 ? "0.5" : "1"; 
+            btn.style.cursor = "not-allowed";
         }
     });
 }
