@@ -500,3 +500,25 @@ body.theme-light .dictionary-meaning {
 #btn-add-word-to-dict:active {
     transform: scale(0.95);
 }
+
+/* --- RAKİP MİNİ IZGARA (VS MODE) --- */
+#opponent-mini-grid {
+    /* Grid yapısı JS ile dinamik verilecek */
+    padding: 2px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.mini-tile {
+    width: 8px;  /* Küçültülmüş boyut */
+    height: 8px;
+    background-color: #374151; /* Boş kutu rengi */
+    border-radius: 1px;
+    transition: background-color 0.3s;
+}
+
+/* Renkler (Ana oyunla uyumlu) */
+.mini-tile.correct { background-color: #10b981; } /* Yeşil */
+.mini-tile.present { background-color: #f59e0b; } /* Sarı */
+.mini-tile.absent  { background-color: #1f2937; opacity: 0.5; } /* Gri/Yok */
+.mini-tile.failed  { background-color: #ef4444; } /* Kırmızı */

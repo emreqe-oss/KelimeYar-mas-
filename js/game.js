@@ -653,6 +653,34 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     
     timeLimit = gameData.timeLimit || 45;
     
+    // --- MİNİ RAKİP IZGARASI GÜNCELLEMESİ (YENİ) ---
+    const isVersusMode = (gameMode === 'multiplayer' || gameMode === 'vsCPU') && !isBR;
+    
+    // Eğer oyun 1v1 ise ve "sequential-game-info" görünürse
+    if (isVersusMode && sequentialGameInfo && !sequentialGameInfo.classList.contains('hidden')) {
+        // Rakibi bul (Benim ID'm olmayan kişi)
+        const opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
+        
+        if (opponentId && gameData.players[opponentId]) {
+            const oppGuesses = gameData.players[opponentId].guesses || [];
+            
+            // UI dosyasından fonksiyonu çağır
+            // (Dosyanın en başına 'import { updateOpponentMiniGrid } from "./ui.js";' eklemeyi unutma!)
+            // Dinamik import ile çağıralım ki import listesini bozmayalım:
+            import('./ui.js').then(ui => {
+                ui.updateOpponentMiniGrid(oppGuesses, gameData.wordLength, GUESS_COUNT);
+            });
+        }
+    } else {
+        // Eğer oyun bittiyse veya mod desteklemiyorsa gizle
+        const miniGrid = document.getElementById('opponent-mini-grid');
+        if (miniGrid) miniGrid.classList.add('hidden');
+    }
+    // -----------------------------------------------
+
+    // (Mevcut kodun son satırı buradaydı)
+    if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+    
     const playerState = gameData.players[currentUserId] || {};
     if (isBR && (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed)) {
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';

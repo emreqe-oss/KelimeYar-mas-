@@ -449,11 +449,13 @@
             
             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0" id="sequential-game-info">
                 <div id="player1-score" class="text-left w-2/5 truncate"></div>
-                <div class="text-center w-1/5">
-                    <p id="round-counter" class="text-xs text-gray-400"></p>
-                    <p id="turn-display" class="font-bold text-md"></p>
-                    <p id="timer-display" class="font-bold text-xl font-mono text-gray-300"></p>
-                </div>
+                <div class="text-center w-1/5 flex flex-col items-center">
+    <div id="opponent-mini-grid" class="grid gap-0.5 mb-1 hidden"></div> 
+    
+    <p id="timer-display" class="font-bold text-xl font-mono text-gray-300 leading-none"></p>
+    <p id="turn-display" class="font-bold text-[10px] leading-tight mt-1"></p>
+    <p id="round-counter" class="text-[10px] text-gray-500 hidden"></p>
+</div>
                 <div id="player2-score" class="text-right w-2/5 truncate"></div>
             </div>
             

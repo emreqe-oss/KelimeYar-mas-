@@ -62,6 +62,11 @@ export let
     dictionaryListContainer, dictionaryEmptyMsg, btnAddWordToDict;
 
 const brPlayerSlots = []; 
+// initUI fonksiyonu içinde uygun bir yere:
+// (brPlayerSlots... satırlarının altına ekleyebilirsin)
+export let opponentMiniGrid; // En üste export listesine de eklemeyi unutma veya direkt document.getElementById kullan.
+// En iyisi initUI içine şunu eklemek yeterli (biz fonksiyonda getElementById kullandık zaten):
+// Sadece export listesine eklemene gerek yok, doğrudan DOM'dan çekiyoruz.
 let currentScreen = '';
 
 export function initUI() {
@@ -84,6 +89,8 @@ export function initUI() {
     brPlayerSlots.push(document.getElementById('br-player-slot-1'));
     brPlayerSlots.push(document.getElementById('br-player-slot-2'));
     brPlayerSlots.push(document.getElementById('br-player-slot-3'));
+    
+    
 
     // Jokers
     jokerPresentBtn = document.getElementById('joker-present');
@@ -1217,5 +1224,41 @@ export function renderDictionaryList(words) {
         }
 
         dictionaryListContainer.appendChild(card);
+    });
+}
+
+// js/ui.js EN ALTINA EKLE
+
+export function updateOpponentMiniGrid(opponentGuesses, wordLength, maxGuesses) {
+    const container = document.getElementById('opponent-mini-grid');
+    if (!container) return;
+
+    // Eğer ızgara henüz oluşturulmadıysa veya boyut değiştiyse oluştur
+    // 6 satır x Kelime Uzunluğu kadar minik kutu
+    const totalTiles = maxGuesses * wordLength;
+    if (container.children.length !== totalTiles) {
+        container.innerHTML = '';
+        container.classList.remove('hidden');
+        container.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+        
+        for (let i = 0; i < maxGuesses; i++) {
+            for (let j = 0; j < wordLength; j++) {
+                const tile = document.createElement('div');
+                tile.className = 'mini-tile';
+                tile.id = `mini-${i}-${j}`;
+                container.appendChild(tile);
+            }
+        }
+    }
+
+    // Renkleri Boya
+    opponentGuesses.forEach((guess, rowIndex) => {
+        guess.colors.forEach((color, colIndex) => {
+            const tile = document.getElementById(`mini-${rowIndex}-${colIndex}`);
+            if (tile) {
+                // Mevcut sınıfları temizle ve yenisini ekle
+                tile.className = `mini-tile ${color}`;
+            }
+        });
     });
 }
