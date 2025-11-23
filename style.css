@@ -517,8 +517,44 @@ body.theme-light .dictionary-meaning {
     transition: background-color 0.3s;
 }
 
+/* --- MATCHMAKING EKRANI ANİMASYONLARI --- */
+
+/* Radar Dalgası */
+.radar-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(99, 102, 241, 0.6); /* Indigo renk */
+    opacity: 0;
+    animation: radar-pulse 2s infinite ease-out;
+    z-index: 0;
+}
+
+.radar-ring.delay-1 {
+    animation-delay: 0.6s;
+}
+
+@keyframes radar-pulse {
+    0% { width: 64px; height: 64px; opacity: 0.8; border-width: 4px; }
+    100% { width: 250px; height: 250px; opacity: 0; border-width: 0px; }
+}
+
+/* Büyüteç Sallanma */
+@keyframes wiggle {
+    0%, 100% { transform: rotate(-15deg); }
+    50% { transform: rotate(15deg); }
+}
+.animate-wiggle {
+    animation: wiggle 1.5s ease-in-out infinite;
+}
+
 /* Renkler (Ana oyunla uyumlu) */
 .mini-tile.correct { background-color: #10b981; } /* Yeşil */
 .mini-tile.present { background-color: #f59e0b; } /* Sarı */
 .mini-tile.absent  { background-color: #1f2937; opacity: 0.5; } /* Gri/Yok */
 .mini-tile.failed  { background-color: #ef4444; } /* Kırmızı */
+

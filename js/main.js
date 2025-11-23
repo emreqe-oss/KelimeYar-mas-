@@ -1,5 +1,6 @@
-// js/main.js - TAM DOSYA (Sözlük Özelliği Eklendi ve Temizlendi)
+// js/main.js - TAM DOSYA (Düzeltilmiş)
 
+// 1. TÜM IMPORTLAR EN ÜSTTE OLMALI
 import { 
     setUserId, setCurrentUserProfile, getCurrentUserProfile, getUserId, getCurrentGameId,
     getFriendsUnsubscribe, setFriendsUnsubscribe,
@@ -11,7 +12,7 @@ import { db, auth } from './firebase.js';
 import { onAuthStateChanged } from "firebase/auth"; 
 import { 
     getDoc, doc, collection, query, orderBy, limit, getDocs, 
-    updateDoc
+    updateDoc, where, onSnapshot // <-- where ve onSnapshot eklendi
 } from "firebase/firestore"; 
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
 import { 
@@ -47,7 +48,7 @@ import {
     playTutorialAnimation,
     stopTutorialAnimation, marketBtn, backToMainFromMarketBtn, openKirtasiyeScreen,
     
-    // --- SÖZLÜK İMPORTLARI (YENİ) ---
+    // Sözlük
     dictionaryMenuBtn, 
     backToMainFromDictionaryBtn,
     openDictionaryScreen
@@ -67,11 +68,16 @@ import {
     usePresentJoker, 
     useCorrectJoker, 
     useRemoveJoker,
-    startRematch 
+    startRematch,
+    abandonGame // <-- Eklendi
 } from './game.js';
-import { showToast } from './utils.js';
 
-// Uygulamayı başlatan ana fonksiyon
+import { showToast, playSound } from './utils.js'; // <-- Düzeltildi
+
+// 2. DEĞİŞKENLER
+let globalGamesUnsubscribe = null;
+
+// 3. ANA FONKSİYONLAR
 function initApp() {
     initUI();
     addEventListeners();
@@ -79,7 +85,42 @@ function initApp() {
     initTheme();
 }
 
-// Kullanıcı giriş/çıkış durumunu dinleyen fonksiyon
+// Global Oyun Takibi (Bildirimler İçin)
+function startGlobalGamesListener() {
+    const userId = getUserId();
+    if (!userId) return;
+
+    const q = query(
+        collection(db, "games"),
+        where("playerIds", "array-contains", userId),
+        where("status", "in", ["waiting", "playing"])
+    );
+
+    if (globalGamesUnsubscribe) globalGamesUnsubscribe();
+
+    globalGamesUnsubscribe = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const gameData = change.doc.data();
+            
+            // Eğer yeni bir oyun "playing" durumuna geçtiyse
+            if (change.type === "modified" && gameData.status === 'playing') {
+                const gameScreen = document.getElementById('game-screen');
+                // Kullanıcı o an oyun ekranında değilse bildirim göster
+                if (gameScreen && gameScreen.classList.contains('hidden')) {
+                    showToast(`🔔 "${gameData.gameType === 'friend' ? 'Arkadaşın' : 'Rakip'}" oyuna başladı!`, false);
+                    playSound('turn');
+                    
+                    const inviteCount = document.getElementById('game-invite-count');
+                    if(inviteCount) {
+                        inviteCount.textContent = "!";
+                        inviteCount.classList.remove('hidden');
+                    }
+                }
+            }
+        });
+    });
+}
+
 function initAuthListener() {
     onAuthStateChanged(auth, async (user) => { 
         const authLoading = document.getElementById('auth-loading');
@@ -87,6 +128,10 @@ function initAuthListener() {
             authLoading.classList.add('hidden');
             setUserId(user.uid);
             
+            // --- YENİ: Global dinleyiciyi başlat ---
+            startGlobalGamesListener();
+            // --------------------------------------
+
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
             
@@ -100,11 +145,9 @@ function initAuthListener() {
                 const mainMenuGoldEl = document.getElementById('main-menu-gold-display');
                 if (mainMenuGoldEl) mainMenuGoldEl.textContent = userGold;
 
-                // 1. Ana Menüdeki Başlığı Güncelle
                 document.getElementById('main-menu-username').textContent = username;
                 document.getElementById('main-menu-avatar').src = avatarUrl;
                 
-                // 2. Profil DÜZENLEME Ekranındaki Alanları Doldur
                 document.getElementById('profile-username-input').value = username;
                 document.getElementById('profile-avatar-img').src = avatarUrl;
                 document.getElementById('profile-fullname-display').value = profileData.fullname || '...';
@@ -124,12 +167,15 @@ function initAuthListener() {
                 setCurrentUserProfile({ email: user.email });
             }
             
+            // Yarım kalan oyunu kontrol et
             const activeGameId = localStorage.getItem('activeGameId');
             if (activeGameId) {
                 try {
                     const gameDoc = await getDoc(doc(db, "games", activeGameId));
                     if (gameDoc.exists() && gameDoc.data().status !== 'finished') {
                         showToast("Yarım kalan oyununa devam ediyorsun!");
+                        // Radar ekranı takılmasın diye direkt oyuna alıyoruz (Resume)
+                        // İstersek burada da status kontrolü yapabiliriz ama basitleştirelim:
                         if (gameDoc.data().gameType === 'multiplayer-br') {
                             await joinBRGame(activeGameId);
                         } else {
@@ -158,6 +204,8 @@ function initAuthListener() {
 
             if (getFriendsUnsubscribe()) getFriendsUnsubscribe()();
             if (getMyGamesUnsubscribe()) getMyGamesUnsubscribe()();
+            if (globalGamesUnsubscribe) globalGamesUnsubscribe(); // Global dinleyiciyi durdur
+            
             setFriendsUnsubscribe(null);
             setMyGamesUnsubscribe(null);
 
@@ -341,7 +389,7 @@ function addEventListeners() {
         });
     }
 
-    // --- SÖZLÜK BUTONLARI (YENİ) ---
+    // --- SÖZLÜK BUTONLARI ---
     if (dictionaryMenuBtn) {
         dictionaryMenuBtn.addEventListener('click', () => {
             openDictionaryScreen();
@@ -353,7 +401,6 @@ function addEventListeners() {
             showScreen('main-menu-screen');
         });
     }
-    // --------------------------------
 
     // Kelimelig Sekme Butonları
     if (btnShowFixtures) {
@@ -398,15 +445,15 @@ function addEventListeners() {
     vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
     dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
     
-    // Gevşek Oyun
+    // Gevşek Oyun (12 Saat)
     randomGameBtn.addEventListener('click', () => findOrCreateRandomGame({ 
         timeLimit: 43200, 
         matchLength: 1,
         gameType: 'random_loose' 
     }));
     
-    // Seri Oyun
-    seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 45, matchLength: 5, gameType: 'random_series' }));
+    // Seri Oyun (120 Sn)
+    seriesGameBtn.addEventListener('click', () => findOrCreateRandomGame({ timeLimit: 120, matchLength: 5, gameType: 'random_series' }));
 
     // Online Oyun Kurma / Katılma
     withFriendsBtn.addEventListener('click', () => {

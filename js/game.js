@@ -823,23 +823,27 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 }
 
 function updateKnownPositions(playerGuesses) {
-    // DÜZELTME: Sadece tahminlerden gelenleri değil,
-    // daha önce Joker ile açılmış (state'te duran) harfleri de baz al.
-    
-    // 1. Mevcut hafızayı kopyala (Jokerleri korumak için)
+    // DÜZELTME: Eğer oyuncunun hiç tahmini yoksa (Yeni Tur), hafızayı eski tahminlerle kirletme!
+    if (!playerGuesses || playerGuesses.length === 0) {
+        // Ancak Joker kullanmış olabilir mi? 
+        // Eğer oyun başıysa ve tahmin yoksa, state'teki 'knownCorrectPositions' 
+        // zaten resetlenmiş olmalıydı (listenToGameUpdates içinde).
+        // O yüzden buraya dokunmuyoruz veya sadece mevcut state'i döndürüyoruz.
+        return state.getKnownCorrectPositions() || {};
+    }
+
+    // 1. Mevcut hafızayı kopyala
     const currentKnown = state.getKnownCorrectPositions() || {};
     const newPositions = { ...currentKnown }; 
 
-    // 2. Tahminlerden gelen "Yeşil" harfleri üzerine ekle
-    if (playerGuesses) {
-        playerGuesses.forEach(guess => {
-            guess.colors.forEach((color, index) => {
-                if (color === 'correct') {
-                    newPositions[index] = guess.word[index];
-                }
-            });
+    // 2. SADECE Bu turda yapılan tahminlerden gelen yeşilleri ekle
+    playerGuesses.forEach(guess => {
+        guess.colors.forEach((color, index) => {
+            if (color === 'correct') {
+                newPositions[index] = guess.word[index];
+            }
         });
-    }
+    });
     
     // 3. Güncellenmiş hafızayı kaydet
     state.setKnownCorrectPositions(newPositions);
@@ -871,17 +875,43 @@ export function listenToGameUpdates(gameId) {
         const currentUserId = state.getUserId();
         const oldGameData = state.getLocalGameData(); 
         const oldStatus = oldGameData?.status;
-        
-        if (oldGameData && gameData.status === 'playing') {
-            const oldPlayerId = oldGameData.currentPlayerId;
-            const newPlayerId = gameData.currentPlayerId;
+        if (oldGameData && oldGameData.status === 'waiting' && gameData.status === 'playing') {
             
-            if (oldPlayerId !== currentUserId && newPlayerId === currentUserId) {
-                if (!isBattleRoyale(gameData.gameType)) {
-                    playSound('turn'); 
-                    showToast("🔔 Sıra Sende!", false); 
+            // 1. Eğer şu an Radar ekranındaysak -> Oyuna geç
+            const matchmakingScreen = document.getElementById('matchmaking-screen');
+            if (matchmakingScreen && !matchmakingScreen.classList.contains('hidden')) {
+                showScreen('game-screen');
+                initializeGameUI(gameData); // Izgarayı hazırla
+            } 
+            // 2. Eğer başka bir ekrandaysak (örn: Main Menu) -> Bildirim göster
+            else {
+                // Oyunlarım menüsünde değilsek bildirim at
+                if (document.getElementById('game-screen').classList.contains('hidden')) {
+                    showToast("🚀 RAKİP BULUNDU! OYUN BAŞLIYOR...", false);
+                    playSound('win'); // Dikkat çekici ses
+                    
+                    // İsteğe bağlı: Otomatik oyuna da alabilirsin
+                    // showScreen('game-screen'); 
                 }
             }
+        }
+        // Eğer eski veri varsa VE yeni gelen verinin tur sayısı eskisinden büyükse
+        if (oldGameData && gameData.currentRound > oldGameData.currentRound) {
+            console.log("LOG: Yeni tur algılandı. Hafıza ve Arayüz temizleniyor...");
+            
+            // 1. JavaScript State Temizliği
+            state.resetKnownCorrectPositions(); // Yeşil harf hafızasını sil
+            state.resetHasUserStartedTyping();  // Yazma durumunu sil
+            
+            // 2. UI Temizliği (Yeni eklediğimiz fonksiyonu çağır)
+            import('./ui.js').then(ui => {
+                ui.resetUIForNewRound();
+                ui.createGrid(gameData.wordLength, gameData.GUESS_COUNT); // Izgarayı baştan yarat
+            });
+
+            // 3. Eğer BR modundaysak ve elenmişsek/kazanmışsak klavyeyi aç
+            if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+        
         }
 
         state.setLocalGameData(gameData); 
@@ -969,42 +999,77 @@ export function listenToGameUpdates(gameId) {
 // === OYUN KURMA VE KATILMA ===
 // ===================================================
 
+// js/game.js
+
 export async function findOrCreateRandomGame(config) {
     state.resetKnownCorrectPositions();
     state.resetHasUserStartedTyping();
 
     const { timeLimit, matchLength, gameType } = config;
     const currentUserId = state.getUserId();
+    
     if (!currentUserId) return showToast("Lütfen önce giriş yapın.", true);
-    showToast("Rakip aranıyor...", false);
+
+    // 1. MATCHMAKING EKRANINI AÇ
+    import('./ui.js').then(ui => ui.openMatchmakingScreen());
+
+    // İptal butonu için flag
+    let isCancelled = false;
+    const cancelBtn = document.getElementById('cancel-matchmaking-btn');
+    
+    // İptal fonksiyonu
+    const handleCancel = () => {
+        isCancelled = true;
+        const activeId = state.getCurrentGameId();
+        if (activeId) {
+            // Eğer oyun ID'si oluştuysa onu sil/ayrıl
+            import('./game.js').then(m => m.abandonGame(activeId));
+        }
+        
+        import('./ui.js').then(ui => ui.showScreen('new-game-screen', true));
+    };
+    
+    if(cancelBtn) cancelBtn.onclick = handleCancel;
+
+    // Yapay bekleme (En az 1.5 saniye animasyonu görsünler, yoksa ekran 'göz kırpar')
+    const minWaitPromise = new Promise(resolve => setTimeout(resolve, 1500));
+
     try {
+        // Veritabanı sorgusu ve bekleme süresi aynı anda başlasın
         const gamesRef = collection(db, 'games');
-        const waitingGamesQuery = query(gamesRef,
+        const waitingGamesQuery = query(gamesRef, 
             where('status', '==', 'waiting'),
             where('gameType', '==', gameType),
             where('timeLimit', '==', timeLimit),
             limit(1)
         );
-        const querySnapshot = await getDocs(waitingGamesQuery);
+
+        const [querySnapshot] = await Promise.all([getDocs(waitingGamesQuery), minWaitPromise]);
+
+        if (isCancelled) return; // Eğer kullanıcı bu sürede iptale bastıysa dur.
+
         let foundGame = null;
         querySnapshot.forEach(doc => {
             if (doc.data().creatorId !== currentUserId) {
                 foundGame = doc;
             }
         });
+
         if (foundGame) {
             await joinGame(foundGame.id);
         } else {
-            await createGame({
-                invitedFriendId: null,
-                timeLimit: timeLimit,
+            await createGame({ 
+                invitedFriendId: null, 
+                timeLimit: timeLimit, 
                 matchLength: matchLength,
-                gameType: gameType
+                gameType: gameType 
             });
         }
     } catch (error) {
+        if (isCancelled) return;
         console.error("Rastgele oyun aranırken hata:", error);
         showToast("Oyun aranırken bir hata oluştu.", true);
+        import('./ui.js').then(ui => ui.showScreen('new-game-screen'));
     }
 }
 
@@ -1055,12 +1120,22 @@ export async function createGame(options = {}) {
         state.setLocalGameData(gameData);
         showScreen('game-screen');
         initializeGameUI(gameData);
+        if (gameData.status === 'playing') {
+            showScreen('game-screen');
+            initializeGameUI(gameData);
+        } else {
+            // Burada sadece arka planda dinlemeyi başlatıyoruz.
+            // Ekranı değiştirmiyoruz, kullanıcı "Rakip Aranıyor" ekranında kalıyor.
+            console.log("LOG: Oyun kuruldu, rakip bekleniyor. Radar ekranında kalınıyor.");
+        }
         listenToGameUpdates(gameId);
     } catch (error) {
         console.error("Error creating game:", error);
         showToast("Oyun oluşturulamadı!", true);
     }
 }
+
+// js/game.js içindeki joinGame fonksiyonunu bununla değiştir:
 
 export async function joinGame(gameId) {
     state.resetKnownCorrectPositions();
@@ -1124,8 +1199,25 @@ export async function joinGame(gameId) {
         localStorage.setItem('activeGameId', gameId);
         state.setCurrentGameId(gameId);
         state.setLocalGameData(gameDataToJoin);
-        showScreen('game-screen');
-        initializeGameUI(gameDataToJoin);
+        
+        // --- DÜZELTME BAŞLANGIÇ ---
+        // Eğer oyun hala "bekliyor" durumundaysa (yani biz kurucuyuz ve kimse gelmemişse)
+        // VE bu bir rastgele eşleşme oyunuysa (Seri/Gevşek), RADAR EKRANINI AÇ.
+        // (Arkadaş davetlerinde oyun ekranı açılabilir, çünkü kod paylaşmak gerekir)
+        const isRandomWaiting = gameDataToJoin.status === 'waiting' && 
+                               (gameDataToJoin.gameType === 'random_loose' || gameDataToJoin.gameType === 'random_series');
+
+        if (isRandomWaiting) {
+            console.log("LOG: joinGame içinde 'waiting' durumu algılandı. Radar ekranı açılıyor.");
+            // ui.js'den fonksiyonu çağır
+            import('./ui.js').then(ui => ui.openMatchmakingScreen());
+        } else {
+            // Normal durum: Oyun oynanıyorsa veya arkadaş davetiyse oyun ekranını aç
+            showScreen('game-screen');
+            initializeGameUI(gameDataToJoin);
+        }
+        // --- DÜZELTME BİTİŞ ---
+
         listenToGameUpdates(gameId);
     } catch (error) {
         console.error("Error joining game:", error);
@@ -1159,7 +1251,7 @@ export async function startNewGame(config) {
     switch (config.mode) {
         case 'vsCPU':
             gameSettings.wordLength = getRandomWordLength();
-            gameSettings.timeLimit = 45;
+            gameSettings.timeLimit = 120;
             gameSettings.matchLength = 5;
             break;
         case 'league':
@@ -1181,7 +1273,7 @@ export async function startNewGame(config) {
                 return; 
             }
             gameSettings.wordLength = secretWord.length;
-            gameSettings.timeLimit = 60;
+            gameSettings.timeLimit = 120;
             gameSettings.matchLength = 1;
             break;
         default:

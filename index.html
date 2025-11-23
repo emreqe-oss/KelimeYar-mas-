@@ -317,6 +317,55 @@
             </div>
         </div>
 
+        <div id="matchmaking-screen" class="hidden flex-1 flex flex-col h-full relative overflow-hidden bg-gray-900">
+            
+            <div class="flex-1 flex flex-col items-center justify-end pb-8 bg-gradient-to-b from-gray-800 to-gray-900 relative w-full">
+                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#4b5563 1px, transparent 1px); background-size: 20px 20px;"></div>
+                
+                <div class="relative z-10 flex flex-col items-center gap-3">
+                    <div class="w-24 h-24 rounded-full bg-gray-700 border-4 border-gray-600 flex items-center justify-center shadow-2xl animate-pulse">
+                        <span class="text-5xl font-black text-gray-500">?</span>
+                    </div>
+                    <div class="text-center">
+                        <h2 class="text-3xl font-black text-gray-500 tracking-widest">???</h2>
+                        <p class="text-xs text-gray-400 animate-pulse mt-1">RAKİP ARANIYOR...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute top-1/2 left-0 w-full h-1 bg-gray-700 flex items-center justify-center z-20 -mt-0.5">
+                <div class="relative">
+                    <div class="radar-ring"></div>
+                    <div class="radar-ring delay-1"></div>
+                    <div class="w-16 h-16 bg-gray-800 rounded-full border-4 border-gray-600 flex items-center justify-center shadow-xl relative z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white animate-wiggle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col items-center justify-start pt-8 bg-gray-900 w-full">
+                <div class="flex flex-col items-center gap-3">
+                    <div class="relative">
+                        <img id="matchmaking-my-avatar" src="" class="w-24 h-24 rounded-full border-4 border-indigo-500 shadow-2xl object-cover">
+                        <div class="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-white rounded-full"></div>
+                    </div>
+                    <div class="text-center">
+                        <h2 id="matchmaking-my-name" class="text-3xl font-black text-white tracking-wide">OYUNCU</h2>
+                        <p class="text-xs text-indigo-400 font-bold mt-1">PROFESYONEL</p>
+                    </div>
+                </div>
+
+                <button id="cancel-matchmaking-btn" class="mt-auto mb-8 bg-red-600/80 hover:bg-red-600 text-white px-8 py-3 rounded-full font-bold text-sm transition flex items-center gap-2 border border-red-500/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    ARAMAYI DURDUR
+                </button>
+            </div>
+        </div>
+
         <div id="how-to-play-screen" class="hidden bg-gray-800 p-4 shadow-lg flex-1 flex flex-col text-left overflow-y-auto">
                 <h2 class="text-3xl font-bold mb-4 text-center">Nasıl Oynanır?</h2>
                 <p class="text-center mb-4">Gizli kelimeyi 6 tahminde bulun.</p>

@@ -57,6 +57,8 @@ export let
     userDisplay, invitationModal, 
     copyGameIdBtn,
 
+    matchmakingScreen, matchmakingMyAvatar, matchmakingMyName, cancelMatchmakingBtn,
+
     // --- SÖZLÜK ELEMENTLERİ (YENİ) ---
     dictionaryMenuBtn, dictionaryScreen, backToMainFromDictionaryBtn, 
     dictionaryListContainer, dictionaryEmptyMsg, btnAddWordToDict;
@@ -103,6 +105,12 @@ export function initUI() {
     logoutBtn = document.getElementById('logout-btn');
     goToRegisterBtn = document.getElementById('go-to-register-btn');
     backToLoginBtn = document.getElementById('back-to-login-btn');
+
+    // Matchmaking UI
+    matchmakingScreen = document.getElementById('matchmaking-screen');
+    matchmakingMyAvatar = document.getElementById('matchmaking-my-avatar');
+    matchmakingMyName = document.getElementById('matchmaking-my-name');
+    cancelMatchmakingBtn = document.getElementById('cancel-matchmaking-btn');
 
     // Main Menu
     newGameBtn = document.getElementById('new-game-btn');
@@ -199,7 +207,7 @@ export function showScreen(screenId, isBackNavigation = false) {
         'login-screen', 'register-screen', 'main-menu-screen', 'new-game-screen',
         'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
         'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
-        'edit-profile-screen', 'kelimelig-screen', 'kirtasiye-screen',
+        'edit-profile-screen', 'kelimelig-screen', 'kirtasiye-screen', 'matchmaking-screen', 
         'dictionary-screen' // <-- Sözlük Ekranı Eklendi
     ];
     
@@ -223,8 +231,16 @@ export function showScreen(screenId, isBackNavigation = false) {
 
 export function createGrid(wordLength, GUESS_COUNT) {
     if (!guessGrid) return;
+    
+    // Önceki tüm stilleri ve içeriği tamamen temizle
     guessGrid.innerHTML = '';
+    guessGrid.className = 'grid gap-1 w-full'; // Temel sınıfları sıfırla
     guessGrid.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+    
+    // Mini ızgarayı da gizle (eğer varsa)
+    const miniGrid = document.getElementById('opponent-mini-grid');
+    if (miniGrid) miniGrid.innerHTML = '';
+
     for (let i = 0; i < GUESS_COUNT; i++) {
         for (let j = 0; j < wordLength; j++) {
             const tile = createElement('div', { id: `tile-${i}-${j}`, className: 'tile' });
@@ -1261,4 +1277,45 @@ export function updateOpponentMiniGrid(opponentGuesses, wordLength, maxGuesses) 
             }
         });
     });
+}
+
+export function resetUIForNewRound() {
+    // 1. Klavyedeki renkleri temizle
+    document.querySelectorAll('.keyboard-key').forEach(btn => {
+        btn.classList.remove('correct', 'present', 'absent');
+        // Eğer 'disabled' veya stili değiştirilmişse sıfırla
+        btn.style.opacity = "1";
+        btn.style.transform = "none";
+        btn.style.pointerEvents = "auto";
+    });
+
+    // 2. Izgaradaki "static" (joker) sınıflarını temizle
+    // createGrid zaten HTML'i siliyor ama biz yine de DOM'da kalan kırıntı varsa diye:
+    const tiles = document.querySelectorAll('.tile');
+    tiles.forEach(tile => {
+        tile.className = 'tile';
+        const back = tile.querySelector('.back');
+        if(back) back.className = 'tile-inner back';
+    });
+}
+
+// --- MATCHMAKING UI ---
+
+export function openMatchmakingScreen() {
+    const profile = state.getCurrentUserProfile();
+
+    // Kullanıcı bilgilerini doldur
+    if (matchmakingMyName) matchmakingMyName.textContent = profile?.username || 'Oyuncu';
+    if (matchmakingMyAvatar) {
+        // Avatar URL'sini belirle (varsayılan veya profil avatarı)
+        const avatarUrl = profile?.avatar || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+        matchmakingMyAvatar.src = avatarUrl;
+    }
+
+    showScreen('matchmaking-screen');
+}
+
+export function closeMatchmakingScreen() {
+    // Arama bitince veya iptal edilince ne olacağı main.js'de veya game.js'de yönetilecek
+    // Genellikle showScreen('game-screen') veya showScreen('new-game-screen') çağrılır.
 }
