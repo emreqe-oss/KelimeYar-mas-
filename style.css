@@ -22,27 +22,39 @@ body {
     min-height: 0;
 }
 
+/* --- GÜNCELLENMİŞ KUTUCUK AYARLARI --- */
 .tile { 
     width: 100%; 
     padding-bottom: 100%; 
     position: relative; 
-    border: 2px solid #ffffff; /* Kenarlık */
+    border: 2px solid #ffffff; 
     display: flex;
     justify-content: center; 
     align-items: center;
-    font-size: clamp(1.5rem, 5vw, 2rem);
-    font-weight: bold; 
+    
+    /* Yazı boyutu: Hem mobilde hem masaüstünde taşmayacak ideal ayar */
+    font-size: clamp(0.9rem, 3.2vw, 1.25rem); 
+    
+    /* Satır yüksekliği: Harfin dikeyde ortalanması için en kritik ayar */
+    line-height: 1; 
+    
+    font-weight: 800; 
     text-transform: uppercase; 
     transform-style: preserve-3d;
     transition: transform 0.6s, background-color 0.3s 0.3s, border-color 0.3s 0.3s;
+    
+    /* İçerik kutu kenarına değmesin */
+    box-sizing: border-box;
 }
+
 .tile-inner { 
     position: absolute; 
     top: 0; left: 0; right: 0; bottom: 0; 
     display: flex; 
     align-items: center; 
     justify-content: center; 
-    line-height: 1;
+    /* Harfi görsel olarak çok az yukarı iter (İ, Ğ gibi harfler için denge) */
+    padding-top: 3px;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
 }
