@@ -493,39 +493,49 @@ export function initializeGameUI(gameData) {
     // -------------------------------------------------
 }
 
-// js/game.js -> updateTurnDisplay Fonksiyonunun TAMAMI
+// js/game.js -> updateTurnDisplay (DÜZELTİLMİŞ FİNAL VERSİYON)
 
 export function updateTurnDisplay(gameData) {
+    // Gerekli UI elementleri yoksa işlem yapma
     if (!startGameBtn || !shareGameBtn) return;
 
     const gameMode = state.getGameMode();
+    const currentUserId = state.getUserId();
+    const isCreator = gameData.creatorId === currentUserId; // Oyunu kuran kişi biz miyiz?
     
-    // 1. LİG MODU (Kendi özel arayüzü var)
+    // 1. LİG MODU (Kendi özel arayüzü var, burayı pas geçiyoruz)
     if (gameMode === 'league') {
         return;
     }
     
-    const currentUserId = state.getUserId();
-    const numPlayers = Object.keys(gameData.players).length;
-    const isBR = isBattleRoyale(gameMode);
-    
-    // 2. BATTLE ROYALE MODU (Özel skor tablosu elementlerini kullanır)
-    if (isBR) {
+    // 2. BATTLE ROYALE MODU
+    if (isBattleRoyale(gameMode)) {
         if (!brTimerDisplay || !brTurnDisplay) return;
         brTimerDisplay.textContent = gameData.timeLimit || 60;
         const brWaitingForPlayers = document.getElementById('br-waiting-for-players');
         const playerState = gameData.players[currentUserId] || {};
+        const numPlayers = Object.keys(gameData.players).length;
 
         if (gameData.status === 'waiting') {
             brTurnDisplay.textContent = `Oyuncu bekleniyor (${numPlayers}/${MAX_BR_PLAYERS || 4})...`;
-            startGameBtn.classList.toggle('hidden', currentUserId !== gameData.creatorId || numPlayers < 2);
+            
+            // --- DÜZELTME: Host ise ve en az 2 kişi varsa Başlat butonu görünsün ---
+            if (isCreator && numPlayers >= 1) { // Test kolaylığı için 1, canlıda 2 yapabilirsin
+                startGameBtn.classList.remove('hidden');
+                startGameBtn.textContent = "Oyunu Başlat (BR)";
+                startGameBtn.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-pointer";
+                startGameBtn.onclick = startGame; 
+            } else {
+                startGameBtn.classList.add('hidden');
+            }
+            // ----------------------------------------------------------------------
+
             shareGameBtn.classList.remove('hidden');
             if (brWaitingForPlayers) brWaitingForPlayers.classList.remove('hidden');
 
         } else if (gameData.status === 'playing') {
             startGameBtn.classList.add('hidden');
             
-            // BR Oyuncusu Durum Mesajları
             if (playerState.isEliminated) {
                 brTurnDisplay.textContent = "✖️ Elendin!";
                 brTurnDisplay.classList.remove('pulsate');
@@ -554,22 +564,48 @@ export function updateTurnDisplay(gameData) {
     if (!turnDisplay || !timerDisplay) return; 
     if (gameMode === 'daily') return;
 
-    if (gameData.status === 'waiting') {
-        turnDisplay.textContent = "Rakip bekleniyor...";
-        startGameBtn.classList.add('hidden');
+    // --- KRİTİK DÜZELTME BURADA ---
+    if (gameData.status === 'waiting' || gameData.status === 'invited') {
+        const numPlayers = Object.keys(gameData.players).length;
+        
+        if (gameData.status === 'invited') {
+             turnDisplay.textContent = `Arkadaşın bekleniyor...`;
+        } else {
+             turnDisplay.textContent = numPlayers > 1 ? "Başlatmak için bekleniyor..." : "Rakip bekleniyor...";
+        }
+
+        // Eğer HOST ise butonu göster
+        if (isCreator) {
+            startGameBtn.classList.remove('hidden');
+            
+            // Oyuncu sayısına göre buton metnini güncellemek iyi bir UX olur
+            // vsCPU modunda tek başına başlatılabilir, diğerlerinde en az 2 kişi lazım
+            if (numPlayers < 2 && gameMode !== 'vsCPU') {
+                startGameBtn.disabled = true; 
+                startGameBtn.textContent = "Oyuncu Bekleniyor...";
+                startGameBtn.className = "w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-not-allowed";
+            } else {
+                startGameBtn.disabled = false;
+                startGameBtn.textContent = "Oyunu Başlat";
+                startGameBtn.className = "w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-pointer";
+                startGameBtn.onclick = startGame; // Fonksiyonu bağla
+            }
+        } else {
+            // Host değilse butonu gizle
+            startGameBtn.classList.add('hidden');
+        }
+        
         shareGameBtn.classList.remove('hidden');
-    } else if (gameData.status === 'invited') {
-        turnDisplay.textContent = `Arkadaşın bekleniyor...`;
-        startGameBtn.classList.add('hidden');
-        shareGameBtn.classList.remove('hidden');
+        
     } 
+    // -------------------------------
     
-    // --- EŞ ZAMANLI OYUN GÜNCELLEMESİ ---
+    // --- OYUN OYNANIYORSA ---
     else if (gameData.status === 'playing') {
         startGameBtn.classList.add('hidden');
         shareGameBtn.classList.add('hidden');
         
-        // vsCPU dışındaki tüm online modlar (Multiplayer, Gevşek, Seri, Friend)
+        // vsCPU dışındaki tüm online modlar
         if (gameMode === 'multiplayer' || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
             const myState = gameData.players[currentUserId];
             
@@ -584,7 +620,7 @@ export function updateTurnDisplay(gameData) {
                 turnDisplay.className = "font-bold text-white pulsate text-md";
             }
         } 
-        // vsCPU Modu (Sıralı sistem simülasyonu devam edebilir)
+        // vsCPU Modu
         else if (gameMode === 'vsCPU') {
             const currentPlayerUsername = gameData.players[gameData.currentPlayerId]?.username;
             if (gameData.currentPlayerId === currentUserId) {
@@ -596,7 +632,6 @@ export function updateTurnDisplay(gameData) {
             }
         }
     } 
-    // -------------------------------------
     
     else if (gameData.status === 'finished') {
         turnDisplay.textContent = "Oyun Bitti";
@@ -605,23 +640,11 @@ export function updateTurnDisplay(gameData) {
     }
 }
 
-async function handleMeaningIconClick(word) {
-    if (!word || word.trim() === '') return;
-    const meaning = await fetchWordMeaning(word);
-    alert(`${word.toLocaleUpperCase('tr-TR')}:\n\n${meaning}`);
-}
-
 // ===================================================
 // === OYUN DURUMUNU ÇİZME (RENDER) ===
 // ===================================================
 
-// js/game.js -> renderGameState (TAM VE DÜZELTİLMİŞ HALİ)
-
-// js/game.js -> renderGameState (TAM VE DÜZELTİLMİŞ HALİ)
-
-// js/game.js -> renderGameState (TAM VE DÜZELTİLMİŞ HALİ)
-
-// js/game.js -> renderGameState (TAM VE DÜZELTİLMİŞ HALİ)
+// js/game.js -> renderGameState (DÜZELTİLMİŞ VERSİYON)
 
 export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!gameData) return;
@@ -648,9 +671,10 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     const gameIdDisplay = document.getElementById('game-id-display');
     const leaveBtn = document.getElementById('leave-game-button');
     const multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
-    const timerDisplay = document.getElementById('timer-display'); // Sayaç elementi
+    const timerDisplay = document.getElementById('timer-display');
     const turnDisplay = document.getElementById('turn-display');
     const roundCounter = document.getElementById('round-counter');
+    const keyboardContainer = document.getElementById('keyboard');
     
     // ============================================================
     // === 1. GENEL GÖRÜNÜRLÜK AYARLARI ===
@@ -741,13 +765,11 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (roundCounter) roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
     }
     
-    // C) SERİ OYUN, GEVŞEK, ARKADAŞ (STANDART MODLAR) - BURASI DÜZELTİLDİ
+    // C) SERİ OYUN, GEVŞEK, ARKADAŞ, BR (STANDART MODLAR)
     else {
-        // --- SAYAÇ GÖRÜNÜRLÜK GARANTİSİ ---
         if (timerDisplay) {
             timerDisplay.style.display = 'block'; 
             timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
-            // Parent elementin sınıfını vsCPU/Standard modlara uygun hale getir (Ortalama)
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
         }
         
@@ -789,8 +811,12 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         keyboardContainer.style.pointerEvents = shouldLockKeyboard ? 'none' : 'auto';
     }
 
+    // --- KRİTİK DÜZELTME: FONKSİYONU BURADAN (GAME.JS) ÇAĞIRIYORUZ ---
+    // updateTurnDisplay bu dosyanın içinde tanımlı olduğu için import etmeye gerek yok.
+    updateTurnDisplay(gameData); 
+    // ----------------------------------------------------------------
+
     import('./ui.js').then(ui => {
-        if(ui.updateTurnDisplay) ui.updateTurnDisplay(gameData);
         if(ui.updateKeyboard) ui.updateKeyboard(gameData);
     });
 
