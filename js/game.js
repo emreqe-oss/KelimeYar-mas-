@@ -443,6 +443,8 @@ function getDaysSinceEpoch() {
 
 // js/game.js -> initializeGameUI (GÜNCELLENMİŞ HALİ)
 
+// js/game.js -> initializeGameUI (TAM VE DÜZELTİLMİŞ HALİ)
+
 export function initializeGameUI(gameData) {
     wordLength = gameData.wordLength;
     
@@ -461,19 +463,25 @@ export function initializeGameUI(gameData) {
     createGrid(wordLength, GUESS_COUNT);
     createKeyboard(handleKeyPress);
 
-    // --- EKLENEN KISIM: VS-CPU BAŞLANGIÇ AYARLARI ---
-    if (state.getGameMode() === 'vsCPU') {
-        // 1. Sayacı manuel başlat (Biraz gecikmeli ki DOM yüklensin)
+    // --- DÜZELTME BURADA ---
+    // Sadece vsCPU değil, "Lig" ve "Günlük" hariç TÜM OYUNLARDA (Seri, Gevşek, Arkadaş) sayaç çalışsın.
+    const gameMode = state.getGameMode();
+    
+    // Sayacı Başlat (Eğer oyun oynanıyorsa)
+    if (gameData.status === 'playing' && gameMode !== 'daily') {
         setTimeout(() => {
+            // game.js içindeki startTurnTimer fonksiyonunu çağır
             startTurnTimer();
-        }, 100);
+        }, 200);
+    }
 
-        // 2. Ayrıl Butonunu Görünür Yap
+    // vsCPU Özel Buton Ayarları
+    if (gameMode === 'vsCPU') {
         const leaveBtn = document.getElementById('leave-game-button');
         const p2ScoreBox = document.getElementById('player2-score');
         
         if (leaveBtn) {
-            leaveBtn.classList.remove('hidden'); // Gizliliği kaldır
+            leaveBtn.classList.remove('hidden'); 
             leaveBtn.className = "bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-sm";
             leaveBtn.textContent = "Çıkış";
             
@@ -613,6 +621,8 @@ async function handleMeaningIconClick(word) {
 
 // js/game.js -> renderGameState (TAM VE DÜZELTİLMİŞ HALİ)
 
+// js/game.js -> renderGameState (TAM VE DÜZELTİLMİŞ HALİ)
+
 export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!gameData) return;
 
@@ -638,25 +648,22 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     const gameIdDisplay = document.getElementById('game-id-display');
     const leaveBtn = document.getElementById('leave-game-button');
     const multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
+    const timerDisplay = document.getElementById('timer-display'); // Sayaç elementi
+    const turnDisplay = document.getElementById('turn-display');
+    const roundCounter = document.getElementById('round-counter');
     
     // ============================================================
-    // === 1. GENEL GÖRÜNÜRLÜK AYARLARI (SAYAÇ İÇİN KRİTİK) ===
+    // === 1. GENEL GÖRÜNÜRLÜK AYARLARI ===
     // ============================================================
     
-    // Battle Royale ise BR tablosunu göster, standart tabloyu gizle
     if (isBR) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.remove('hidden');
         if (sequentialGameInfo) sequentialGameInfo.classList.add('hidden');
-        // BR Skorlarını güncelle
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
     } 
-    // Diğer tüm modlar (Seri, Gevşek, vsCPU, League) için Standart Tabloyu GÖSTER
     else {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
-        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden'); // <-- BU EKSİKTİ!
-        
-        // Standart Skorları güncelle (vsCPU ve Multi için)
-        // ui.js içindeki updateMultiplayerScoreBoard fonksiyonu standart modları da kapsıyor
+        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
     }
 
@@ -678,6 +685,8 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 
     // A) LİG VE GÜNLÜK
     if (gameMode === 'daily' || gameMode === 'league') {
+        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
+        
         if (gameMode === 'league') {
             if (timerDisplay) {
                 timerDisplay.style.display = 'block';
@@ -705,9 +714,14 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     
     // B) vsCPU
     else if (gameMode === 'vsCPU') {
-        if (timerDisplay) timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
+        if (timerDisplay) {
+            timerDisplay.style.display = 'block';
+            timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
+            if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
+        }
         if (turnDisplay) turnDisplay.style.display = 'block';
         if (roundCounter) roundCounter.style.display = 'block';
+        
         document.getElementById('player1-score').style.display = 'block';
         
         const p2ScoreBox = document.getElementById('player2-score');
@@ -727,18 +741,19 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (roundCounter) roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
     }
     
-    // C) SERİ OYUN, GEVŞEK, ARKADAŞ (STANDART MODLAR)
+    // C) SERİ OYUN, GEVŞEK, ARKADAŞ (STANDART MODLAR) - BURASI DÜZELTİLDİ
     else {
-        // Sayaç ve Skorlar Görünür Olsun
+        // --- SAYAÇ GÖRÜNÜRLÜK GARANTİSİ ---
         if (timerDisplay) {
-            timerDisplay.style.display = 'block'; // Garantiye al
+            timerDisplay.style.display = 'block'; 
             timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
-            // Eğer league modundan çıkıp geldiyse parent class bozulmuş olabilir, düzelt:
+            // Parent elementin sınıfını vsCPU/Standard modlara uygun hale getir (Ortalama)
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
         }
         
         if (turnDisplay) turnDisplay.style.display = 'block';
         if (roundCounter) roundCounter.style.display = 'block';
+        
         document.getElementById('player1-score').style.display = 'block';
         document.getElementById('player2-score').style.display = 'block';
 
@@ -751,7 +766,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         }
         
         if (roundCounter) {
-            // Gevşek oyun tek turdur ama yine de yazabiliriz
             if (gameData.gameType === 'random_loose') roundCounter.textContent = "Gevşek Oyun";
             else roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
         }
@@ -780,7 +794,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if(ui.updateKeyboard) ui.updateKeyboard(gameData);
     });
 
-    // --- IZGARA ÇİZİMİ (Aynı Kalıyor) ---
+    // --- IZGARA ÇİZİMİ ---
     const firstTile = document.getElementById(`tile-0-0`);
     const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
     const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
