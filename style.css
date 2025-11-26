@@ -23,27 +23,30 @@ body {
 }
 
 /* --- GÜNCELLENMİŞ KUTUCUK AYARLARI --- */
+/* --- GÜNCELLENMİŞ KUTUCUK AYARLARI (Yükseklik %20 Düşürüldü) --- */
 .tile { 
     width: 100%; 
-    padding-bottom: 100%; 
+    /* Eskiden 100% idi (Kare). Şimdi %80 yaptık (Daha basık) */
+    padding-bottom: 80%; 
+    
     position: relative; 
     border: 2px solid #ffffff; 
     display: flex;
     justify-content: center; 
     align-items: center;
     
-    /* Yazı boyutu: Hem mobilde hem masaüstünde taşmayacak ideal ayar */
-    font-size: clamp(0.9rem, 3.2vw, 1.25rem); 
+    /* Yazı Boyutu: %20 oranında küçültüldü */
+    /* Eski: clamp(0.9rem, 3.2vw, 1.25rem) */
+    font-size: clamp(0.7rem, 2.5vw, 1.0rem) !important; 
     
-    /* Satır yüksekliği: Harfin dikeyde ortalanması için en kritik ayar */
-    line-height: 1; 
+    /* Satır yüksekliği sıkı tutuldu */
+    line-height: 1 !important; 
     
     font-weight: 800; 
     text-transform: uppercase; 
     transform-style: preserve-3d;
     transition: transform 0.6s, background-color 0.3s 0.3s, border-color 0.3s 0.3s;
     
-    /* İçerik kutu kenarına değmesin */
     box-sizing: border-box;
 }
 
@@ -53,8 +56,10 @@ body {
     display: flex; 
     align-items: center; 
     justify-content: center; 
-    /* Harfi görsel olarak çok az yukarı iter (İ, Ğ gibi harfler için denge) */
-    padding-top: 3px;
+    
+    /* Yükseklik azaldığı için harfi ortalamak adına üst boşluğu biraz kıstık (3px -> 1px) */
+    padding-top: 1px;
+    
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
 }
