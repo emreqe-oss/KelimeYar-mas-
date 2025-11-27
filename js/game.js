@@ -1735,8 +1735,8 @@ async function submitGuess() {
 
     // 6. VERİTABANI / DURUM GÜNCELLEMESİ
     
-    // A) ONLINE ÇOK OYUNCULU (Multiplayer, BR, League)
-    if (gameMode === 'multiplayer' || isBattleRoyale(gameMode) || gameMode === 'league' || gameMode === 'friend' || gameMode === 'random_series') {
+    // A) ONLINE ÇOK OYUNCULU (Multiplayer, BR, Friend, Random) - LEAGUE HARİÇ
+    if (gameMode === 'multiplayer' || isBattleRoyale(gameMode) || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
         const updates = {
             [`players.${currentUserId}.guesses`]: localGameData.players[currentUserId].guesses
         };
@@ -1756,6 +1756,65 @@ async function submitGuess() {
         } catch (error) {
             console.error("Tahmin gönderilemedi:", error);
             showToast("Bağlantı hatası.", true);
+        }
+    } 
+    
+    // --- YENİ: LİG MODU ÖZEL GÜNCELLEMESİ ---
+    else if (gameMode === 'league') {
+        const weekID = localGameData.leagueWeekID;
+        const matchId = localGameData.leagueMatchId;
+        const userId = state.getUserId();
+        
+        // Veritabanında hangi oyuncu olduğunu bul (p1 veya p2)
+        // localGameData.leagueMatchId bilgisini startLeagueMatch'de kaydetmiştik
+        if (weekID && matchId) {
+            const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+            
+            // Önce hangi tarafız onu belirleyelim (p1 mi p2 mi?)
+            // Bunu yapmak için sunucudan veriyi çekmemiz gerekebilir ama
+            // pratik olarak matchId içinde userId kontrolü veya startLeagueMatch'de kaydettiğimiz bilgiye güvenebiliriz.
+            // Ancak en garantisi veritabanına bir "merge" işlemi atmaktır.
+            
+            // Basit bir trick: Match objesi elimizde yoksa transaction veya getDoc gerekir.
+            // Ama biz UI tarafında zaten P1 mi P2 mi biliyorduk.
+            // En güvenli yol: Veritabanını oku ve güncelle.
+            
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const mDoc = await transaction.get(matchRef);
+                    if (!mDoc.exists()) throw "Maç bulunamadı";
+                    
+                    const mData = mDoc.data();
+                    const playerKey = (mData.p1 === userId) ? 'p1_data' : 'p2_data';
+                    
+                    const updates = {};
+                    updates[`${playerKey}.guesses`] = localGameData.players[currentUserId].guesses;
+                    
+                    if (isWinner) {
+                        updates[`${playerKey}.completed`] = true; // Oyunu bitirdi
+                        updates[`${playerKey}.failed`] = false;
+                    } else if (guessCount >= GUESS_COUNT) {
+                        updates[`${playerKey}.completed`] = true;
+                        updates[`${playerKey}.failed`] = true;
+                    }
+                    
+                    transaction.update(matchRef, updates);
+                });
+                
+                // Eğer oyun bittiyse yerel durumu da güncelle
+                if (isWinner || guessCount >= GUESS_COUNT) {
+                    localGameData.status = 'finished';
+                    localGameData.roundWinner = isWinner ? currentUserId : null; // null = bilemedi
+                    state.setLocalGameData(localGameData);
+                    stopTurnTimer();
+                    
+                    // Sonuç ekranını göster
+                    setTimeout(() => showScoreboard(localGameData), 1000);
+                }
+                
+            } catch (e) {
+                console.error("Lig güncelleme hatası:", e);
+            }
         }
     } 
     
@@ -1830,6 +1889,8 @@ async function submitGuess() {
 
 // js/game.js -> failTurn Fonksiyonunun TAMAMI
 
+// js/game.js -> failTurn (GÜNCELLENMİŞ)
+
 export async function failTurn(guessWord = '') {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
@@ -1838,58 +1899,70 @@ export async function failTurn(guessWord = '') {
     const gameMode = state.getGameMode();
     const playerState = localGameData.players[currentUserId];
 
-    // Eğer zaten bitirmişse işlem yapma
     if (playerState.hasSolved || playerState.hasFailed || playerState.isEliminated) return;
 
-    // Sayacı ve klavyeyi durdur
     stopTurnTimer();
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
 
-    console.log("LOG: failTurn çalıştı. Süre bitti, oyuncu işaretleniyor.");
+    console.log("LOG: failTurn çalıştı. Süre bitti.");
 
-    // 1. ONLINE MODLAR (Multiplayer, BR, League)
-    if (gameMode === 'multiplayer' || isBattleRoyale(gameMode) || gameMode === 'league') {
-        const updates = {
-            [`players.${currentUserId}.hasFailed`]: true // KRİTİK NOKTA: Oyuncuyu "Kaybetti" olarak işaretle
-        };
-
-        // Eğer League moduysa sonucu hemen lig tablosuna da işle (opsiyonel ama güvenli)
-        if (gameMode === 'league') {
-             // Lig maç sonucunu ayrıca kaydetme mantığı buraya eklenebilir
-             // Ancak listenToGameUpdates bunu zaten hallediyor, burada sadece durumu güncellemek yeterli.
-        }
-
+    // 1. ONLINE MODLAR (Multiplayer, BR) - LEAGUE HARİÇ
+    if (gameMode === 'multiplayer' || isBattleRoyale(gameMode)) {
+        const updates = { [`players.${currentUserId}.hasFailed`]: true };
         try {
-            // Veritabanını güncelle -> Bu güncelleme listenToGameUpdates'i tetikleyecek
-            // ve orada "Herkes bitti mi?" kontrolü çalışıp oyunu bitirecek.
             await updateDoc(doc(db, "games", state.getCurrentGameId()), updates);
             showToast("Süre doldu!", true);
-        } catch (error) {
-            console.error("Fail turn update error:", error);
-        }
+        } catch (error) { console.error(error); }
     } 
     
-    // 2. OFFLINE / BOT MODLARI (vsCPU, Daily)
-    else {
-        // Yerel veriyi güncelle
-        const newGuess = { word: (guessWord || '').padEnd(localGameData.wordLength, ' '), colors: Array(localGameData.wordLength).fill('failed') };
-        // Hata olarak işaretle ama satır doldurmaya gerek yok, direkt statüyü bitir.
+    // 2. LİG MODU (LEAGUE) - ÖZEL İŞLEM
+    else if (gameMode === 'league') {
+        const weekID = localGameData.leagueWeekID;
+        const matchId = localGameData.leagueMatchId;
         
+        if (weekID && matchId) {
+            const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const mDoc = await transaction.get(matchRef);
+                    if (!mDoc.exists()) return;
+                    const mData = mDoc.data();
+                    const playerKey = (mData.p1 === currentUserId) ? 'p1_data' : 'p2_data';
+                    
+                    // Tahminleri kaydet (varsa) ve başarısız olarak işaretle
+                    transaction.update(matchRef, {
+                        [`${playerKey}.guesses`]: localGameData.players[currentUserId].guesses || [],
+                        [`${playerKey}.completed`]: true,
+                        [`${playerKey}.failed`]: true
+                    });
+                });
+                
+                localGameData.status = 'finished';
+                localGameData.roundWinner = null; // Kaybetti
+                state.setLocalGameData(localGameData);
+                
+                showToast("Süre doldu!", true);
+                setTimeout(() => showScoreboard(localGameData), 1000);
+                
+            } catch (e) { console.error("Lig süre bitiş hatası:", e); }
+        }
+    }
+    
+    // 3. OFFLINE / BOT MODLARI (vsCPU, Daily)
+    else {
+        // ... (Eski kodun aynısı buraya gelecek) ...
+        // Eski else bloğunun içindekileri buraya taşı:
         localGameData.status = 'finished';
         localGameData.roundWinner = (gameMode === 'vsCPU') ? 'cpu' : null;
-        
-        // İstatistikleri güncelle
         await updateStats(false, 0);
-
+        
         if (gameMode === 'daily') {
-            saveDailyGameState(localGameData); 
-            await saveDailyResultToDatabase(currentUserId, getUsername(), localGameData.secretWord, false, GUESS_COUNT, 0);
-            localGameData.players[currentUserId].dailyScore = 0;
+             saveDailyGameState(localGameData); 
+             await saveDailyResultToDatabase(currentUserId, getUsername(), localGameData.secretWord, false, GUESS_COUNT, 0);
         } else if (gameMode === 'vsCPU') {
              if (localGameData.players['cpu']) localGameData.players['cpu'].score += 100;
         }
 
-        // Ekranı güncelle ve sonuç tablosunu aç
         renderGameState(localGameData, true).then(() => { 
             setTimeout(() => showScoreboard(localGameData), 1500); 
         });
@@ -3230,9 +3303,7 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
     renderLeagueStandings(standingsList, userId); 
 }
 
-// js/game.js -> startLeagueMatch GÜNCELLENMİŞ HALİ
-
-// js/game.js içindeki startLeagueMatch fonksiyonunu bununla değiştir:
+// js/game.js -> startLeagueMatch (HATA KORUMALI VERSİYON)
 
 export async function startLeagueMatch(matchId, opponentId, opponentName) {
     const weekID = getCurrentWeekID();
@@ -3247,15 +3318,25 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
     // DURUM 1: Maç veritabanında YOKSA -> Oluştur
     if (!matchSnap.exists()) {
         console.log("LOG: Maç veritabanında yok, yeni oluşturuluyor...");
-        const len = 5; // Lig maçları standart 5 harf olsun (veya getRandomWordLength())
-        secretWord = await getNewSecretWord(len);
+        const len = 5; 
         
-        if (!secretWord) {
-            showToast("Kelime üretilemedi.", true);
-            return;
+        // --- DÜZELTME BURADA: Sunucu Hatasına Karşı Koruma ---
+        try {
+            // Önce sunucudan istemeyi dene
+            secretWord = await getNewSecretWord(len);
+        } catch (error) {
+            console.warn("Sunucu hatası, yerel kelime seçiliyor:", error);
+            // Hata alırsan yerel listeden seç
+            secretWord = getRandomLocalWord(len);
         }
 
-        // ID sıralamasına göre P1 ve P2'yi belirle (Tutarlılık için)
+        // Eğer sunucu null dönerse yine yerel seç
+        if (!secretWord) {
+            secretWord = getRandomLocalWord(len);
+        }
+        // -----------------------------------------------------
+
+        // ID sıralamasına göre P1 ve P2'yi belirle
         const p1 = userId < opponentId ? userId : opponentId;
         const p2 = userId < opponentId ? opponentId : userId;
 
@@ -3266,7 +3347,6 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
             p2: p2,
             secretWord: secretWord,
             createdAt: serverTimestamp(),
-            // Veri yapısını başlat
             p1_data: {}, 
             p2_data: {}
         };
@@ -3279,10 +3359,17 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
         matchData = matchSnap.data();
         secretWord = matchData.secretWord;
 
-        // Eğer maç var ama kelimesi yoksa (Nadir hata durumu)
         if (!secretWord) {
             const len = 5;
-            secretWord = await getNewSecretWord(len);
+            // --- BURAYA DA KORUMA EKLEDİK ---
+            try {
+                secretWord = await getNewSecretWord(len);
+            } catch (e) {
+                secretWord = getRandomLocalWord(len);
+            }
+            if(!secretWord) secretWord = getRandomLocalWord(len);
+            // -------------------------------
+            
             matchData.secretWord = secretWord;
             await setDoc(matchRef, { secretWord: secretWord }, { merge: true });
         }
@@ -3295,20 +3382,18 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
     
     let startTime = matchData[startTimeField];
     
-    // Eski tahminleri çek (Varsa)
     let previousGuesses = [];
     if (matchData[dataKey] && matchData[dataKey].guesses) {
         previousGuesses = matchData[dataKey].guesses;
     }
 
-    // Başlangıç zamanı yoksa şimdi başlat
     if (!startTime) {
         startTime = new Date(); 
         await updateDoc(matchRef, {
             [startTimeField]: serverTimestamp() 
         });
     } else {
-        startTime = startTime.toDate(); 
+        startTime = startTime.toDate ? startTime.toDate() : new Date(startTime);
     }
 
     // Süre Kontrolü (120 Saniye)
@@ -3318,9 +3403,6 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
 
     if (elapsed >= timeLimit) {
         showToast("Bu maçın süresi dolmuş! Tekrar giremezsiniz.", true);
-        
-        // Eğer süresi dolmuşsa ve oyuncu oynamamışsa, hükmen mağlup saymak için failTurn çağırılabilir
-        // Ama şimdilik sadece uyarı verip çıkıyoruz.
         return; 
     }
 
@@ -3331,12 +3413,10 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
         initialGuesses: previousGuesses
     });
 
-    // Yerel veriyi güncelle
     const localData = state.getLocalGameData();
     localData.leagueMatchId = matchId;
     localData.leagueWeekID = weekID;
     localData.turnStartTime = startTime; 
-    // Lig maçlarında 'currentPlayerId' her zaman oynayan kişidir (kendisi)
     localData.currentPlayerId = userId; 
     state.setLocalGameData(localData);
 
@@ -3574,4 +3654,16 @@ function checkVsCpuGameEnd() {
             setTimeout(() => showScoreboard(localGameData), 1500);
         });
     }
+}
+
+// js/game.js dosyasının içine, en alta ekle:
+
+function getRandomLocalWord(length) {
+    const lenStr = String(length);
+    // allWordList dosyanın en başında import edilmiş olmalı
+    const list = allWordList[lenStr] || allWordList["5"]; 
+    if (list && list.length > 0) {
+        return list[Math.floor(Math.random() * list.length)];
+    }
+    return "KALEM"; // Hiçbir şey bulunamazsa acil durum kelimesi
 }
