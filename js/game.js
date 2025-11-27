@@ -31,6 +31,8 @@ import {
     addPresentJokerLetter
 } from './state.js';
 
+let cpuLoopTimeout = null; // Bot döngüsünü kontrol etmek için global değişken
+
 import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement } from './utils.js';
 
 import { 
@@ -1038,6 +1040,29 @@ export function listenToGameUpdates(gameId) {
             // -------------------------------------
         }
 
+        // --- BOT KONTROLÜ (GİZLİ OYUNCU) ---
+        // Eğer oyun başladıysa ve rakip 'isBot' ise, yapay zeka döngüsünü başlat.
+        if (gameData.status === 'playing') {
+            const opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
+            const opponentData = gameData.players[opponentId];
+            
+            // Eğer rakip bir BOT ise ve henüz döngü başlamadıysa
+            // Ve biz "Host" (Creator) isek botu biz yönetelim (Çakışmayı önlemek için)
+            if (opponentData && opponentData.isBot && gameData.creatorId === currentUserId) {
+                // Bot hamle yapmamışsa veya sırasıysa döngüyü tetikle
+                // startCpuLoop fonksiyonunu biraz modifiye etmemiz gerekecek veya 
+                // mevcut cpuTurn fonksiyonunu 'opponentId' alacak şekilde güncelleyeceğiz.
+                
+                // Basit çözüm: startCpuLoop zaten var, ama 'cpu' stringine bakıyor.
+                // Onu birazdan güncelleyeceğiz. Şimdilik sadece çağıralım.
+                // Botun ID'sini state'e geçici olarak kaydedebiliriz veya fonksiyona parametre geçebiliriz.
+                
+                // startCpuLoop fonksiyonunu aşağıda güncelleyeceğiz, burada sadece çağırıyoruz.
+                startCpuLoop(opponentId); 
+            }
+        }
+        // -----------------------------------
+
         state.setLocalGameData(gameData); 
         
         if (gameData.players && gameData.players[currentUserId]) {
@@ -1146,7 +1171,7 @@ export function listenToGameUpdates(gameId) {
 
 // js/game.js
 
-// js/game.js -> findOrCreateRandomGame (Race Condition Korumalı)
+// js/game.js -> findOrCreateRandomGame (BOT DESTEKLİ)
 
 export async function findOrCreateRandomGame(config, attempt = 1) {
     state.resetKnownCorrectPositions();
@@ -1157,7 +1182,7 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
     
     if (!currentUserId) return showToast("Lütfen önce giriş yapın.", true);
 
-    // 1. Sadece ilk denemede UI'ı aç (Recursive çağrılarda tekrar açmaya gerek yok)
+    // 1. UI'ı aç
     if (attempt === 1) {
         import('./ui.js').then(ui => ui.openMatchmakingScreen());
     }
@@ -1178,13 +1203,13 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
     if(cancelBtn) cancelBtn.onclick = handleCancel;
 
     try {
-        // Veritabanı sorgusu
+        // Veritabanı sorgusu (Aynı kalıyor)
         const gamesRef = collection(db, 'games');
         const waitingGamesQuery = query(gamesRef, 
             where('status', '==', 'waiting'),
             where('gameType', '==', gameType),
             where('timeLimit', '==', timeLimit),
-            limit(5) // 1 yerine 5 çekelim, belki ilk sıradaki doludur
+            limit(5)
         );
 
         const querySnapshot = await getDocs(waitingGamesQuery);
@@ -1192,7 +1217,6 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
         if (isCancelled) return;
 
         let foundGame = null;
-        // Kendi kurduğumuz oyun olmayan bir oyun bul
         querySnapshot.forEach(doc => {
             if (doc.data().creatorId !== currentUserId) {
                 foundGame = doc;
@@ -1200,36 +1224,40 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
         });
 
         if (foundGame) {
-            // OYUN BULUNDU -> KATIL
-            // joinGame içinde transaction var, eğer oyun dolmuşsa hata verir.
-            // O yüzden joinGame'in başarılı olup olmadığını anlamak zor olabilir,
-            // ama şimdilik direkt katılmayı deniyoruz.
             await joinGame(foundGame.id);
         } 
         else {
-            // OYUN BULUNAMADI -> HEMEN KURMA! (Çakışmayı önle)
-            
-            // Eğer bu ilk denemeyse, rastgele bekle ve tekrar dene
             if (attempt === 1) {
-                // 500ms ile 2000ms arası rastgele bir süre belirle
                 const randomDelay = Math.floor(Math.random() * 1500) + 500;
-                console.log(`LOG: Oyun bulunamadı. Çakışmayı önlemek için ${randomDelay}ms bekleniyor...`);
-                
+                console.log(`LOG: Oyun bulunamadı. ${randomDelay}ms bekleniyor...`);
                 await new Promise(resolve => setTimeout(resolve, randomDelay));
-                
                 if (isCancelled) return;
-
-                // Kendini tekrar çağır (2. Deneme)
                 return findOrCreateRandomGame(config, 2);
             }
             
-            // 2. Denemede de bulunamadıysa ARTIK KURABİLİRİZ.
+            // OYUN KURUYORUZ
             await createGame({ 
                 invitedFriendId: null, 
                 timeLimit: timeLimit, 
-                matchLength: matchLength,
+                matchLength: matchLength, 
                 gameType: gameType 
             });
+
+            // --- YENİ: BOT ZAMANLAYICISI ---
+            // Oyun kuruldu, ID state'e kaydedildi. Şimdi 45sn sayacı başlatıyoruz.
+            const createdGameId = state.getCurrentGameId();
+            
+            console.log("LOG: 45 Saniyelik Bot Sayacı Başlatıldı...");
+            setTimeout(() => {
+                // 45 saniye sonra oyun hala 'waiting' ise bot ata
+                const currentGameData = state.getLocalGameData();
+                
+                // Kullanıcı hala o ekrandaysa ve oyun başlamamışsa
+                if (currentGameData && currentGameData.gameId === createdGameId && currentGameData.status === 'waiting') {
+                    assignBotToGame(createdGameId);
+                }
+            }, 45000); // 45000 ms = 45 saniye
+            // -------------------------------
         }
     } catch (error) {
         if (isCancelled) return;
@@ -2087,22 +2115,27 @@ function calculateColors(guess, secret) {
     return colors;
 }
 
-function findBestCpuGuess() {
+// js/game.js -> findBestCpuGuess (GÜNCELLENMİŞ - GENEL KULLANIM)
+
+function findBestCpuGuess(botId = 'cpu') {
     const localGameData = state.getLocalGameData();
-    const playerGuesses = localGameData.players[state.getUserId()]?.guesses || []; 
-    const cpuGuesses = localGameData.players['cpu']?.guesses || [];
-    const allGuesses = [...playerGuesses, ...cpuGuesses];
+    // Sadece o anki botun tahminlerini al
+    const botGuesses = localGameData.players[botId]?.guesses || [];
+    
     const wordLenStr = String(localGameData.wordLength);
-    let possibleWords = [...(allWordList[wordLenStr] || [])]; 
+    let possibleWords = [...(allWordList[wordLenStr] || allWordList["5"])]; 
+    
     const correctLetters = {}; 
     const presentLetters = new Set(); 
     const absentLetters = new Set(); 
     const positionMisplaced = {}; 
 
-    allGuesses.forEach(g => {
+    // Botun önceki tahminlerini analiz et
+    botGuesses.forEach(g => {
         for (let i = 0; i < g.word.length; i++) {
             const letter = g.word[i];
             const color = g.colors[i];
+            
             if (color === 'correct') {
                 correctLetters[i] = letter;
                 presentLetters.add(letter);
@@ -2111,6 +2144,7 @@ function findBestCpuGuess() {
                 if (!positionMisplaced[letter]) positionMisplaced[letter] = new Set();
                 positionMisplaced[letter].add(i);
             } else if (color === 'absent') {
+                // Eğer harf başka bir yerde yeşil/sarı ise 'absent' listesine ekleme
                 let isKnownPresent = false;
                 for (let k = 0; k < g.word.length; k++) {
                     if ((g.colors[k] === 'correct' || g.colors[k] === 'present') && g.word[k] === letter) {
@@ -2125,16 +2159,21 @@ function findBestCpuGuess() {
         }
     });
 
+    // Olası kelimeleri filtrele (Yapay Zeka Mantığı)
     possibleWords = possibleWords.filter(word => {
+        // 1. Yeşil harfler kesinlikle doğru yerde olmalı
         for (const pos in correctLetters) {
             if (word[pos] !== correctLetters[pos]) return false;
         }
+        // 2. Gri harfler kelimede OLMAMALI
         for (const letter of absentLetters) {
             if (word.includes(letter)) return false;
         }
+        // 3. Sarı harfler kelimede OLMALI
         for (const letter of presentLetters) {
             if (!word.includes(letter)) return false;
         }
+        // 4. Sarı harfler YANLIŞ YERDE olmamalı (Yani eski yerine tekrar gelmemeli)
         for (const letter in positionMisplaced) {
              for (const pos of positionMisplaced[letter]) {
                  if (word[pos] === letter) return false;
@@ -2143,93 +2182,103 @@ function findBestCpuGuess() {
         return true;
     });
     
-    const guessedWords = new Set(allGuesses.map(g => g.word));
+    // Botun daha önce denediği kelimeleri çıkar
+    const guessedWords = new Set(botGuesses.map(g => g.word));
     let finalWords = possibleWords.filter(w => !guessedWords.has(w));
     
     const secretWord = localGameData.secretWord;
-    const winningWordIndex = finalWords.indexOf(secretWord);
-    let winningWord = null;
-    let otherPossibleWords = [...finalWords]; 
-    if (winningWordIndex !== -1) {
-        winningWord = secretWord;
-        otherPossibleWords.splice(winningWordIndex, 1); 
-    }
-
-    const currentGuesses = localGameData.players['cpu']?.guesses.length || 0;
-
-    if (currentGuesses < 3) { 
-        if (otherPossibleWords.length > 0) {
-            const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
-            return otherPossibleWords[randomIndex];
-        } else {
-            const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
-            if (emergencyList.length > 0) {
-                 return emergencyList[Math.floor(Math.random() * emergencyList.length)];
-            }
-        }
-    }
-
-    if (winningWord && otherPossibleWords.length > 0) {
-        
-        if (Math.random() < 0.5) { 
-             const randomIndex = Math.floor(Math.random() * otherPossibleWords.length);
-             return otherPossibleWords[randomIndex]; 
-        }
-    }
-
-    if (finalWords.length > 0) {
-        const randomIndex = Math.floor(Math.random() * finalWords.length);
-        return finalWords[randomIndex]; 
-    } else {
+    
+    // --- ZORLUK AYARI VE "İNSAN" DAVRANIŞI ---
+    // Botun hemen bulmasını engellemek için bazen "hata" payı bırakabiliriz 
+    // veya sadece final listesinden rastgele seçeriz.
+    
+    // Eğer hiç kelime kalmadıysa (çok nadir), rastgele salla
+    if (finalWords.length === 0) {
         const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
-        return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : localGameData.secretWord;
+        return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : "KALEM";
     }
+
+    // Kazanma şansı varsa (Secret word listedeyse)
+    const winningWordIndex = finalWords.indexOf(secretWord);
+    
+    // İlk 2 tahminde hemen bilmesin (Biraz gerçekçi olsun)
+    if (botGuesses.length < 2 && winningWordIndex !== -1 && finalWords.length > 1) {
+        // Doğru cevabı listeden geçici olarak çıkar, heyecan olsun
+        finalWords.splice(winningWordIndex, 1);
+    }
+    // 4. tahminden sonra kazanma şansı %50 artsın
+    else if (botGuesses.length >= 3 && winningWordIndex !== -1) {
+        if (Math.random() > 0.4) return secretWord; // %60 ihtimalle doğruyu seçer
+    }
+
+    // Kalan olası kelimelerden rastgele birini seç
+    const randomIndex = Math.floor(Math.random() * finalWords.length);
+    return finalWords[randomIndex]; 
 }
 
-// js/game.js -> cpuTurn (DÜZELTİLMİŞ HALİ)
+// js/game.js -> cpuTurn (GÜNCELLENMİŞ - GENEL BOT DESTEĞİ)
 
-async function cpuTurn() {
+// js/game.js -> cpuTurn (GÜNCELLENMİŞ - AKILLI BOT DESTEĞİ)
+
+// js/game.js -> cpuTurn (DÜZELTİLMİŞ - KAZANMA KONTROLÜ)
+
+async function cpuTurn(botId = 'cpu') {
     const localGameData = state.getLocalGameData();
-    // Eğer oyun zaten bitmişse veya veri yoksa dur
     if (!localGameData || localGameData.status === 'finished') return;
 
-    const cpuState = localGameData.players['cpu'];
-    // CPU zaten bitirdiyse (Çözdü veya Yandı) tekrar hamle yapmasın
-    if (cpuState.hasSolved || cpuState.hasFailed) return;
-
-    // En iyi kelimeyi bul
-    const guess = findBestCpuGuess();
-    const finalGuess = guess || localGameData.secretWord; 
+    const botState = localGameData.players[botId];
     
+    // Güvenlik kontrolü: Zaten bitirmişse işlem yapma
+    if (botState.hasSolved || botState.hasFailed) return;
+
+    const finalGuess = findBestCpuGuess(botId);
     const secretWord = localGameData.secretWord;
     const colors = calculateColors(finalGuess, secretWord);
     const newGuess = { word: finalGuess, colors: colors };
     
-    // Tahmini ekle
-    localGameData.players['cpu'].guesses.push(newGuess);
-    const guessCount = localGameData.players['cpu'].guesses.length;
-
-    // --- DÜZELTME BURADA ---
-    // Eskiden burada "status = finished" yapıyorduk, ONU SİLDİK.
-    // Sadece CPU'nun durumunu güncelliyoruz.
+    // A) vsCPU Modu (Yerel İşlem)
+    if (botId === 'cpu') {
+        localGameData.players['cpu'].guesses.push(newGuess);
+        
+        if (finalGuess === secretWord) {
+            console.log("BOT: Doğru bildi!");
+            localGameData.players['cpu'].hasSolved = true; // <-- Kritik
+            localGameData.players['cpu'].score += calculateRoundScore(localGameData.players['cpu'].guesses.length, true);
+        }
+        else if (localGameData.players['cpu'].guesses.length >= GUESS_COUNT) {
+            localGameData.players['cpu'].hasFailed = true; // <-- Kritik
+        }
+        
+        state.setLocalGameData(localGameData);
+        await renderGameState(localGameData, false);
+        checkVsCpuGameEnd();
+    } 
     
-    if (finalGuess === secretWord) {
-        localGameData.players['cpu'].hasSolved = true; // CPU Bildi
+    // B) Online Bot Modu (Firebase İşlemi)
+    else {
+        const currentGuesses = botState.guesses || [];
+        const updatedGuesses = [...currentGuesses, newGuess];
         
-        // Puan Hesapla
-        const roundScore = calculateRoundScore(guessCount, true);
-        localGameData.players['cpu'].score += roundScore;
-        
-    } else if (guessCount >= GUESS_COUNT) {
-        localGameData.players['cpu'].hasFailed = true; // CPU Bilemedi
+        const updates = {
+            [`players.${botId}.guesses`]: updatedGuesses
+        };
+
+        if (finalGuess === secretWord) {
+            console.log(`BOT (${botState.username}): KAZANDI!`);
+            updates[`players.${botId}.hasSolved`] = true; // <-- Kritik: Veritabanına işlenmeli
+            const roundScore = calculateRoundScore(updatedGuesses.length, true);
+            updates[`players.${botId}.score`] = (botState.score || 0) + roundScore;
+        } else if (updatedGuesses.length >= GUESS_COUNT) {
+            console.log(`BOT (${botState.username}): KAYBETTİ!`);
+            updates[`players.${botId}.hasFailed`] = true; // <-- Kritik
+        }
+
+        try {
+            await updateDoc(doc(db, "games", state.getCurrentGameId()), updates);
+        } catch (e) {
+            console.error("Bot hamlesi yazılamadı:", e);
+        }
     }
-
-    // Yerel veriyi güncelle ve ekranı çiz
-    state.setLocalGameData(localGameData);
-    await renderGameState(localGameData, false); 
-
-    // OYUN SONU KONTROLÜ (İkimiz de bittik mi?)
-    checkVsCpuGameEnd();
 }
 
 async function updateStats(didWin, guessCount) {
@@ -2541,10 +2590,19 @@ function startBRTimer() {
     state.setTurnTimerInterval(interval);
 }
 
+// js/game.js -> stopTurnTimer (GÜNCELLENMİŞ HALİ)
+
 export function stopTurnTimer() {
     clearInterval(state.getTurnTimerInterval());
     state.setTurnTimerInterval(null);
     
+    // --- EKLEME: Bot Döngüsünü Durdur ---
+    if (cpuLoopTimeout) {
+        clearTimeout(cpuLoopTimeout);
+        cpuLoopTimeout = null;
+    }
+    // ------------------------------------
+
     if (timerDisplay) {
         timerDisplay.textContent = '';
         timerDisplay.classList.remove('text-red-500');
@@ -2556,16 +2614,30 @@ export function stopTurnTimer() {
     }
 }
 
+// js/game.js -> leaveGame (GÜNCELLENMİŞ HALİ)
+
 export function leaveGame() {
     console.log("LOG: leaveGame fonksiyonu çalıştı.");
+    
     const gameUnsubscribe = state.getGameUnsubscribe();
     if (gameUnsubscribe) gameUnsubscribe();
-    stopTurnTimer();
+    
+    // --- EKLEME: Bot Döngüsünü Kesin Olarak Durdur ---
+    if (cpuLoopTimeout) {
+        clearTimeout(cpuLoopTimeout);
+        cpuLoopTimeout = null;
+    }
+    // -------------------------------------------------
+
+    stopTurnTimer(); // Bu fonksiyon zaten yukarıda güncellediğimiz için oradaki temizliği de yapar.
+    
     localStorage.removeItem('activeGameId');
     state.setGameUnsubscribe(null);
     state.setCurrentGameId(null);
     state.setLocalGameData(null);
+    
     showScreen('main-menu-screen');
+    
     const rejoinBtn = document.getElementById('rejoin-game-btn');
     if (rejoinBtn) rejoinBtn.classList.add('hidden');
 }
@@ -3583,32 +3655,48 @@ export function setupDictionaryButton(word) {
 
 // js/game.js -> cpuLoop (Yeni Fonksiyon)
 
-async function startCpuLoop() {
-    const gameMode = state.getGameMode();
-    // Sadece vsCPU modunda çalışır
-    if (gameMode !== 'vsCPU') return;
+// js/game.js -> startCpuLoop (GÜNCELLENMİŞ - GENEL BOT DESTEĞİ)
 
-    // Rastgele bekleme süresi: 8 ile 12 saniye arası (8000ms - 12000ms)
+// js/game.js -> startCpuLoop (DÜZELTİLMİŞ - TEK DÖNGÜ GARANTİSİ)
+
+async function startCpuLoop(botId = 'cpu') {
+    // Önceki bekleyen döngüyü iptal et (Üst üste binmeyi önler)
+    if (cpuLoopTimeout) clearTimeout(cpuLoopTimeout);
+
+    const localGameData = state.getLocalGameData();
+    
+    // Oyun bitmişse veya oynanmıyorsa dur
+    if (!localGameData || localGameData.status !== 'playing') return;
+
+    // Botun durumunu kontrol et
+    const botState = localGameData.players[botId];
+    // Bot zaten çözmüşse veya hakkı bitmişse DUR
+    if (!botState || botState.hasSolved || botState.hasFailed) {
+        console.log(`BOT (${botState?.username}): Zaten bitirdi, döngü durduruldu.`);
+        return;
+    }
+
+    // Rastgele bekleme süresi: 8 - 12 saniye arası
     const randomDelay = Math.floor(Math.random() * 4000) + 8000;
     
-    console.log(`CPU: Bir sonraki tahmin ${randomDelay / 1000} saniye sonra.`);
+    console.log(`BOT (${botState.username}): Bir sonraki tahmin ${randomDelay / 1000} sn sonra.`);
 
-    // Bekle
-    await new Promise(resolve => setTimeout(resolve, randomDelay));
+    // Zamanlayıcıyı değişkene ata ki iptal edebilelim
+    cpuLoopTimeout = setTimeout(async () => {
+        // Bekleme bittikten sonra tekrar durumu kontrol et
+        const currentData = state.getLocalGameData();
+        const currentBotState = currentData?.players[botId];
 
-    // Oyun hala devam ediyor mu kontrol et
-    const localGameData = state.getLocalGameData();
-    if (!localGameData || localGameData.status !== 'playing' || state.getGameMode() !== 'vsCPU') return;
+        if (!currentData || currentData.status !== 'playing') return;
+        
+        // Beklerken bot kazanmışsa veya elenmişse işlem yapma
+        if (currentBotState.hasSolved || currentBotState.hasFailed) return;
 
-    // CPU durumu
-    const cpuState = localGameData.players['cpu'];
-    if (cpuState.hasSolved || cpuState.hasFailed) return; // CPU bitirmişse dur
+        await cpuTurn(botId);
 
-    // Tahmin Yap
-    await cpuTurn();
-
-    // Döngüyü tekrar çağır (Recursive)
-    startCpuLoop();
+        // Döngüyü devam ettir (Recursive)
+        startCpuLoop(botId);
+    }, randomDelay);
 }
 
 // js/game.js -> checkVsCpuGameEnd (DÜZELTİLMİŞ HALİ)
@@ -3666,4 +3754,71 @@ function getRandomLocalWord(length) {
         return list[Math.floor(Math.random() * list.length)];
     }
     return "KALEM"; // Hiçbir şey bulunamazsa acil durum kelimesi
+}
+
+// js/game.js (EN ALTA EKLE)
+
+// --- BOT İSİM HAVUZU ---
+const botNames = [
+  "KelimeBaz", "LügatEfendisi", "HarfAvcısı", "BilginBaykuş", "KitapKurdu",
+  "GeceMavisi", "RüzgarınOğlu", "SessizFırtına", "Ahmet_1905", "AyşeGül_Tr",
+  "MehmetCan", "Zeynep_K", "Mustafa34", "ElifSu", "Burak_Ylmz",
+  "DenizMavi", "Cem_Baba", "Sözlükçü", "AkılKüpü", "BulmacaKralı",
+  "ŞanslıKedi", "YalnızKurt", "ŞirinPanda", "HızlıLeopar", "DağKeçisi",
+  "Gamer_Tr", "ProOyuncu", "Winner_01", "Efsane", "KralTac",
+  "Joker", "Neo", "Matrix", "KaptanPilot", "MaviBere",
+  "SonSavaşçı", "GölgeHaramisi", "YıldızTozu", "Çaylak", "Uykusuz",
+  "Profesör", "Editör", "YazarÇizer", "OkurYazar", "Heceleme",
+  "Alfabe", "KlavyeDelisi", "EkranKoruyucu", "SanalZeka", "Piksel"
+];
+
+function getRandomBotName() {
+    const randomIndex = Math.floor(Math.random() * botNames.length);
+    return botNames[randomIndex];
+}
+
+// --- BOT OYUNCUYU OYUNA DAHİL ETME ---
+async function assignBotToGame(gameId) {
+    const botId = 'bot_' + Date.now(); // Benzersiz bir ID oluştur
+    const botName = getRandomBotName();
+    
+    console.log(`LOG: 45sn doldu. Bot atanıyor: ${botName}`);
+
+    const gameRef = doc(db, "games", gameId);
+    
+    // Bot için oyuncu verisi
+    const botPlayerState = { 
+        username: botName, 
+        guesses: [], 
+        score: 0, 
+        jokersUsed: { present: false, correct: false, remove: false },
+        isBot: true // <-- KRİTİK: Bu bayrak sayesinde yapay zeka devreye girecek
+    };
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists()) return;
+            
+            const gameData = gameDoc.data();
+            
+            // Eğer son anda gerçek biri girdiyse iptal et
+            if (Object.keys(gameData.players).length >= 2) {
+                console.log("LOG: Gerçek oyuncu girdiği için bot iptal edildi.");
+                return;
+            }
+
+            const updates = {
+                [`players.${botId}`]: botPlayerState,
+                playerIds: arrayUnion(botId),
+                status: 'playing',
+                turnStartTime: serverTimestamp(),
+                invitedPlayerId: deleteField()
+            };
+            
+            transaction.update(gameRef, updates);
+        });
+    } catch (error) {
+        console.error("Bot atama hatası:", error);
+    }
 }
