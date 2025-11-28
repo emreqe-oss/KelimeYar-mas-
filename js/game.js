@@ -425,9 +425,9 @@ export async function fetchWordMeaning(word) {
 // === OYUN İÇİ DEĞİŞKENLER VE YARDIMCILAR ===
 // ===================================================
 const GUESS_COUNT = 6;
-const MAX_BR_PLAYERS = 4;
+const MAX_BR_PLAYERS = 8;
 let wordLength = 5;
-let timeLimit = 45; 
+let timeLimit = 120; 
 
 const DAILY_WORD_LENGTHS = [4, 5, 6]; 
 
@@ -462,6 +462,14 @@ export function initializeGameUI(gameData) {
     
     if (guessGrid) {
         guessGrid.innerHTML = ''; 
+
+        // --- YENİ: BR Moduysa Izgaraya Özel Sınıf Ekle ---
+        if (gameData.gameType === 'multiplayer-br') {
+            guessGrid.classList.add('br-mode-grid');
+        } else {
+            guessGrid.classList.remove('br-mode-grid');
+        }
+        // ------------------------------------------------
         
         if (wordLength === 4) {
             guessGrid.style.maxWidth = '220px';
@@ -532,14 +540,39 @@ export function updateTurnDisplay(gameData) {
             brTurnDisplay.textContent = `Oyuncu bekleniyor (${numPlayers}/${MAX_BR_PLAYERS || 4})...`;
             
             // --- DÜZELTME: Host ise ve en az 2 kişi varsa Başlat butonu görünsün ---
-            if (isCreator && numPlayers >= 1) { // Test kolaylığı için 1, canlıda 2 yapabilirsin
+            // --- GÜNCELLENMİŞ BR BEKLEME EKRANI KODLARI ---
+            if (isCreator) {
+                // 1. Başlat Butonunu Yönet
                 startGameBtn.classList.remove('hidden');
-                startGameBtn.textContent = "Oyunu Başlat (BR)";
-                startGameBtn.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-pointer";
-                startGameBtn.onclick = startGame; 
+                
+                if (numPlayers >= 2) { 
+                    startGameBtn.disabled = false;
+                    startGameBtn.textContent = `Başlat (${numPlayers} Kişi)`;
+                    startGameBtn.className = "w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-pointer shadow-lg transform active:scale-95 transition";
+                    startGameBtn.onclick = startGame; 
+                } else {
+                    startGameBtn.disabled = true;
+                    startGameBtn.textContent = "Oyuncu Bekleniyor...";
+                    startGameBtn.className = "w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-not-allowed";
+                }
+
+                // 2. DAVET BUTONUNU GÖSTER (MAVİ BUTON)
+                const inviteBtn = document.getElementById('invite-to-lobby-btn');
+                // Eğer buton HTML'de varsa 'hidden' sınıfını kaldır
+                if (inviteBtn) {
+                    inviteBtn.classList.remove('hidden'); 
+                    inviteBtn.onclick = () => import('./ui.js').then(ui => ui.openLobbyInviteModal());
+                } else {
+                    console.error("HATA: invite-to-lobby-btn HTML'de bulunamadı!");
+                }
+
             } else {
+                // Host değilse butonları gizle
                 startGameBtn.classList.add('hidden');
+                const inviteBtn = document.getElementById('invite-to-lobby-btn');
+                if (inviteBtn) inviteBtn.classList.add('hidden');
             }
+            // -----------------------------------------------
             // ----------------------------------------------------------------------
 
             shareGameBtn.classList.remove('hidden');
@@ -2715,7 +2748,7 @@ export async function createBRGame(options = {}) {
         turnStartTime: serverTimestamp(),
         GUESS_COUNT: GUESS_COUNT, 
         gameType: 'multiplayer-br',
-        maxPlayers: 4,
+        maxPlayers: 8,
         currentRound: 1,
     };
     try {
@@ -3918,5 +3951,25 @@ export async function populateLeagueWithBots() {
     } catch (error) {
         console.error("Bot ekleme hatası:", error);
         showToast("Bot eklenirken hata oluştu.", true);
+    }
+}
+
+// js/game.js (EN ALTA EKLE)
+
+// --- LOBİYE ARKADAŞ DAVET ETME ---
+export async function sendLobbyInvite(friendId) {
+    const gameId = state.getCurrentGameId();
+    if (!gameId || !friendId) return;
+
+    try {
+        const gameRef = doc(db, "games", gameId);
+        // Arkadaşın ID'sini davetliler listesine ekle
+        await updateDoc(gameRef, {
+            invitedPlayerIds: arrayUnion(friendId)
+        });
+        showToast("Davet gönderildi!", false);
+    } catch (error) {
+        console.error("Davet gönderme hatası:", error);
+        showToast("Davet gönderilemedi.", true);
     }
 }

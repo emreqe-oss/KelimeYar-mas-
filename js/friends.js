@@ -217,46 +217,68 @@ function renderFriends(friends, requests) {
     }
 }
 
+// js/friends.js -> listenToMyGames (GÜNCELLENMİŞ - BR DAVET DESTEKLİ)
+
 export function listenToMyGames() {
     const currentUserId = state.getUserId();
     if (!currentUserId) return;
 
-    const q = query(
-        collection(db, 'games'),
-        where('playerIds', 'array-contains', currentUserId),
-        orderBy('createdAt', 'desc')
-    );
+    // 1. Oyuncusu olduğum oyunlar (Mevcut mantık)
+    const qPlayer = query(collection(db, 'games'), where('playerIds', 'array-contains', currentUserId), orderBy('createdAt', 'desc'));
     
-    return onSnapshot(q, async (snapshot) => {
+    // 2. Davet edildiğim oyunlar (YENİ: Battle Royale Davetleri)
+    const qInvited = query(collection(db, 'games'), where('invitedPlayerIds', 'array-contains', currentUserId), orderBy('createdAt', 'desc'));
+
+    let allGamesMap = new Map();
+
+    const mergeAndRender = () => {
         const activeGames = [];
         const finishedGames = [];
         const invites = [];
-        snapshot.forEach(doc => {
-            const game = { id: doc.id, ...doc.data() };
-            if (game.status === 'invited' && game.invitedPlayerId === currentUserId) {
-                invites.push(game);
-            } else if (game.status === 'finished') {
+
+        allGamesMap.forEach(game => {
+            // BR Daveti mi?
+            const isInvitedToBR = game.invitedPlayerIds && game.invitedPlayerIds.includes(currentUserId) && !game.playerIds.includes(currentUserId);
+            
+            // Standart Davet mi?
+            const isInvitedStandard = game.status === 'invited' && game.invitedPlayerId === currentUserId;
+
+            if (isInvitedToBR || isInvitedStandard) {
+                // Eğer oyun bitmişse daveti gösterme
+                if (game.status !== 'finished') {
+                    invites.push(game);
+                }
+            } 
+            else if (game.status === 'finished') {
                 finishedGames.push(game);
-            } else if (game.status === 'waiting' || game.status === 'playing' || (game.status === 'invited' && game.creatorId === currentUserId)) {
+            } 
+            else if (game.status === 'waiting' || game.status === 'playing' || (game.status === 'invited' && game.creatorId === currentUserId)) {
                 activeGames.push(game);
             }
         });
 
-        // --- GAME INVITE COUNT KULLANIMI ---
-        // ui.js'den import ettiğimiz elementi burada kullanıyoruz
-        const inviteCount = invites.length;
-        if (gameInviteCount) { 
-            if (inviteCount > 0) {
-                gameInviteCount.textContent = inviteCount;
-                gameInviteCount.classList.remove('hidden');
-            } else {
-                gameInviteCount.classList.add('hidden');
-            }
+        // Sayıyı güncelle
+        if (gameInviteCount) {
+            gameInviteCount.textContent = invites.length;
+            invites.length > 0 ? gameInviteCount.classList.remove('hidden') : gameInviteCount.classList.add('hidden');
         }
-        // -----------------------------------
 
         renderMyGamesLists(activeGames, finishedGames, invites);
-    }, error => console.error("Oyunlar dinlenirken hata:", error));
+    };
+
+    // İki dinleyiciyi de başlat
+    const unsub1 = onSnapshot(qPlayer, (snapshot) => {
+        snapshot.docs.forEach(doc => allGamesMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        mergeAndRender();
+    });
+
+    const unsub2 = onSnapshot(qInvited, (snapshot) => {
+        snapshot.docs.forEach(doc => allGamesMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        mergeAndRender();
+    });
+    
+    // Unsubscribe fonksiyonu (ikisini de durdurur)
+    return () => { unsub1(); unsub2(); };
 }
 
 async function showFriendProfile(friendId) {
@@ -280,4 +302,31 @@ async function showFriendProfile(friendId) {
         showToast("Profil getirilirken hata oluştu.", true);
         console.error(error);
     }
+}
+
+// js/friends.js (EN ALTA EKLE)
+
+export async function getMyFriendsList() {
+    const currentUserId = state.getUserId();
+    if (!currentUserId) return [];
+
+    // Kabul edilmiş arkadaşlıkları bul
+    const q = query(collection(db, 'friendships'), 
+        where('users', 'array-contains', currentUserId),
+        where('status', '==', 'accepted')
+    );
+
+    const snapshot = await getDocs(q);
+    const friendPromises = [];
+
+    snapshot.forEach(docSnapshot => {
+        const data = docSnapshot.data();
+        const friendId = data.users.find(id => id !== currentUserId);
+        if (friendId) {
+            // Arkadaşın kullanıcı bilgilerini çek
+            friendPromises.push(getDoc(doc(db, 'users', friendId)).then(d => ({id: d.id, ...d.data()})));
+        }
+    });
+
+    return await Promise.all(friendPromises);
 }

@@ -7,7 +7,8 @@ import {
     checkLeagueStatus, joinCurrentLeague, buyItem, addGold,
     loadDictionary, removeWordFromDictionary // <-- Sözlük için eklendi
 } from './game.js';
-
+import { sendLobbyInvite } from './game.js';
+import { getMyFriendsList } from './friends.js';
 // Değişkenler
 export let 
     // Game Screen
@@ -87,10 +88,10 @@ export function initUI() {
     brRoundCounter = document.getElementById('br-round-counter');
     brTimerDisplay = document.getElementById('br-timer-display');
     brTurnDisplay = document.getElementById('br-turn-display');
-    brPlayerSlots.push(document.getElementById('br-player-slot-0'));
-    brPlayerSlots.push(document.getElementById('br-player-slot-1'));
-    brPlayerSlots.push(document.getElementById('br-player-slot-2'));
-    brPlayerSlots.push(document.getElementById('br-player-slot-3'));
+    brPlayerSlots.length = 0; // Diziyi temizle
+    for (let i = 0; i < 8; i++) {
+        brPlayerSlots.push(document.getElementById(`br-player-slot-${i}`));
+    }
     
     
 
@@ -416,11 +417,13 @@ export function updateMultiplayerScoreBoard(gameData) {
             .map(([id, data]) => ({ id, ...data }))
             .sort((a, b) => (b.score || 0) - (a.score || 0)); 
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 8; i++) { 
             const slot = brPlayerSlots[i];
             const player = players[i]; 
 
             if (slot) {
+                // HTML yapısındaki p etiketlerini seçiyoruz
+                // index.html'de soldaki isim, sağdaki durum olacak
                 const nameEl = slot.querySelector('p:first-child');
                 const statusEl = slot.querySelector('p:last-child');
 
@@ -428,40 +431,45 @@ export function updateMultiplayerScoreBoard(gameData) {
                     const isMe = player.id === currentUserId;
                     const hasSolved = player.hasSolved;
                     const hasFailed = player.hasFailed;
+                    const guessCount = (player.guesses || []).length;
 
-                    let playerStatus = '';
-                    let statusColor = 'text-gray-400';
+                    // Arkaplan Rengi (Ben: İndigo, Başkası: Gri)
                     let bgColor = isMe ? 'bg-indigo-600' : 'bg-gray-700';
-                    let nameColor = isMe ? 'text-white' : 'text-gray-200';
+                    let nameColor = isMe ? 'text-white' : 'text-gray-300';
+                    let statusColor = 'text-gray-400';
+                    let statusText = '';
 
-                    const scoreText = `${player.score || 0} Puan`;
-
+                    // Durum Metni Belirleme
                     if (hasSolved) {
-                        playerStatus = `✅ ${scoreText}`;
-                        statusColor = 'text-green-400 font-bold';
-                    } else if (hasFailed) {
-                        playerStatus = `❌ ${scoreText}`;
-                        statusColor = 'text-red-400 font-bold';
+                        statusText = "✅"; // Bildiyse sadece Tik
+                        statusColor = 'text-green-400';
+                    } else if (hasFailed || player.isEliminated) {
+                        statusText = "❌"; // Yandıysa Çarpı
+                        statusColor = 'text-red-400';
                     } else if (gameData.status === 'playing') {
-                        const guessCount = (player.guesses || []).length;
-                        playerStatus = `🤔 ${guessCount}/6 - ${scoreText}`;
-                        statusColor = 'text-yellow-300';
+                        // Oynuyorsa sadece kaçıncı hakta olduğunu yaz (Örn: 2/6)
+                        statusText = `${guessCount}/${gameData.GUESS_COUNT || 6}`;
+                        statusColor = 'text-yellow-400 font-mono font-bold';
                     } else if (gameData.status === 'waiting') {
-                        playerStatus = 'Bekliyor...';
+                        statusText = '...';
                     } else {
-                         playerStatus = scoreText;
+                        statusText = '-';
                     }
 
-                    slot.className = `${bgColor} p-2 rounded-lg shadow border border-gray-600`; 
-                    nameEl.textContent = `${player.username}`;
-                    nameEl.className = `font-bold text-sm truncate ${nameColor}`;
-                    statusEl.textContent = playerStatus;
-                    statusEl.className = `text-xs ${statusColor}`;
+                    // Elementleri Güncelle
+                    slot.className = `${bgColor} px-2 py-1 rounded shadow flex justify-between items-center h-7 border border-gray-600/50`;
+                    
+                    nameEl.textContent = player.username;
+                    nameEl.className = `font-bold text-xs truncate w-20 text-left ${nameColor}`;
+                    
+                    statusEl.textContent = statusText;
+                    statusEl.className = `text-xs text-right ${statusColor}`;
 
                 } else {
-                    slot.className = 'bg-gray-800 p-2 rounded-lg shadow opacity-50';
-                    nameEl.textContent = '-';
-                    statusEl.textContent = 'Boş';
+                    // Boş Slot Görünümü
+                    slot.className = 'bg-gray-800/50 px-2 py-1 rounded border border-gray-700/50 flex justify-between items-center h-7 opacity-50';
+                    nameEl.textContent = '---';
+                    statusEl.textContent = '';
                 }
             }
         }
@@ -1328,4 +1336,57 @@ export function openMatchmakingScreen() {
 export function closeMatchmakingScreen() {
     // Arama bitince veya iptal edilince ne olacağı main.js'de veya game.js'de yönetilecek
     // Genellikle showScreen('game-screen') veya showScreen('new-game-screen') çağrılır.
+}
+
+// js/ui.js (EN ALTA EKLE)
+
+// --- LOBİ DAVET MODALI ---
+export async function openLobbyInviteModal() {
+    const modal = document.getElementById('lobby-invite-modal');
+    const listContainer = document.getElementById('lobby-friends-list');
+    const closeBtn = document.getElementById('close-lobby-invite-modal');
+    
+    if (!modal || !listContainer) return;
+    
+    modal.classList.remove('hidden');
+    listContainer.innerHTML = '<div class="flex justify-center p-4"><div class="radar-ring relative w-8 h-8 border-2 border-indigo-500 rounded-full animate-spin border-t-transparent"></div></div>';
+
+    // Kapatma butonu olayı
+    closeBtn.onclick = () => modal.classList.add('hidden');
+
+    try {
+        const friends = await getMyFriendsList();
+        listContainer.innerHTML = '';
+
+        if (friends.length === 0) {
+            listContainer.innerHTML = '<p class="text-center text-gray-500 py-4">Hiç arkadaşın yok :(</p>';
+            return;
+        }
+
+        friends.forEach(friend => {
+            const div = document.createElement('div');
+            div.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center border border-gray-600';
+            div.innerHTML = `
+                <span class="text-white font-bold">${friend.username}</span>
+                <button class="invite-btn bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition">
+                    Davet Et
+                </button>
+            `;
+            
+            const btn = div.querySelector('.invite-btn');
+            btn.onclick = async () => {
+                btn.disabled = true;
+                btn.textContent = "Gönderildi";
+                btn.className = "bg-gray-600 text-gray-400 text-xs font-bold py-1.5 px-3 rounded cursor-not-allowed";
+                
+                await sendLobbyInvite(friend.id);
+            };
+
+            listContainer.appendChild(div);
+        });
+
+    } catch (e) {
+        console.error(e);
+        listContainer.innerHTML = '<p class="text-center text-red-400 py-4">Liste yüklenemedi.</p>';
+    }
 }

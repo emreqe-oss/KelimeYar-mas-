@@ -595,3 +595,17 @@ body.theme-light .dictionary-meaning {
     padding: 4px 10px;
     border: 1px solid rgba(255,255,255,0.2);
 }
+
+/* ============================================== */
+/* === BATTLE ROYALE ÖZEL IZGARA AYARLARI === */
+/* ============================================== */
+
+/* BR modunda harfleri %30 oranında küçültüyoruz */
+.br-mode-grid .tile {
+    /* Normalde: clamp(1.5rem, 5vw, 2.2rem) */
+    /* BR İçin: Daha küçük ve kibar */
+    font-size: clamp(1.0rem, 3.5vw, 1.5rem) !important;
+}
+
+/* BR modunda harfleri biraz daha ince yapabiliriz (Opsiyonel) */
+/* .br-mode-grid .tile { font-weight: 800; } */
