@@ -448,6 +448,16 @@ function getDaysSinceEpoch() {
 // js/game.js -> initializeGameUI (TAM VE DÜZELTİLMİŞ HALİ)
 
 export function initializeGameUI(gameData) {
+    // --- KESİN ÇÖZÜM: SİGORTA KODU ---
+    // Eğer gizli kelime varsa, oyunun belirlediği uzunluğa bakma,
+    // doğrudan kelimenin kendi uzunluğunu baz al!
+    if (gameData.secretWord && gameData.secretWord.length > 0) {
+        if (gameData.wordLength !== gameData.secretWord.length) {
+            console.warn(`DÜZELTME: Izgara ${gameData.wordLength} yerine kelimeye uygun olarak ${gameData.secretWord.length} yapıldı.`);
+            // Veriyi anlık olarak düzeltiyoruz
+            gameData.wordLength = gameData.secretWord.length;
+        }
+    }
     wordLength = gameData.wordLength;
     
     if (guessGrid) {
