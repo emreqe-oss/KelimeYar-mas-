@@ -583,3 +583,15 @@ body.theme-light .dictionary-meaning {
         font-weight: 800;
     }
 }
+
+/* Menü butonu için özel stil */
+#leave-game-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 50; /* Diğer her şeyin üstünde */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    font-size: 0.75rem; /* Küçük ve kibar olsun */
+    padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+}

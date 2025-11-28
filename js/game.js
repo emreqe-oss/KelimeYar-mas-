@@ -680,7 +680,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 
     // --- UI ELEMENTLERİNİ SEÇ ---
     const sequentialGameInfo = document.getElementById('sequential-game-info');
-    const gameInfoBar = document.getElementById('game-info-bar');
     const jokerContainer = document.getElementById('joker-container');
     const copyBtn = document.getElementById('copy-game-id-btn');
     const shareBtn = document.getElementById('share-game-btn');
@@ -725,9 +724,18 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             import('./game.js').then(m => m.leaveGame());
         };
 
-        if (gameInfoBar && !gameInfoBar.contains(leaveBtn)) {
-            gameInfoBar.appendChild(leaveBtn);
-        }
+        // === 2. BUTON SIFIRLAMA ===
+    // ============================================================
+        if (leaveBtn) {
+        leaveBtn.classList.remove('hidden');
+        // İstersek metni burada değiştirebiliriz ama HTML'de "Menü" yazması yeterli.
+        
+        leaveBtn.onclick = (e) => {
+            e.stopPropagation(); 
+            import('./game.js').then(m => m.leaveGame());
+        };
+    }
+        
     }
 
     // ============================================================
@@ -787,7 +795,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                 leaveBtn.textContent = "Çıkış";
             }
         }
-        if (gameInfoBar) gameInfoBar.style.display = 'none'; 
         if (jokerContainer) jokerContainer.style.display = 'flex'; 
         if (roundCounter) roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
     }
@@ -808,12 +815,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 
         if (jokerContainer) jokerContainer.style.display = 'flex'; 
         
-        if (gameInfoBar) {
-            gameInfoBar.style.display = 'flex';
-            if (gameIdDisplay) gameIdDisplay.textContent = gameData.gameId || '';
-            if (copyBtn) copyBtn.style.display = 'block'; 
-        }
-        
+               
         if (roundCounter) {
             if (gameData.gameType === 'random_loose') roundCounter.textContent = "Gevşek Oyun";
             else roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
@@ -2557,6 +2559,7 @@ export function startTurnTimer() {
     const updateTimer = async () => {
         let now = new Date();
         let elapsed = Math.floor((now - turnStartTime) / 1000);
+        if (elapsed < 0) elapsed = 0;
         let timeLeft = limit - elapsed; 
         
         // Negatif süreleri engelle
