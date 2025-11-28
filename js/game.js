@@ -580,6 +580,11 @@ export function updateTurnDisplay(gameData) {
 
         } else if (gameData.status === 'playing') {
             startGameBtn.classList.add('hidden');
+
+            // --- DÜZELTME: Oyun başlayınca Davet Butonunu Gizle ---
+            const inviteBtn = document.getElementById('invite-to-lobby-btn');
+            if (inviteBtn) inviteBtn.classList.add('hidden');
+            // -----------------------------------------------------
             
             if (playerState.isEliminated) {
                 brTurnDisplay.textContent = "✖️ Elendin!";
@@ -1128,35 +1133,64 @@ export function listenToGameUpdates(gameId) {
                 return p.isEliminated || p.hasSolved || p.hasFailed; 
             });
 
+            // --- GÜNCELLENMİŞ BİTİŞ KONTROLÜ (BR UYUMLU) ---
             if (isEveryoneDone) {
+                // Çakışmayı önlemek için sadece Creator tetiklesin
                 if (gameData.creatorId === currentUserId) {
                     console.log("Herkes tamamladı. Tur bitiriliyor...");
                     
-                    const playersArr = Object.entries(gameData.players).map(([key, val]) => ({ ...val, userId: key }));
-                    const solvers = playersArr.filter(p => p.hasSolved);
-                    let winnerId = null;
-                    
-                    if (solvers.length > 0) {
-                        solvers.sort((a, b) => (a.guesses ? a.guesses.length : 99) - (b.guesses ? b.guesses.length : 99));
-                        winnerId = solvers[0].userId;
-                    } 
-
-                    const currentRound = gameData.currentRound || 1;
-                    const matchLength = gameData.matchLength || 1;
-                    
                     let updates = {};
-                    if (currentRound < matchLength) {
-                        updates = { roundWinner: winnerId, status: 'finished' };
-                    } else {
-                        updates = { status: 'finished', roundWinner: winnerId, matchWinnerId: winnerId };
+                    
+                    // --- BATTLE ROYALE İÇİN ÖZEL MANTIK ---
+                    if (gameData.gameType === 'multiplayer-br') {
+                        // BR'de tek bir kazanan yoktur, herkes puanını aldı.
+                        // Sadece statüsü bitirip bir sonraki tura/sonuca geçmeliyiz.
+                        // Son tur mu kontrolü:
+                        if (gameData.currentRound >= (gameData.matchLength || 10)) {
+                             // Maç komple bitti, kazananı belirle (Skoru en yüksek olan)
+                             const playersArr = Object.values(gameData.players);
+                             playersArr.sort((a, b) => (b.score || 0) - (a.score || 0));
+                             const winner = playersArr[0]; // En yüksek puanlı
+                             
+                             updates = { 
+                                 status: 'finished', 
+                                 matchWinnerId: winner.userId || Object.keys(gameData.players).find(key => gameData.players[key] === winner)
+                             };
+                        } else {
+                             // Sadece tur bitti
+                             updates = { status: 'finished' };
+                        }
+                    } 
+                    // --- STANDART MODLAR ---
+                    else {
+                        const playersArr = Object.entries(gameData.players).map(([key, val]) => ({ ...val, userId: key }));
+                        const solvers = playersArr.filter(p => p.hasSolved);
+                        let winnerId = null;
+                        
+                        if (solvers.length > 0) {
+                            solvers.sort((a, b) => (a.guesses ? a.guesses.length : 99) - (b.guesses ? b.guesses.length : 99));
+                            winnerId = solvers[0].userId;
+                        } 
+    
+                        const currentRound = gameData.currentRound || 1;
+                        const matchLength = gameData.matchLength || 1;
+                        
+                        if (currentRound < matchLength) {
+                            updates = { roundWinner: winnerId, status: 'finished' };
+                        } else {
+                            updates = { status: 'finished', roundWinner: winnerId, matchWinnerId: winnerId };
+                        }
                     }
                     
-                    if (updates.roundWinner === undefined) updates.roundWinner = null;
+                    // Güvenlik: undefined değer gitmesin
+                    if (updates.roundWinner === undefined && gameData.gameType !== 'multiplayer-br') updates.roundWinner = null;
                     if (updates.matchWinnerId === undefined) delete updates.matchWinnerId;
 
+                    // Veritabanını güncelle
                     updateDoc(gameRef, updates).catch(err => console.error("Tur bitirme hatası:", err));
                 }
             }
+            // ----------------------------------------------------
         }
 
         // 4. RENDER VE SAYFA YENİLEME DURUMU
