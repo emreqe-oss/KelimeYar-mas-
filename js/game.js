@@ -1,4 +1,4 @@
-// js/game.js - FİNAL DÜZELTİLMİŞ VERSİYON (BR 10 TUR FİKSİ)
+// js/game.js - FİNAL SÜRÜM (Next Round Buton Fix)
 
 // Firebase v9'dan gerekli modülleri içe aktar
 import { 
@@ -114,7 +114,7 @@ export async function showScoreboard(gameData) {
     }
     setupDictionaryButton(gameData.secretWord);
 
-    // 6. Puan Tablosu Oluşturma (BR ve Standart Ortak)
+    // 6. Puan Tablosu Oluşturma
     if (finalScores) {
         const playersArr = Object.values(gameData.players).sort((a, b) => (b.score || 0) - (a.score || 0));
         
@@ -133,24 +133,20 @@ export async function showScoreboard(gameData) {
         });
     }
 
-    // 7. Buton Yönetimi (KRİTİK DÜZELTME BURADA)
+    // 7. Buton Yönetimi (KRİTİK DÜZELTME)
     const currentRound = gameData.currentRound || 1;
-    // Eğer matchLength tanımlı değilse ve BR ise 10, yoksa 1 varsay.
     const totalRounds = gameData.matchLength || (gameData.gameType === 'multiplayer-br' ? 10 : 1);
     
-    // Maç ne zaman biter?
-    // 1. Eğer BR ise: Son tura gelindiyse (current >= total)
-    // 2. Diğer modlarda: status 'finished' ise ve çok turlu değilse.
     let isMatchFinished = false;
 
     if (gameData.gameType === 'multiplayer-br') {
-        // Battle Royale: Sadece tur sayısı dolduysa veya maç kazananı belliyse bitir
         isMatchFinished = (currentRound >= totalRounds) || (gameData.matchWinnerId !== undefined);
     } else {
-        // Diğer modlar (Seri Oyun vb.)
+        // Çok turlu oyunlarda, tur sayısı dolana kadar maç bitmez
         if (totalRounds > 1 && currentRound < totalRounds) {
             isMatchFinished = false;
         } else {
+            // Tek turlu veya son tur
             isMatchFinished = true;
         }
     }
@@ -163,6 +159,7 @@ export async function showScoreboard(gameData) {
         }
         if (newRoundBtn) {
             newRoundBtn.textContent = "Ana Menü";
+            newRoundBtn.disabled = false;
             newRoundBtn.onclick = leaveGame;
             newRoundBtn.classList.remove('hidden');
             newRoundBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
@@ -170,16 +167,30 @@ export async function showScoreboard(gameData) {
     } else {
         // SONRAKİ TUR
         if (newRoundBtn) {
+            // --- FİX: Butonu her zaman aktif başlat ---
+            newRoundBtn.disabled = false;
+            newRoundBtn.style.opacity = "1";
+            newRoundBtn.style.cursor = "pointer";
             newRoundBtn.textContent = "Sonraki Tur";
-            newRoundBtn.onclick = () => {
-                // Sadece kurucu başlatabilir uyarısı (BR Modu için)
+            // ------------------------------------------
+
+            newRoundBtn.onclick = async () => {
                 if (gameData.gameType === 'multiplayer-br' && gameData.creatorId !== currentUserId) {
                     showToast("Oyun kurucunun turu başlatması bekleniyor...", false);
                     return;
                 }
+                
                 newRoundBtn.disabled = true;
                 newRoundBtn.textContent = "Hazırlanıyor...";
-                startNewRound();
+                
+                try {
+                    await startNewRound();
+                } catch (error) {
+                    console.error("Yeni tur hatası:", error);
+                    showToast("Bir hata oluştu, tekrar dene.", true);
+                    newRoundBtn.disabled = false;
+                    newRoundBtn.textContent = "Tekrar Dene";
+                }
             };
             newRoundBtn.classList.remove('hidden');
             newRoundBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
@@ -2721,36 +2732,60 @@ export async function checkLeagueStatus() {
     }
 }
 
+// js/game.js -> joinCurrentLeague
+
 export async function joinCurrentLeague(weekID) {
     const userId = state.getUserId();
     const username = getUsername();
     
     try {
         const joinBtn = document.getElementById('join-league-btn');
-        joinBtn.disabled = true;
-        joinBtn.textContent = "Kaydediliyor...";
+        if(joinBtn) {
+            joinBtn.disabled = true;
+            joinBtn.textContent = "Lige giriliyor...";
+        }
 
+        // 1. MEVCUT KALABALIĞI KONTROL ET
+        const participantsRef = collection(db, "leagues", weekID, "participants");
+        // İlk 15 kişiyi sorgula
+        const snapshot = await getDocs(query(participantsRef, limit(15)));
+
+        // Eğer 15 kişiden az oyuncu varsa, ligi doldur (Botları çağır)
+        if (snapshot.size < 15) {
+            await populateLeagueWithBots(weekID);
+        }
+
+        // 2. ŞİMDİ KULLANICIYI KAYDET (Botlardan sonra)
         await setDoc(doc(db, "leagues", weekID, "participants", userId), {
             username: username,
-            joinedAt: serverTimestamp(),
+            joinedAt: serverTimestamp(), // Biz şu an katılıyoruz
             score: 0
         });
 
+        // Ligi aktif olarak işaretle
         await setDoc(doc(db, "leagues", weekID), { isActive: true }, { merge: true });
 
-        joinBtn.classList.add('hidden');
-        document.getElementById('league-join-status').classList.remove('hidden');
+        // Butonu gizle ve başarı mesajı göster
+        if(joinBtn) joinBtn.classList.add('hidden');
+        const statusEl = document.getElementById('league-join-status');
+        if(statusEl) statusEl.classList.remove('hidden');
         
-        showToast("Lige başarıyla katıldın!");
+        showToast("Lige katılım sağlandı! Rakiplerin hazır.", false);
 
+        // 3. EKRANI YENİLE (Fikstürü göster)
+        // Biraz gecikme verelim ki veritabanı yazma işlemi tamamlansın
         setTimeout(() => {
-            checkLeagueStatus(); 
-        }, 2000);
+            import('./game.js').then(m => m.checkLeagueStatus());
+        }, 1500);
 
     } catch (error) {
         console.error("Lige katılma hatası:", error);
         showToast("Hata oluştu.", true);
-        document.getElementById('join-league-btn').disabled = false;
+        const joinBtn = document.getElementById('join-league-btn');
+        if(joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.textContent = "LİGE KATIL ✍️";
+        }
     }
 }
 
@@ -3314,30 +3349,26 @@ export async function startQuickFriendGame(friendId) {
     });
 }
 
-export async function populateLeagueWithBots() {
-    const weekID = getCurrentWeekID();
-    const botsToAdd = [];
-    const usedIndices = new Set();
+// js/game.js -> populateLeagueWithBots
 
-    while (botsToAdd.length < 15) {
-        const randomIndex = Math.floor(Math.random() * botNames.length);
-        if (!usedIndices.has(randomIndex)) {
-            usedIndices.add(randomIndex);
-            botsToAdd.push(botNames[randomIndex]);
-        }
-        if (usedIndices.size >= botNames.length) break;
-    }
-
-    console.log("Lige eklenecek botlar:", botsToAdd);
-    showToast("Botlar lige ekleniyor...", false);
+export async function populateLeagueWithBots(weekID) {
+    // Bot isimlerini karıştıralım ki hep aynı sıra olmasın
+    const shuffledNames = [...botNames].sort(() => 0.5 - Math.random());
+    const botsToAdd = shuffledNames.slice(0, 15); // İlk 15 ismi al
 
     const promises = botsToAdd.map((name, index) => {
-        const botId = `bot_league_${Date.now()}_${index}`;
+        // Bot ID'si çakışmasın diye timestamp ekliyoruz
+        const botId = `player_${Date.now()}_${index}`; 
         
+        // ZAMAN HİLESİ: Bot sanki 2 saat ile 3 gün önce katılmış gibi yapalım
+        const pastTime = new Date();
+        const hoursBack = Math.floor(Math.random() * 72) + 2; // 2 ila 74 saat önce
+        pastTime.setHours(pastTime.getHours() - hoursBack);
+
         const botData = {
             username: name,
-            joinedAt: serverTimestamp(),
-            score: 0,
+            joinedAt: pastTime, // Firebase bunu tarih olarak kaydeder
+            score: Math.floor(Math.random() * 60), // 0-60 arası rastgele puanla başlasınlar (daha gerçekçi)
             isBot: true, 
             stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } 
         };
@@ -3347,13 +3378,9 @@ export async function populateLeagueWithBots() {
 
     try {
         await Promise.all(promises);
-        showToast("✅ 15 Bot başarıyla lige eklendi!");
-        
-        checkLeagueStatus();
-        
+        console.log("Lig ortamı hazırlandı: 15 sanal oyuncu yerleştirildi.");
     } catch (error) {
         console.error("Bot ekleme hatası:", error);
-        showToast("Bot eklenirken hata oluştu.", true);
     }
 }
 
