@@ -1,4 +1,4 @@
-// js/game.js - TAM DOSYA (Sözlük Özelliği Eklendi)
+// js/game.js - FİNAL DÜZELTİLMİŞ VERSİYON (BR 10 TUR FİKSİ)
 
 // Firebase v9'dan gerekli modülleri içe aktar
 import { 
@@ -11,10 +11,10 @@ import {
     startNextBRRound
 } from './firebase.js';
 
-// Firestore modüllerini içe aktar (arrayRemove EKLENDİ)
+// Firestore modüllerini içe aktar
 import {
     collection, query, where, limit, getDocs, getDoc, doc, setDoc, updateDoc,
-    runTransaction, onSnapshot, serverTimestamp, arrayUnion, arrayRemove, // <-- arrayRemove eklendi
+    runTransaction, onSnapshot, serverTimestamp, arrayUnion, arrayRemove, 
     orderBy, 
     deleteField, 
     deleteDoc 
@@ -31,7 +31,7 @@ import {
     addPresentJokerLetter
 } from './state.js';
 
-let cpuLoopTimeout = null; // Bot döngüsünü kontrol etmek için global değişken
+let cpuLoopTimeout = null; 
 
 import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement } from './utils.js';
 
@@ -52,333 +52,142 @@ import { default as allWordList } from '../functions/kelimeler.json';
 // ===================================================
 
 export async function showScoreboard(gameData) {
+    console.log("Skor tablosu açılıyor..."); 
     stopTurnTimer();
+    
+    // 1. Ekran Değişimi
     showScreen('scoreboard-screen');
-    
+
+    // 2. Elementleri Seç
     const roundWinnerDisplay = document.getElementById('round-winner-display');
-    const correctWordDisplay = document.getElementById('correct-word-display');
-    const finalScores = document.getElementById('final-scores');
     const matchWinnerDisplay = document.getElementById('match-winner-display');
+    const correctWordDisplay = document.getElementById('correct-word-display');
     const meaningDisplay = document.getElementById('word-meaning-display');
-    const newRoundBtn = document.getElementById('new-round-btn');
-    const gameMode = state.getGameMode();
-    const currentUserId = state.getUserId();
-    const dailyStatsContainer = document.getElementById('daily-stats-container');
-    const defaultWordDisplayContainer = document.getElementById('default-word-display-container');
-    const defaultRoundButtons = document.getElementById('default-round-buttons');
-    const newWordRematchBtn = document.getElementById('new-word-rematch-btn');
+    const finalScores = document.getElementById('final-scores');
     
-    if (!roundWinnerDisplay || !correctWordDisplay || !finalScores || !matchWinnerDisplay || !meaningDisplay || !newRoundBtn) return;
+    const newRoundBtn = document.getElementById('new-round-btn');
+    const newWordRematchBtn = document.getElementById('new-word-rematch-btn');
+    const mainMenuBtn = document.getElementById('main-menu-btn');
 
-    // Varsayılan gizlemeler
-    newRoundBtn.classList.add('hidden');
-    newWordRematchBtn.classList.add('hidden');
-    if (newRoundBtn) newRoundBtn.disabled = false;
+    const currentUserId = state.getUserId();
+    const gameMode = state.getGameMode();
 
-    // 1. BATTLE ROYALE KONTROLÜ
-    if (isBattleRoyale(gameMode)) {
-        dailyStatsContainer.classList.remove('hidden');
-        defaultWordDisplayContainer.style.display = 'none';
-        const isMatchFinished = gameData.currentRound >= 10; 
-        let winnerMessage;
-        let matchWinnerName = "";
-        if (isMatchFinished) {
-            const playersArr = Object.values(gameData.players);
-            playersArr.sort((a, b) => (b.score || 0) - (a.score || 0));
-            const winner = playersArr[0];
-            if (winner.score > 0) {
-                matchWinnerName = winner.username;
-                winnerMessage = winner.userId === currentUserId ? "👑 TEBRİKLER, ŞAMPİYONSUN!" : `👑 ŞAMPİYON: ${matchWinnerName}`;
-            } else {
-                winnerMessage = "MAÇ BERABERE BİTTİ!";
-            }
-            matchWinnerDisplay.style.display = 'block';
-            matchWinnerDisplay.textContent = `MAÇ SONUCU: ${matchWinnerName} (${winner.score} Puan)`;
-            newRoundBtn.textContent = 'Ana Menü';
+    // 3. Temizlik ve Hazırlık
+    if (finalScores) finalScores.innerHTML = '';
+    if (newRoundBtn) newRoundBtn.classList.add('hidden');
+    if (newWordRematchBtn) newWordRematchBtn.classList.add('hidden');
+    if (matchWinnerDisplay) matchWinnerDisplay.classList.add('hidden');
+
+    // 4. Kazanma/Kaybetme Mesajı
+    let titleText = "";
+    let titleColor = "";
+
+    const isMyTurnWinner = gameData.roundWinner === currentUserId;
+    const winnerName = gameData.roundWinner ? (gameData.players[gameData.roundWinner]?.username || 'Rakip') : 'Kimse';
+
+    if (isMyTurnWinner) {
+        titleText = "TEBRİKLER! 🎉";
+        titleColor = "text-green-400";
+        playSound('win');
+    } else if (gameData.roundWinner === null) {
+        titleText = "SÜRE BİTTİ / BERABERE";
+        titleColor = "text-gray-400";
+        playSound('lose');
+    } else {
+        titleText = `${winnerName} KAZANDI`;
+        titleColor = "text-red-400";
+        playSound('lose');
+    }
+
+    if (roundWinnerDisplay) {
+        roundWinnerDisplay.textContent = titleText;
+        roundWinnerDisplay.className = `text-3xl font-black mb-2 tracking-wide uppercase drop-shadow-md ${titleColor}`;
+    }
+
+    // 5. Kelime ve Anlamı
+    if (correctWordDisplay) correctWordDisplay.textContent = gameData.secretWord;
+    if (meaningDisplay) {
+        meaningDisplay.textContent = "Anlam yükleniyor...";
+        fetchWordMeaning(gameData.secretWord).then(mean => {
+            meaningDisplay.textContent = mean;
+        });
+    }
+    setupDictionaryButton(gameData.secretWord);
+
+    // 6. Puan Tablosu Oluşturma (BR ve Standart Ortak)
+    if (finalScores) {
+        const playersArr = Object.values(gameData.players).sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        playersArr.forEach((p, index) => {
+            const isMe = p.username === getUsername();
+            const row = document.createElement('div');
+            row.className = `flex justify-between items-center p-2 rounded ${isMe ? 'bg-indigo-900/50 border border-indigo-500/50' : 'bg-gray-800 border-b border-gray-700'}`;
+            row.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-gray-500 w-4">${index + 1}.</span>
+                    <span class="font-bold ${isMe ? 'text-white' : 'text-gray-300'}">${p.username}</span>
+                </div>
+                <span class="font-mono font-bold text-yellow-400">${p.score || 0} P</span>
+            `;
+            finalScores.appendChild(row);
+        });
+    }
+
+    // 7. Buton Yönetimi (KRİTİK DÜZELTME BURADA)
+    const currentRound = gameData.currentRound || 1;
+    // Eğer matchLength tanımlı değilse ve BR ise 10, yoksa 1 varsay.
+    const totalRounds = gameData.matchLength || (gameData.gameType === 'multiplayer-br' ? 10 : 1);
+    
+    // Maç ne zaman biter?
+    // 1. Eğer BR ise: Son tura gelindiyse (current >= total)
+    // 2. Diğer modlarda: status 'finished' ise ve çok turlu değilse.
+    let isMatchFinished = false;
+
+    if (gameData.gameType === 'multiplayer-br') {
+        // Battle Royale: Sadece tur sayısı dolduysa veya maç kazananı belliyse bitir
+        isMatchFinished = (currentRound >= totalRounds) || (gameData.matchWinnerId !== undefined);
+    } else {
+        // Diğer modlar (Seri Oyun vb.)
+        if (totalRounds > 1 && currentRound < totalRounds) {
+            isMatchFinished = false;
+        } else {
+            isMatchFinished = true;
+        }
+    }
+
+    if (isMatchFinished) {
+        // MAÇ BİTTİ
+        if (matchWinnerDisplay) {
+            matchWinnerDisplay.classList.remove('hidden');
+            matchWinnerDisplay.textContent = "MAÇ SONA ERDİ";
+        }
+        if (newRoundBtn) {
+            newRoundBtn.textContent = "Ana Menü";
             newRoundBtn.onclick = leaveGame;
             newRoundBtn.classList.remove('hidden');
-        } else {
-            matchWinnerDisplay.style.display = 'none';
-            winnerMessage = gameData.roundWinner === currentUserId ? "✅ TURU KAZANDIN!" : "TUR TAMAMLANDI";
-            newRoundBtn.textContent = `Sonraki Tur (${gameData.currentRound}/10)`; 
+            newRoundBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
+        }
+    } else {
+        // SONRAKİ TUR
+        if (newRoundBtn) {
+            newRoundBtn.textContent = "Sonraki Tur";
             newRoundBtn.onclick = () => {
+                // Sadece kurucu başlatabilir uyarısı (BR Modu için)
+                if (gameData.gameType === 'multiplayer-br' && gameData.creatorId !== currentUserId) {
+                    showToast("Oyun kurucunun turu başlatması bekleniyor...", false);
+                    return;
+                }
                 newRoundBtn.disabled = true;
-                newRoundBtn.textContent = 'Yükleniyor...';
-                showToast("Yeni tur başlatılıyor...", false); 
+                newRoundBtn.textContent = "Hazırlanıyor...";
                 startNewRound();
             };
             newRoundBtn.classList.remove('hidden');
+            newRoundBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
         }
-        roundWinnerDisplay.textContent = winnerMessage;
-        playSound(isMatchFinished ? 'win' : 'turn'); 
-        const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
-        finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">Puan Durumu (Tur ${gameData.currentRound}/10)</h3>`;
-        finalScores.style.display = 'block';
-        sortedPlayers.forEach(player => {
-            const scoreEl = document.createElement('div');
-            scoreEl.className = 'flex justify-between items-center bg-gray-700 p-2 rounded mb-1 ' + (player.id === currentUserId ? 'border border-yellow-400' : '');
-            scoreEl.innerHTML = `<span class="font-bold text-white">${player.username}</span><span class="text-yellow-400 font-mono text-lg">${player.score || 0} Puan</span>`; 
-            finalScores.appendChild(scoreEl);
-        });
-        const meaning = await fetchWordMeaning(gameData.secretWord);
-        dailyStatsContainer.innerHTML = `
-            <div class="mt-6 mb-4">
-                <p>Doğru Kelime: <strong class="text-green-400 text-xl">${gameData.secretWord}</strong></p>
-                <p id="word-meaning-display-br" class="text-sm text-gray-400 mt-2 italic">${meaning}</p>
-            </div>
-        `;
-        
-        // SÖZLÜK BUTONU ENTEGRASYONU (BR İÇİN)
-        setupDictionaryButton(gameData.secretWord);
-        return;
     }
 
-    // 2. GÜNÜN KELİMESİ (DAILY)
-    if (gameMode === 'daily') {
-        // Gereksiz elementleri gizle
-        roundWinnerDisplay.style.display = 'none';
-        correctWordDisplay.style.display = 'none';
-        matchWinnerDisplay.style.display = 'none';
-        finalScores.style.display = 'none';
-        newRoundBtn.classList.add('hidden'); 
-        newWordRematchBtn.classList.add('hidden');
-        defaultWordDisplayContainer.style.display = 'none'; 
-
-        // İstatistikleri getir
-        const dailyStats = await getDailyLeaderboardStats(currentUserId, gameData.secretWord);
-        dailyStatsContainer.classList.remove('hidden');
-
-        const didWin = gameData.roundWinner === currentUserId;
-        const resultTitle = didWin ? "🎉 TEBRİKLER!" : "😔 MAALESEF";
-        const resultColor = didWin ? "text-green-400" : "text-red-400";
-
-        // İstatistik Kartını Oluştur
-        if (dailyStats) {
-            dailyStatsContainer.innerHTML = `
-                <div class="w-full max-w-md mx-auto bg-gray-800/95 p-6 rounded-xl shadow-2xl border border-gray-600 flex flex-col items-center">
-                    
-                    <h2 class="text-3xl font-extrabold ${resultColor} mb-2 tracking-wide">${resultTitle}</h2>
-                    
-                    <div class="text-center mb-6">
-                        <span class="text-gray-400 text-sm uppercase tracking-wider">Doğru Kelime</span>
-                        <div class="text-4xl font-black text-white mt-1 bg-gray-700 px-6 py-2 rounded-lg tracking-widest shadow-inner">
-                            ${gameData.secretWord}
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 w-full mb-6">
-                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
-                            <p class="text-2xl font-bold text-yellow-400">${dailyStats.userScore}</p>
-                            <p class="text-xs text-gray-400 uppercase font-semibold">Puanın</p>
-                        </div>
-                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
-                            <p class="text-2xl font-bold text-indigo-300">${dailyStats.userPosition > 0 ? '#' + dailyStats.userPosition : '-'}</p>
-                            <p class="text-xs text-gray-400 uppercase font-semibold">Sıralama</p>
-                        </div>
-                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
-                            <p class="text-xl font-bold text-white">${dailyStats.userGuessCount}</p>
-                            <p class="text-xs text-gray-400 uppercase font-semibold">Deneme</p>
-                        </div>
-                        <div class="bg-gray-700 p-3 rounded-lg text-center shadow border border-gray-600">
-                            <p class="text-xl font-bold text-white">${dailyStats.avgScore}</p>
-                            <p class="text-xs text-gray-400 uppercase font-semibold">Ort. Puan</p>
-                        </div>
-                    </div>
-
-                    <p class="text-xs text-gray-500 mb-4">Toplam ${dailyStats.totalPlayers} oyuncu bugün oynadı.</p>
-
-                    <div class="w-full border-t border-gray-600 pt-4 mt-2 text-center">
-                        <p id="word-meaning-display-daily" class="text-sm text-gray-300 italic leading-relaxed mb-3">
-                            Anlam yükleniyor...
-                        </p>
-                        
-                        <div id="daily-dict-btn-container" class="flex justify-center"></div>
-                    </div>
-                </div>
-            `;
-            
-            // Anlamı yükle
-            const meaningDisplayEl = document.getElementById('word-meaning-display-daily'); 
-            const meaning = await fetchWordMeaning(gameData.secretWord);
-            if(meaningDisplayEl) meaningDisplayEl.textContent = meaning;
-
-            // --- DÜZELTME: Sözlük Butonunu Özel Konteynera Taşı ---
-            // Normal butonu alıyoruz
-            const originalBtn = document.getElementById('btn-add-word-to-dict');
-            if (originalBtn) {
-                // Butonu görünür yap ve özelliklerini ayarla
-                originalBtn.classList.remove('hidden');
-                originalBtn.classList.add('bg-amber-600');
-                originalBtn.disabled = false;
-                originalBtn.innerHTML = '<span>📖</span> Sözlüğe Ekle';
-                
-                // Event listener'ı temizle ve yenisini ekle
-                const newBtn = originalBtn.cloneNode(true);
-                newBtn.onclick = () => import('./game.js').then(m => m.addWordToDictionary(gameData.secretWord));
-                
-                // Butonu oluşturduğumuz özel konteynera taşı
-                const container = document.getElementById('daily-dict-btn-container');
-                if (container) {
-                    container.appendChild(newBtn);
-                }
-            }
-            // -----------------------------------------------------
-
-        } else {
-            dailyStatsContainer.innerHTML = `<p class="text-gray-400 text-center">Günlük sıralama bilgileri yüklenemedi.</p>`;
-        }
-
-        playSound(didWin ? 'win' : 'lose');
-        
-        const mainMenuBtn = document.getElementById('main-menu-btn');
-        mainMenuBtn.textContent = "Ana Menüye Dön";
-        mainMenuBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg";
+    if (mainMenuBtn) {
         mainMenuBtn.onclick = leaveGame;
-        
-        document.getElementById('share-results-btn').classList.remove('hidden');
-        defaultRoundButtons.style.display = 'flex';
-        
-        return; 
-    }
-
-    // 3. KELİMELİG (LEAGUE)
-    if (gameMode === 'league') {
-        dailyStatsContainer.classList.add('hidden');
-        matchWinnerDisplay.style.display = 'none';
-        finalScores.style.display = 'none';
-        newRoundBtn.classList.add('hidden');
-        newWordRematchBtn.classList.add('hidden');
-
-        defaultWordDisplayContainer.style.display = 'block';
-        defaultRoundButtons.style.display = 'flex';
-
-        const didWin = gameData.roundWinner === currentUserId;
-        
-        if (didWin) {
-            roundWinnerDisplay.innerHTML = `
-                <span class="text-green-400 block text-3xl mb-2">TEBRİKLER! DOĞRU CEVAP 🎉</span>
-                <span class="text-gray-400 text-sm font-normal block">Puan durumu rakip oynayınca belli olacak.</span>
-            `;
-            playSound('win');
-        } else {
-             roundWinnerDisplay.innerHTML = `
-                <span class="text-red-400 block text-3xl mb-2">ÜZGÜNÜZ, SÜRE BİTTİ 😔</span>
-                <span class="text-gray-400 text-sm font-normal block">Rakibin sonucu bekleniyor. İkiniz de bilemezseniz 1 puan alacaksınız.</span>
-             `;
-             playSound('lose');
-        }
-
-        correctWordDisplay.textContent = gameData.secretWord;
-        meaningDisplay.textContent = 'Anlam yükleniyor...';
-        const meaning = await fetchWordMeaning(gameData.secretWord);
-        meaningDisplay.textContent = meaning;
-
-        const mainMenuBtnEl = document.getElementById('main-menu-btn');
-        mainMenuBtnEl.textContent = "Lige Dön";
-        mainMenuBtnEl.className = "w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg text-lg"; 
-        mainMenuBtnEl.onclick = () => openKelimeligScreen();
-        
-        document.getElementById('share-results-btn').classList.add('hidden'); 
-        
-        // SÖZLÜK BUTONU ENTEGRASYONU
-        setupDictionaryButton(gameData.secretWord);
-        return; 
-    }
-
-// 4. DİĞER STANDART MODLAR (Gevşek / Seri / vsCPU)
-    
-    const mainMenuBtnReset = document.getElementById('main-menu-btn');
-    if (mainMenuBtnReset) {
-        mainMenuBtnReset.textContent = "Ana Menü";
-        mainMenuBtnReset.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg";
-        mainMenuBtnReset.onclick = leaveGame;
-    }
-    document.getElementById('share-results-btn').classList.remove('hidden'); // Paylaş butonunu geri getir
-    dailyStatsContainer.classList.add('hidden');
-    defaultWordDisplayContainer.style.display = 'block';
-    defaultRoundButtons.style.display = 'flex';
-    const showScores = gameMode === 'multiplayer' || gameMode === 'vsCPU';
-    finalScores.style.display = showScores ? 'block' : 'none';
-    matchWinnerDisplay.style.display = showScores ? 'block' : 'none';
-
-    if (showScores) {
-        finalScores.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center">Toplam Puan</h3>`;
-        const sortedPlayers = Object.entries(gameData.players).map(([id, data]) => ({ ...data, id })).sort((a, b) => (b.score || 0) - (a.score || 0));
-        sortedPlayers.forEach(player => {
-            const scoreEl = document.createElement('p');
-            scoreEl.className = 'text-lg';
-            scoreEl.textContent = `${player.username}: ${player.score || 0} Puan`,
-            finalScores.appendChild(scoreEl);
-        });
-    }
-
-    if (gameData.roundWinner && gameData.players[gameData.roundWinner]) {
-        const winnerName = gameData.players[gameData.roundWinner].username || 'Bilgisayar';
-        roundWinnerDisplay.textContent = (gameData.roundWinner === currentUserId) ? "Tebrikler, Turu Kazandın!" : `Turu ${winnerName} Kazandı!`;
-        playSound(gameData.roundWinner === currentUserId ? 'win' : 'lose');
-    } else {
-        roundWinnerDisplay.textContent = `Kimse Bulamadı! Cevap: ${gameData.secretWord}`;
-        playSound('lose');
-    }
-    
-    correctWordDisplay.textContent = gameData.secretWord;
-    meaningDisplay.textContent = 'Anlam yükleniyor...';
-    const meaning = await fetchWordMeaning(gameData.secretWord);
-    meaningDisplay.textContent = meaning;
-    matchWinnerDisplay.textContent = '';
-    
-    // SÖZLÜK BUTONU ENTEGRASYONU (Standart Modlar)
-    setupDictionaryButton(gameData.secretWord);
-
-    if (gameMode === 'vsCPU' || gameMode === 'multiplayer') {
-        if (gameData.matchLength === 1 && gameMode === 'multiplayer') {
-            if (gameData.roundWinner === null) roundWinnerDisplay.textContent = "BERABERE! Kimse bulamadı.";
-            newWordRematchBtn.classList.remove('hidden'); 
-            newRoundBtn.classList.add('hidden');
-        } 
-        else if (gameData.currentRound < gameData.matchLength) {
-            newRoundBtn.textContent = 'Sonraki Kelime';
-            newRoundBtn.onclick = startNewRound;
-            newRoundBtn.classList.remove('hidden');
-        } 
-        else {
-            // --- MAÇ BİTİŞİ (SERİ TAMAMLANDI) ---
-            newRoundBtn.textContent = 'Yeniden Oyna';
-            
-            if (gameMode === 'vsCPU') {
-                newRoundBtn.onclick = () => startNewGame({ mode: gameMode });
-            } else if (gameMode === 'multiplayer') {
-                newRoundBtn.onclick = () => findOrCreateRandomGame({ 
-                    timeLimit: gameData.timeLimit, 
-                    matchLength: gameData.matchLength, 
-                    gameType: gameData.gameType 
-                });
-            }
-            newRoundBtn.classList.remove('hidden');
-
-            // GALİBİYET HESAPLAMA VE GÖSTERİMİ
-            if (showScores && gameData.matchLength > 1) {
-                const sortedPlayers = Object.entries(gameData.players)
-                    .map(([id, data]) => ({ ...data, id }))
-                    .sort((a, b) => (b.score || 0) - (a.score || 0));
-                
-                // En üstteki başlığı değiştir
-                roundWinnerDisplay.innerHTML = '<span class="text-yellow-400">🏆 SERİ TAMAMLANDI!</span>';
-                
-                // Alt başlığa kazananı yaz
-                if (sortedPlayers.length > 1) {
-                    if (sortedPlayers[0].score > sortedPlayers[1].score) {
-                        matchWinnerDisplay.innerHTML = `KAZANAN: <span class="text-green-400 text-4xl block mt-2">${sortedPlayers[0].username.toUpperCase()}</span>`;
-                        playSound('win'); // Maç sonu zafer sesi
-                    } else if (sortedPlayers[0].score < sortedPlayers[1].score) {
-                        matchWinnerDisplay.innerHTML = `KAZANAN: <span class="text-green-400 text-4xl block mt-2">${sortedPlayers[1].username.toUpperCase()}</span>`;
-                    } else {
-                        matchWinnerDisplay.innerHTML = `<span class="text-blue-400 text-4xl block mt-2">DOSTLUK KAZANDI!<br>(BERABERE)</span>`;
-                    }
-                    matchWinnerDisplay.style.display = 'block';
-                }
-            }
-        }
     }
 }
 
@@ -386,23 +195,16 @@ export async function showScoreboard(gameData) {
 // === ANLAM GETİRME FONKSİYONLARI ===
 // ===================================================
 
-// Anlamları bir kez yükleyip hafızada tutmak için:
 let localMeanings = null;
 
 async function getLocalMeanings() {
-    if (localMeanings) {
-        return localMeanings; 
-    }
+    if (localMeanings) return localMeanings; 
     try {
         const response = await fetch('/kelime_anlamlari.json'); 
-        if (!response.ok) {
-            throw new Error('Yerel anlam dosyası (kelime_anlamlari.json) bulunamadı.');
-        }
+        if (!response.ok) throw new Error('Yerel anlam dosyası bulunamadı.');
         localMeanings = await response.json();
-        console.log("Kelime anlamları başarıyla yerel dosyadan yüklendi.");
         return localMeanings;
     } catch (error) {
-        console.error("Yerel anlamlar yüklenemedi:", error);
         return null; 
     }
 }
@@ -416,8 +218,7 @@ export async function fetchWordMeaning(word) {
         }
         return "Anlamı bulunamadı.";
     } catch (error) {
-        console.error("Anlam alınırken bir hata oluştu:", error);
-        return "Anlam yüklenirken bir sorun oluştu. (Yerel dosya okunamadı)";
+        return "Anlam yüklenirken bir sorun oluştu.";
     }
 }
 
@@ -427,7 +228,6 @@ export async function fetchWordMeaning(word) {
 const GUESS_COUNT = 6;
 const MAX_BR_PLAYERS = 8;
 let wordLength = 5;
-let timeLimit = 120; 
 
 const DAILY_WORD_LENGTHS = [4, 5, 6]; 
 
@@ -443,18 +243,9 @@ function getDaysSinceEpoch() {
     return Math.floor((startOfTodayTRT - epoch) / (1000 * 60 * 60 * 24));
 }
 
-// js/game.js -> initializeGameUI (GÜNCELLENMİŞ HALİ)
-
-// js/game.js -> initializeGameUI (TAM VE DÜZELTİLMİŞ HALİ)
-
 export function initializeGameUI(gameData) {
-    // --- KESİN ÇÖZÜM: SİGORTA KODU ---
-    // Eğer gizli kelime varsa, oyunun belirlediği uzunluğa bakma,
-    // doğrudan kelimenin kendi uzunluğunu baz al!
     if (gameData.secretWord && gameData.secretWord.length > 0) {
         if (gameData.wordLength !== gameData.secretWord.length) {
-            console.warn(`DÜZELTME: Izgara ${gameData.wordLength} yerine kelimeye uygun olarak ${gameData.secretWord.length} yapıldı.`);
-            // Veriyi anlık olarak düzeltiyoruz
             gameData.wordLength = gameData.secretWord.length;
         }
     }
@@ -462,40 +253,28 @@ export function initializeGameUI(gameData) {
     
     if (guessGrid) {
         guessGrid.innerHTML = ''; 
-
-        // --- YENİ: BR Moduysa Izgaraya Özel Sınıf Ekle ---
         if (gameData.gameType === 'multiplayer-br') {
             guessGrid.classList.add('br-mode-grid');
         } else {
             guessGrid.classList.remove('br-mode-grid');
         }
-        // ------------------------------------------------
         
-        if (wordLength === 4) {
-            guessGrid.style.maxWidth = '220px';
-        } else if (wordLength === 5) {
-            guessGrid.style.maxWidth = '260px'; 
-        } else { 
-            guessGrid.style.maxWidth = '300px'; 
-        }
+        if (wordLength === 4) guessGrid.style.maxWidth = '220px';
+        else if (wordLength === 5) guessGrid.style.maxWidth = '260px'; 
+        else guessGrid.style.maxWidth = '300px'; 
     }
     
     createGrid(wordLength, GUESS_COUNT);
     createKeyboard(handleKeyPress);
 
-    // --- DÜZELTME BURADA ---
-    // Sadece vsCPU değil, "Lig" ve "Günlük" hariç TÜM OYUNLARDA (Seri, Gevşek, Arkadaş) sayaç çalışsın.
     const gameMode = state.getGameMode();
     
-    // Sayacı Başlat (Eğer oyun oynanıyorsa)
     if (gameData.status === 'playing' && gameMode !== 'daily') {
         setTimeout(() => {
-            // game.js içindeki startTurnTimer fonksiyonunu çağır
             startTurnTimer();
         }, 200);
     }
 
-    // vsCPU Özel Buton Ayarları
     if (gameMode === 'vsCPU') {
         const leaveBtn = document.getElementById('leave-game-button');
         const p2ScoreBox = document.getElementById('player2-score');
@@ -510,25 +289,17 @@ export function initializeGameUI(gameData) {
             }
         }
     }
-    // -------------------------------------------------
 }
 
-// js/game.js -> updateTurnDisplay (DÜZELTİLMİŞ FİNAL VERSİYON)
-
 export function updateTurnDisplay(gameData) {
-    // Gerekli UI elementleri yoksa işlem yapma
     if (!startGameBtn || !shareGameBtn) return;
 
     const gameMode = state.getGameMode();
     const currentUserId = state.getUserId();
-    const isCreator = gameData.creatorId === currentUserId; // Oyunu kuran kişi biz miyiz?
+    const isCreator = gameData.creatorId === currentUserId; 
     
-    // 1. LİG MODU (Kendi özel arayüzü var, burayı pas geçiyoruz)
-    if (gameMode === 'league') {
-        return;
-    }
+    if (gameMode === 'league') return;
     
-    // 2. BATTLE ROYALE MODU
     if (isBattleRoyale(gameMode)) {
         if (!brTimerDisplay || !brTurnDisplay) return;
         brTimerDisplay.textContent = gameData.timeLimit || 60;
@@ -539,10 +310,7 @@ export function updateTurnDisplay(gameData) {
         if (gameData.status === 'waiting') {
             brTurnDisplay.textContent = `Oyuncu bekleniyor (${numPlayers}/${MAX_BR_PLAYERS || 4})...`;
             
-            // --- DÜZELTME: Host ise ve en az 2 kişi varsa Başlat butonu görünsün ---
-            // --- GÜNCELLENMİŞ BR BEKLEME EKRANI KODLARI ---
             if (isCreator) {
-                // 1. Başlat Butonunu Yönet
                 startGameBtn.classList.remove('hidden');
                 
                 if (numPlayers >= 2) { 
@@ -556,35 +324,25 @@ export function updateTurnDisplay(gameData) {
                     startGameBtn.className = "w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-not-allowed";
                 }
 
-                // 2. DAVET BUTONUNU GÖSTER (MAVİ BUTON)
                 const inviteBtn = document.getElementById('invite-to-lobby-btn');
-                // Eğer buton HTML'de varsa 'hidden' sınıfını kaldır
                 if (inviteBtn) {
                     inviteBtn.classList.remove('hidden'); 
                     inviteBtn.onclick = () => import('./ui.js').then(ui => ui.openLobbyInviteModal());
-                } else {
-                    console.error("HATA: invite-to-lobby-btn HTML'de bulunamadı!");
                 }
 
             } else {
-                // Host değilse butonları gizle
                 startGameBtn.classList.add('hidden');
                 const inviteBtn = document.getElementById('invite-to-lobby-btn');
                 if (inviteBtn) inviteBtn.classList.add('hidden');
             }
-            // -----------------------------------------------
-            // ----------------------------------------------------------------------
 
             shareGameBtn.classList.remove('hidden');
             if (brWaitingForPlayers) brWaitingForPlayers.classList.remove('hidden');
 
         } else if (gameData.status === 'playing') {
             startGameBtn.classList.add('hidden');
-
-            // --- DÜZELTME: Oyun başlayınca Davet Butonunu Gizle ---
             const inviteBtn = document.getElementById('invite-to-lobby-btn');
             if (inviteBtn) inviteBtn.classList.add('hidden');
-            // -----------------------------------------------------
             
             if (playerState.isEliminated) {
                 brTurnDisplay.textContent = "✖️ Elendin!";
@@ -610,11 +368,9 @@ export function updateTurnDisplay(gameData) {
         return;
     }
     
-    // 3. STANDART MODLAR (Multiplayer, vsCPU, Gevşek, Seri)
     if (!turnDisplay || !timerDisplay) return; 
     if (gameMode === 'daily') return;
 
-    // --- KRİTİK DÜZELTME BURADA ---
     if (gameData.status === 'waiting' || gameData.status === 'invited') {
         const numPlayers = Object.keys(gameData.players).length;
         
@@ -624,12 +380,9 @@ export function updateTurnDisplay(gameData) {
              turnDisplay.textContent = numPlayers > 1 ? "Başlatmak için bekleniyor..." : "Rakip bekleniyor...";
         }
 
-        // Eğer HOST ise butonu göster
         if (isCreator) {
             startGameBtn.classList.remove('hidden');
             
-            // Oyuncu sayısına göre buton metnini güncellemek iyi bir UX olur
-            // vsCPU modunda tek başına başlatılabilir, diğerlerinde en az 2 kişi lazım
             if (numPlayers < 2 && gameMode !== 'vsCPU') {
                 startGameBtn.disabled = true; 
                 startGameBtn.textContent = "Oyuncu Bekleniyor...";
@@ -638,24 +391,19 @@ export function updateTurnDisplay(gameData) {
                 startGameBtn.disabled = false;
                 startGameBtn.textContent = "Oyunu Başlat";
                 startGameBtn.className = "w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-pointer";
-                startGameBtn.onclick = startGame; // Fonksiyonu bağla
+                startGameBtn.onclick = startGame; 
             }
         } else {
-            // Host değilse butonu gizle
             startGameBtn.classList.add('hidden');
         }
         
         shareGameBtn.classList.remove('hidden');
         
     } 
-    // -------------------------------
-    
-    // --- OYUN OYNANIYORSA ---
     else if (gameData.status === 'playing') {
         startGameBtn.classList.add('hidden');
         shareGameBtn.classList.add('hidden');
         
-        // vsCPU dışındaki tüm online modlar
         if (gameMode === 'multiplayer' || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
             const myState = gameData.players[currentUserId];
             
@@ -670,16 +418,12 @@ export function updateTurnDisplay(gameData) {
                 turnDisplay.className = "font-bold text-white pulsate text-md";
             }
         } 
-        // vsCPU Modu
         else if (gameMode === 'vsCPU') {
             const myState = gameData.players[currentUserId];
-            
-            // DÜZELTME: Eğer ben bitirdiysem (Bildi veya Yandı), Bilgisayarı bekle
             if (myState && (myState.hasSolved || myState.hasFailed)) {
                 turnDisplay.textContent = "Bilgisayar Bekleniyor...";
                 turnDisplay.className = "font-bold text-yellow-400 animate-pulse text-sm";
             } 
-            // Ben bitirmedim, sıra bende
             else {
                 turnDisplay.textContent = "Sıra Sende!";
                 turnDisplay.className = "font-bold text-white pulsate text-md";
@@ -694,12 +438,6 @@ export function updateTurnDisplay(gameData) {
     }
 }
 
-// ===================================================
-// === OYUN DURUMUNU ÇİZME (RENDER) ===
-// ===================================================
-
-// js/game.js -> renderGameState (DÜZELTİLMİŞ VERSİYON)
-
 export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!gameData) return;
 
@@ -707,7 +445,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     const gameMode = state.getGameMode();
     const isBR = (gameMode === 'multiplayer-br');
 
-    // Ses Efekti
     const oldGameData = state.getLocalGameData();
     const oldPlayerId = oldGameData?.currentPlayerId;
     const isMyTurnNow = gameData.currentPlayerId === currentUserId;
@@ -716,7 +453,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         import('./utils.js').then(u => u.playSound('turn'));
     }
 
-    // --- UI ELEMENTLERİNİ SEÇ ---
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     const jokerContainer = document.getElementById('joker-container');
     const copyBtn = document.getElementById('copy-game-id-btn');
@@ -729,10 +465,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     const roundCounter = document.getElementById('round-counter');
     const keyboardContainer = document.getElementById('keyboard');
     
-    // ============================================================
-    // === 1. GENEL GÖRÜNÜRLÜK AYARLARI ===
-    // ============================================================
-    
     if (isBR) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.remove('hidden');
         if (sequentialGameInfo) sequentialGameInfo.classList.add('hidden');
@@ -744,43 +476,17 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
     }
 
-    // ============================================================
-    // === 2. BUTON SIFIRLAMA VE GÜVENLİ ÇIKIŞ AYARI ===
-    // ============================================================
     if (leaveBtn) {
         leaveBtn.classList.remove('hidden');
-        // Rengi Gri yapıyoruz (Güvenli çıkış hissi için)
         leaveBtn.className = "bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded text-sm";
-        // İsmini "Menü" yapıyoruz
         leaveBtn.textContent = "Menü";
-        
-        // --- KRİTİK DÜZELTME ---
-        // Tıklanınca oyunu SONLANDIRMA (abandon), sadece EKRANDAN ÇIK (leave)
-        // Bu sayede 'Oyunlarım' menüsünden geri dönebilirsin.
-        leaveBtn.onclick = (e) => {
-            e.stopPropagation(); // Olası diğer tıklamaları engelle
-            import('./game.js').then(m => m.leaveGame());
-        };
-
-        // === 2. BUTON SIFIRLAMA ===
-    // ============================================================
-        if (leaveBtn) {
-        leaveBtn.classList.remove('hidden');
-        // İstersek metni burada değiştirebiliriz ama HTML'de "Menü" yazması yeterli.
         
         leaveBtn.onclick = (e) => {
             e.stopPropagation(); 
             import('./game.js').then(m => m.leaveGame());
         };
     }
-        
-    }
 
-    // ============================================================
-    // === 3. MODA ÖZEL ARAYÜZ AYARLARI ===
-    // ============================================================
-
-    // A) LİG VE GÜNLÜK
     if (gameMode === 'daily' || gameMode === 'league') {
         if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
         
@@ -800,6 +506,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             if (roundCounter) { roundCounter.style.display = 'block'; roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); }
         }
 
+        const gameInfoBar = document.getElementById('game-info-bar');
         if (gameInfoBar) {
             gameInfoBar.style.display = 'flex'; 
             if (gameIdDisplay) gameIdDisplay.textContent = ''; 
@@ -809,7 +516,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (jokerContainer) jokerContainer.style.display = (gameMode === 'league') ? 'flex' : 'none';
     } 
     
-    // B) vsCPU
     else if (gameMode === 'vsCPU') {
         if (timerDisplay) {
             timerDisplay.style.display = 'block';
@@ -837,7 +543,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (roundCounter) roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
     }
     
-    // C) SERİ OYUN, GEVŞEK, ARKADAŞ, BR (STANDART MODLAR)
     else {
         if (timerDisplay) {
             timerDisplay.style.display = 'block'; 
@@ -853,14 +558,13 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 
         if (jokerContainer) jokerContainer.style.display = 'flex'; 
         
-               
+                
         if (roundCounter) {
             if (gameData.gameType === 'random_loose') roundCounter.textContent = "Gevşek Oyun";
             else roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
         }
     }
     
-    // Klavye Kilidi
     const playerState = gameData.players[currentUserId] || {};
     let shouldLockKeyboard = false;
 
@@ -878,16 +582,12 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         keyboardContainer.style.pointerEvents = shouldLockKeyboard ? 'none' : 'auto';
     }
 
-    // --- KRİTİK DÜZELTME: FONKSİYONU BURADAN (GAME.JS) ÇAĞIRIYORUZ ---
-    // updateTurnDisplay bu dosyanın içinde tanımlı olduğu için import etmeye gerek yok.
     updateTurnDisplay(gameData); 
-    // ----------------------------------------------------------------
-
+    
     import('./ui.js').then(ui => {
         if(ui.updateKeyboard) ui.updateKeyboard(gameData);
     });
 
-    // --- IZGARA ÇİZİMİ ---
     const firstTile = document.getElementById(`tile-0-0`);
     const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
     const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
@@ -970,7 +670,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         } 
     }
     
-    // --- MİNİ RAKİP IZGARASI ---
     const isVersusMode = (gameMode === 'multiplayer' || gameMode === 'vsCPU' || gameMode === 'friend' || gameMode === 'random_series') && !isBR;
     
     if (isVersusMode && sequentialGameInfo && !sequentialGameInfo.classList.contains('hidden')) {
@@ -999,20 +698,13 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 }
 
 function updateKnownPositions(playerGuesses) {
-    // DÜZELTME: Eğer oyuncunun hiç tahmini yoksa (Yeni Tur), hafızayı eski tahminlerle kirletme!
     if (!playerGuesses || playerGuesses.length === 0) {
-        // Ancak Joker kullanmış olabilir mi? 
-        // Eğer oyun başıysa ve tahmin yoksa, state'teki 'knownCorrectPositions' 
-        // zaten resetlenmiş olmalıydı (listenToGameUpdates içinde).
-        // O yüzden buraya dokunmuyoruz veya sadece mevcut state'i döndürüyoruz.
         return state.getKnownCorrectPositions() || {};
     }
 
-    // 1. Mevcut hafızayı kopyala
     const currentKnown = state.getKnownCorrectPositions() || {};
     const newPositions = { ...currentKnown }; 
 
-    // 2. SADECE Bu turda yapılan tahminlerden gelen yeşilleri ekle
     playerGuesses.forEach(guess => {
         guess.colors.forEach((color, index) => {
             if (color === 'correct') {
@@ -1021,24 +713,9 @@ function updateKnownPositions(playerGuesses) {
         });
     });
     
-    // 3. Güncellenmiş hafızayı kaydet
     state.setKnownCorrectPositions(newPositions);
     return newPositions;
 }
-
-// ===================================================
-// === OYUN AKIŞI (LISTENERS) ===
-// ===================================================
-
-// js/game.js -> listenToGameUpdates Fonksiyonunun TAMAMI
-
-// js/game.js -> listenToGameUpdates (TAM VE DÜZELTİLMİŞ HALİ)
-
-// js/game.js -> listenToGameUpdates (TAM VE DÜZELTİLMİŞ HALİ)
-
-// js/game.js -> listenToGameUpdates (GÜNCELLENMİŞ)
-
-// js/game.js -> listenToGameUpdates (FİNAL DÜZELTME - BR SAYAÇ AKTİF)
 
 export function listenToGameUpdates(gameId) {
     const gameUnsubscribe = state.getGameUnsubscribe();
@@ -1057,7 +734,6 @@ export function listenToGameUpdates(gameId) {
         const currentUserId = state.getUserId();
         const oldGameData = state.getLocalGameData(); 
 
-        // 1. YENİ TUR ALGILAMA (HARD RESET)
         if (oldGameData && gameData.currentRound > oldGameData.currentRound) {
             console.log(`LOG: Yeni tur (${gameData.currentRound}) algılandı.`);
             state.resetKnownCorrectPositions(); 
@@ -1071,7 +747,6 @@ export function listenToGameUpdates(gameId) {
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
         }
 
-        // 2. OYUN BAŞLAMA ALGILAMA (WAITING -> PLAYING)
         const isGameJustStarted = (oldGameData?.status === 'waiting' || oldGameData?.status === 'invited') && gameData.status === 'playing';
         
         if (isGameJustStarted) {
@@ -1081,41 +756,25 @@ export function listenToGameUpdates(gameId) {
             }
             initializeGameUI(gameData);
             
-            // --- KRİTİK DÜZELTME: SAYAÇ SEÇİMİ ---
             setTimeout(() => {
                 if (gameData.gameType === 'multiplayer-br') {
                     console.log("BR Sayacı başlatılıyor...");
-                    startBRTimer(); // Battle Royale için özel sayaç
+                    startBRTimer(); 
                 } else {
                     console.log("Standart sayaç başlatılıyor...");
-                    startTurnTimer(); // Diğer modlar için standart sayaç
+                    startTurnTimer(); 
                 }
             }, 500);
-            // -------------------------------------
         }
 
-        // --- BOT KONTROLÜ (GİZLİ OYUNCU) ---
-        // Eğer oyun başladıysa ve rakip 'isBot' ise, yapay zeka döngüsünü başlat.
         if (gameData.status === 'playing') {
             const opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
             const opponentData = gameData.players[opponentId];
             
-            // Eğer rakip bir BOT ise ve henüz döngü başlamadıysa
-            // Ve biz "Host" (Creator) isek botu biz yönetelim (Çakışmayı önlemek için)
             if (opponentData && opponentData.isBot && gameData.creatorId === currentUserId) {
-                // Bot hamle yapmamışsa veya sırasıysa döngüyü tetikle
-                // startCpuLoop fonksiyonunu biraz modifiye etmemiz gerekecek veya 
-                // mevcut cpuTurn fonksiyonunu 'opponentId' alacak şekilde güncelleyeceğiz.
-                
-                // Basit çözüm: startCpuLoop zaten var, ama 'cpu' stringine bakıyor.
-                // Onu birazdan güncelleyeceğiz. Şimdilik sadece çağıralım.
-                // Botun ID'sini state'e geçici olarak kaydedebiliriz veya fonksiyona parametre geçebiliriz.
-                
-                // startCpuLoop fonksiyonunu aşağıda güncelleyeceğiz, burada sadece çağırıyoruz.
                 startCpuLoop(opponentId); 
             }
         }
-        // -----------------------------------
 
         state.setLocalGameData(gameData); 
         
@@ -1123,7 +782,6 @@ export function listenToGameUpdates(gameId) {
             updateKnownPositions(gameData.players[currentUserId].guesses);
         }
 
-        // 3. OYUN/TUR BİTİŞ KONTROLÜ (HERKES İÇİN)
         if (gameData.status === 'playing') {
             const allPlayerIds = Object.keys(gameData.players);
             const isEveryoneDone = allPlayerIds.every(pid => {
@@ -1133,35 +791,26 @@ export function listenToGameUpdates(gameId) {
                 return p.isEliminated || p.hasSolved || p.hasFailed; 
             });
 
-            // --- GÜNCELLENMİŞ BİTİŞ KONTROLÜ (BR UYUMLU) ---
             if (isEveryoneDone) {
-                // Çakışmayı önlemek için sadece Creator tetiklesin
                 if (gameData.creatorId === currentUserId) {
                     console.log("Herkes tamamladı. Tur bitiriliyor...");
                     
                     let updates = {};
                     
-                    // --- BATTLE ROYALE İÇİN ÖZEL MANTIK ---
                     if (gameData.gameType === 'multiplayer-br') {
-                        // BR'de tek bir kazanan yoktur, herkes puanını aldı.
-                        // Sadece statüsü bitirip bir sonraki tura/sonuca geçmeliyiz.
-                        // Son tur mu kontrolü:
                         if (gameData.currentRound >= (gameData.matchLength || 10)) {
-                             // Maç komple bitti, kazananı belirle (Skoru en yüksek olan)
                              const playersArr = Object.values(gameData.players);
                              playersArr.sort((a, b) => (b.score || 0) - (a.score || 0));
-                             const winner = playersArr[0]; // En yüksek puanlı
+                             const winner = playersArr[0]; 
                              
                              updates = { 
                                  status: 'finished', 
                                  matchWinnerId: winner.userId || Object.keys(gameData.players).find(key => gameData.players[key] === winner)
                              };
                         } else {
-                             // Sadece tur bitti
                              updates = { status: 'finished' };
                         }
                     } 
-                    // --- STANDART MODLAR ---
                     else {
                         const playersArr = Object.entries(gameData.players).map(([key, val]) => ({ ...val, userId: key }));
                         const solvers = playersArr.filter(p => p.hasSolved);
@@ -1182,22 +831,17 @@ export function listenToGameUpdates(gameId) {
                         }
                     }
                     
-                    // Güvenlik: undefined değer gitmesin
                     if (updates.roundWinner === undefined && gameData.gameType !== 'multiplayer-br') updates.roundWinner = null;
                     if (updates.matchWinnerId === undefined) delete updates.matchWinnerId;
 
-                    // Veritabanını güncelle
                     updateDoc(gameRef, updates).catch(err => console.error("Tur bitirme hatası:", err));
                 }
             }
-            // ----------------------------------------------------
         }
 
-        // 4. RENDER VE SAYFA YENİLEME DURUMU
         const wasFinished = oldGameData?.status === 'finished';
         const isNowPlaying = gameData.status === 'playing';
         
-        // Eğer sayfa yenilendiyse ve oyun oynanıyorsa sayacı tekrar tetikle
         if (!oldGameData && isNowPlaying) {
              setTimeout(() => {
                 if (gameData.gameType === 'multiplayer-br') startBRTimer();
@@ -1208,7 +852,6 @@ export function listenToGameUpdates(gameId) {
         if (wasFinished && isNowPlaying) {
             showScreen('game-screen');
             initializeGameUI(gameData);
-            // Yeni tur başlangıcında da sayaç başlat
             setTimeout(() => {
                 if (gameData.gameType === 'multiplayer-br') startBRTimer();
                 else startTurnTimer();
@@ -1226,7 +869,7 @@ export function listenToGameUpdates(gameId) {
         if (gameData.status === 'playing') {
             const myGuesses = gameData.players[currentUserId]?.guesses || [];
             if (myGuesses.length >= gameData.GUESS_COUNT) {
-                stopTurnTimer(); // Sadece kendi yerel sayacını durdur (BR sayacı ayrı çalışır)
+                stopTurnTimer(); 
                 if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
             }
         }
@@ -1252,10 +895,6 @@ export function listenToGameUpdates(gameId) {
 // === OYUN KURMA VE KATILMA ===
 // ===================================================
 
-// js/game.js
-
-// js/game.js -> findOrCreateRandomGame (BOT DESTEKLİ)
-
 export async function findOrCreateRandomGame(config, attempt = 1) {
     state.resetKnownCorrectPositions();
     state.resetHasUserStartedTyping();
@@ -1265,12 +904,10 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
     
     if (!currentUserId) return showToast("Lütfen önce giriş yapın.", true);
 
-    // 1. UI'ı aç
     if (attempt === 1) {
         import('./ui.js').then(ui => ui.openMatchmakingScreen());
     }
 
-    // İptal butonu için flag
     let isCancelled = false;
     const cancelBtn = document.getElementById('cancel-matchmaking-btn');
     
@@ -1286,7 +923,6 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
     if(cancelBtn) cancelBtn.onclick = handleCancel;
 
     try {
-        // Veritabanı sorgusu (Aynı kalıyor)
         const gamesRef = collection(db, 'games');
         const waitingGamesQuery = query(gamesRef, 
             where('status', '==', 'waiting'),
@@ -1318,7 +954,6 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
                 return findOrCreateRandomGame(config, 2);
             }
             
-            // OYUN KURUYORUZ
             await createGame({ 
                 invitedFriendId: null, 
                 timeLimit: timeLimit, 
@@ -1326,21 +961,16 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
                 gameType: gameType 
             });
 
-            // --- YENİ: BOT ZAMANLAYICISI ---
-            // Oyun kuruldu, ID state'e kaydedildi. Şimdi 45sn sayacı başlatıyoruz.
             const createdGameId = state.getCurrentGameId();
             
             console.log("LOG: 45 Saniyelik Bot Sayacı Başlatıldı...");
             setTimeout(() => {
-                // 45 saniye sonra oyun hala 'waiting' ise bot ata
                 const currentGameData = state.getLocalGameData();
                 
-                // Kullanıcı hala o ekrandaysa ve oyun başlamamışsa
                 if (currentGameData && currentGameData.gameId === createdGameId && currentGameData.status === 'waiting') {
                     assignBotToGame(createdGameId);
                 }
-            }, 45000); // 45000 ms = 45 saniye
-            // -------------------------------
+            }, 45000); 
         }
     } catch (error) {
         if (isCancelled) return;
@@ -1401,8 +1031,6 @@ export async function createGame(options = {}) {
             showScreen('game-screen');
             initializeGameUI(gameData);
         } else {
-            // Burada sadece arka planda dinlemeyi başlatıyoruz.
-            // Ekranı değiştirmiyoruz, kullanıcı "Rakip Aranıyor" ekranında kalıyor.
             console.log("LOG: Oyun kuruldu, rakip bekleniyor. Radar ekranında kalınıyor.");
         }
         listenToGameUpdates(gameId);
@@ -1411,8 +1039,6 @@ export async function createGame(options = {}) {
         showToast("Oyun oluşturulamadı!", true);
     }
 }
-
-// js/game.js içindeki joinGame fonksiyonunu bununla değiştir:
 
 export async function joinGame(gameId) {
     state.resetKnownCorrectPositions();
@@ -1477,23 +1103,16 @@ export async function joinGame(gameId) {
         state.setCurrentGameId(gameId);
         state.setLocalGameData(gameDataToJoin);
         
-        // --- DÜZELTME BAŞLANGIÇ ---
-        // Eğer oyun hala "bekliyor" durumundaysa (yani biz kurucuyuz ve kimse gelmemişse)
-        // VE bu bir rastgele eşleşme oyunuysa (Seri/Gevşek), RADAR EKRANINI AÇ.
-        // (Arkadaş davetlerinde oyun ekranı açılabilir, çünkü kod paylaşmak gerekir)
         const isRandomWaiting = gameDataToJoin.status === 'waiting' && 
                                (gameDataToJoin.gameType === 'random_loose' || gameDataToJoin.gameType === 'random_series');
 
         if (isRandomWaiting) {
             console.log("LOG: joinGame içinde 'waiting' durumu algılandı. Radar ekranı açılıyor.");
-            // ui.js'den fonksiyonu çağır
             import('./ui.js').then(ui => ui.openMatchmakingScreen());
         } else {
-            // Normal durum: Oyun oynanıyorsa veya arkadaş davetiyse oyun ekranını aç
             showScreen('game-screen');
             initializeGameUI(gameDataToJoin);
         }
-        // --- DÜZELTME BİTİŞ ---
 
         listenToGameUpdates(gameId);
     } catch (error) {
@@ -1520,9 +1139,7 @@ export async function startNewGame(config) {
 
     state.setGameMode(config.mode);
     let secretWord;
-    // --- YENİ: Başlangıç tahminlerini al (Yoksa boş dizi) ---
     const initialGuesses = config.initialGuesses || []; 
-    // --------------------------------------------------------
 
     const gameSettings = { isHardMode: false };
     switch (config.mode) {
@@ -1531,7 +1148,6 @@ export async function startNewGame(config) {
             gameSettings.timeLimit = 120; 
             gameSettings.matchLength = 5;
             
-            // Sadece CPU'yu başlat (Sayaç initializeGameUI içinde başlıyor)
             setTimeout(startCpuLoop, 1000); 
             break;
         case 'league':
@@ -1581,9 +1197,7 @@ export async function startNewGame(config) {
         players: { 
             [state.getUserId()]: { 
                 username: getUsername(), 
-                // --- YENİ: Tahminleri buraya yükle ---
                 guesses: initialGuesses, 
-                // -------------------------------------
                 score: 0,
                 jokersUsed: { present: false, correct: false, remove: false } 
             } 
@@ -1607,29 +1221,20 @@ export async function startNewGame(config) {
     };
     state.setLocalGameData(gameData);
     
-    // --- YENİ: Eğer eski tahmin varsa hafızayı (yeşil harfleri) geri yükle ---
     if (initialGuesses.length > 0) {
-        // Bu fonksiyonu game.js içinde en alta tanımlamıştık (önceki adımlarda)
-        // Buradan çağırmak için import etmemize gerek yok, aynı dosyadayız.
-        // Ancak fonksiyonun 'export' olup olmaması önemli değil, dosya içi erişilebilir.
-        // Eğer updateKnownPositions fonksiyonu game.js içindeyse:
          const known = {};
          initialGuesses.forEach(g => {
              g.colors.forEach((c, i) => { if(c === 'correct') known[i] = g.word[i]; });
          });
          state.setKnownCorrectPositions(known);
     }
-    // -----------------------------------------------------------------------
 
     showScreen('game-screen');
     initializeGameUI(gameData);
     await renderGameState(gameData);
     if (config.mode === 'vsCPU') {
-        // Önceki zamanlayıcı varsa temizle (Çakışmayı önle)
         if (typeof cpuLoopTimeout !== 'undefined' && cpuLoopTimeout) clearTimeout(cpuLoopTimeout);
-        
         console.log("vsCPU Başlatılıyor: Bot 1.5sn sonra devreye girecek.");
-        // Yeni döngüyü başlat
         setTimeout(() => startCpuLoop('cpu'), 1500); 
     }
 }
@@ -1659,15 +1264,12 @@ function saveDailyGameState(gameState) {
     localStorage.setItem(`dailyGameState_${state.getUserId()}`, JSON.stringify(toSave));
 }
 
-// js/game.js -> restoreDailyGame (GÜNCELLENMİŞ)
-
 function restoreDailyGame(savedState) {
     console.log("Günün kelimesi hafızadan yükleniyor...");
     
     state.resetKnownCorrectPositions(); 
     state.resetHasUserStartedTyping();
     
-    // --- KRİTİK DÜZELTME: Yeşil harfleri hafızaya geri yükle ---
     const known = {};
     if(savedState.guesses) {
         savedState.guesses.forEach(g => {
@@ -1677,7 +1279,6 @@ function restoreDailyGame(savedState) {
         });
     }
     state.setKnownCorrectPositions(known);
-    // -----------------------------------------------------------
 
     const gameData = {
         wordLength: savedState.secretWord.length, 
@@ -1685,7 +1286,7 @@ function restoreDailyGame(savedState) {
         timeLimit: 60,
         isHardMode: false, 
         currentRound: 1, 
-        matchLength: 1, // Günlük oyun tek maçtır
+        matchLength: 1, 
         roundWinner: savedState.status === 'finished' && savedState.guesses.length < GUESS_COUNT ? state.getUserId() : null,
         players: { 
             [state.getUserId()]: { 
@@ -1705,14 +1306,10 @@ function restoreDailyGame(savedState) {
     state.setGameMode('daily');
     state.setLocalGameData(gameData);
     
-    // Ekranı aç ve UI'ı hazırla
     showScreen('game-screen');
     initializeGameUI(gameData);
     
-    // Durumu çiz (Render)
-    // true parametresi animasyonsuz hızlı çizim sağlar
     renderGameState(gameData, true).then(() => {
-        // Eğer oyun bitmiş olarak yüklendiyse, hemen skor tablosunu aç
         if (gameData.status === 'finished') {
             setTimeout(() => showScoreboard(gameData), 500);
         }
@@ -1782,10 +1379,6 @@ export async function saveDailyResultToDatabase(userId, username, secretWord, di
     }
 }
 
-// js/game.js -> submitGuess fonksiyonunun TAMAMI (Eş Zamanlı Mod Uyumlu)
-
-// js/game.js -> submitGuess Fonksiyonunun TAMAMI
-
 async function submitGuess() {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
@@ -1794,12 +1387,10 @@ async function submitGuess() {
     const currentUserId = state.getUserId();
     const playerState = localGameData.players[currentUserId];
 
-    // 1. KONTROLLER: Elenmişse, çözmüşse veya hakkı bitmişse işlem yapma
     if (!playerState || playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || (playerState.guesses && playerState.guesses.length >= GUESS_COUNT)) {
         return;
     }
     
-    // 2. KELİMEYİ OLUŞTUR (UI'dan oku)
     let guessWord = '';
     const currentRow = playerState.guesses ? playerState.guesses.length : 0;
     const currentWordLength = localGameData.wordLength || 5;
@@ -1816,7 +1407,6 @@ async function submitGuess() {
         guessWord += tileInner.textContent;
     }
 
-    // 3. ZOR MOD KONTROLÜ
     if (localGameData.isHardMode && playerState.guesses.length > 0) {
         if (!checkHardMode(guessWord, playerState.guesses)) {
             shakeCurrentRow(currentWordLength, currentRow);
@@ -1826,7 +1416,6 @@ async function submitGuess() {
 
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
 
-    // 4. SÖZLÜK KONTROLÜ
     const isValidWord = await checkWordValidity(guessWord);
     if (!isValidWord) {
         showToast("Kelime sözlükte bulunamadı!", true);
@@ -1835,10 +1424,6 @@ async function submitGuess() {
         return;
     }
 
-    // Süreyi sadece BR değilse durdurabiliriz ama vsCPU'da yarış olduğu için durdurmuyoruz
-    // Sadece kullanıcı bitirince duracak.
-
-    // 5. RENKLERİ HESAPLA VE LOCAL STATE GÜNCELLE
     const secretWord = localGameData.secretWord;
     const colors = calculateColors(guessWord, secretWord);
     const newGuess = { word: guessWord, colors: colors };
@@ -1852,9 +1437,6 @@ async function submitGuess() {
     const isWinner = (guessWord === secretWord);
     const guessCount = localGameData.players[currentUserId].guesses.length;
 
-    // 6. VERİTABANI / DURUM GÜNCELLEMESİ
-    
-    // A) ONLINE ÇOK OYUNCULU (Multiplayer, BR, Friend, Random) - LEAGUE HARİÇ
     if (gameMode === 'multiplayer' || isBattleRoyale(gameMode) || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
         const updates = {
             [`players.${currentUserId}.guesses`]: localGameData.players[currentUserId].guesses
@@ -1878,25 +1460,13 @@ async function submitGuess() {
         }
     } 
     
-    // --- YENİ: LİG MODU ÖZEL GÜNCELLEMESİ ---
     else if (gameMode === 'league') {
         const weekID = localGameData.leagueWeekID;
         const matchId = localGameData.leagueMatchId;
         const userId = state.getUserId();
         
-        // Veritabanında hangi oyuncu olduğunu bul (p1 veya p2)
-        // localGameData.leagueMatchId bilgisini startLeagueMatch'de kaydetmiştik
         if (weekID && matchId) {
             const matchRef = doc(db, "leagues", weekID, "matches", matchId);
-            
-            // Önce hangi tarafız onu belirleyelim (p1 mi p2 mi?)
-            // Bunu yapmak için sunucudan veriyi çekmemiz gerekebilir ama
-            // pratik olarak matchId içinde userId kontrolü veya startLeagueMatch'de kaydettiğimiz bilgiye güvenebiliriz.
-            // Ancak en garantisi veritabanına bir "merge" işlemi atmaktır.
-            
-            // Basit bir trick: Match objesi elimizde yoksa transaction veya getDoc gerekir.
-            // Ama biz UI tarafında zaten P1 mi P2 mi biliyorduk.
-            // En güvenli yol: Veritabanını oku ve güncelle.
             
             try {
                 await runTransaction(db, async (transaction) => {
@@ -1910,7 +1480,7 @@ async function submitGuess() {
                     updates[`${playerKey}.guesses`] = localGameData.players[currentUserId].guesses;
                     
                     if (isWinner) {
-                        updates[`${playerKey}.completed`] = true; // Oyunu bitirdi
+                        updates[`${playerKey}.completed`] = true; 
                         updates[`${playerKey}.failed`] = false;
                     } else if (guessCount >= GUESS_COUNT) {
                         updates[`${playerKey}.completed`] = true;
@@ -1920,14 +1490,12 @@ async function submitGuess() {
                     transaction.update(matchRef, updates);
                 });
                 
-                // Eğer oyun bittiyse yerel durumu da güncelle
                 if (isWinner || guessCount >= GUESS_COUNT) {
                     localGameData.status = 'finished';
-                    localGameData.roundWinner = isWinner ? currentUserId : null; // null = bilemedi
+                    localGameData.roundWinner = isWinner ? currentUserId : null; 
                     state.setLocalGameData(localGameData);
                     stopTurnTimer();
                     
-                    // Sonuç ekranını göster
                     setTimeout(() => showScoreboard(localGameData), 1000);
                 }
                 
@@ -1937,10 +1505,7 @@ async function submitGuess() {
         }
     } 
     
-    // B) YEREL / CPU / GÜNLÜK MODLAR
     else {
-        
-        // --- vsCPU GÜNCELLEMESİ (BURASI DEĞİŞTİ) ---
         if (gameMode === 'vsCPU') {
             if (isWinner) {
                 localGameData.players[currentUserId].hasSolved = true;
@@ -1956,15 +1521,11 @@ async function submitGuess() {
                 showToast("Hakkın bitti! Bilgisayar bekleniyor...", true);
             }
             
-            // State'i güncelle ve Oyun Sonunu Kontrol Et
             state.setLocalGameData(localGameData);
-            checkVsCpuGameEnd(); // <-- E Maddesi burası
+            checkVsCpuGameEnd(); 
         }
         
-        // DAILY MODE
         else if (gameMode === 'daily') {
-            // 1. ÖNCE HER TAHMİNDE DURUMU KAYDET (Kritik Ekleme)
-            // Oyun bitmese bile o anki tahminleri tarayıcıya yazıyoruz.
             saveDailyGameState(localGameData);
 
             if (isWinner) {
@@ -1973,20 +1534,17 @@ async function submitGuess() {
                 await updateStats(true, guessCount);
                 const dailyScore = calculateDailyScore(guessCount, true);
                 await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, true, guessCount, dailyScore);
-                // Kazanınca da son halini kaydet
                 saveDailyGameState(localGameData);
             } else if (guessCount >= GUESS_COUNT) {
                 localGameData.status = 'finished';
                 localGameData.roundWinner = null;
                 await updateStats(false, guessCount);
                 await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, false, guessCount, 0);
-                // Kaybedince de son halini kaydet
                 saveDailyGameState(localGameData);
             }
         }
     }
 
-    // 7. KLAVYE KİLİDİ VE RENDER
     if (isWinner || guessCount >= GUESS_COUNT) {
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
         
@@ -1997,18 +1555,12 @@ async function submitGuess() {
         }
     }
 
-    // Render
     renderGameState(localGameData, true).then(() => {
-        // Sadece Daily modunda hemen bitir (vsCPU yukarıda handled, Online listenToUpdates ile handled)
         if (gameMode === 'daily' && localGameData.status === 'finished') {
             setTimeout(() => showScoreboard(localGameData), 1500);
         }
     });
 }
-
-// js/game.js -> failTurn Fonksiyonunun TAMAMI
-
-// js/game.js -> failTurn (GÜNCELLENMİŞ)
 
 export async function failTurn(guessWord = '') {
     const localGameData = state.getLocalGameData();
@@ -2025,7 +1577,6 @@ export async function failTurn(guessWord = '') {
 
     console.log("LOG: failTurn çalıştı. Süre bitti.");
 
-    // 1. ONLINE MODLAR (Multiplayer, BR) - LEAGUE HARİÇ
     if (gameMode === 'multiplayer' || isBattleRoyale(gameMode)) {
         const updates = { [`players.${currentUserId}.hasFailed`]: true };
         try {
@@ -2034,7 +1585,6 @@ export async function failTurn(guessWord = '') {
         } catch (error) { console.error(error); }
     } 
     
-    // 2. LİG MODU (LEAGUE) - ÖZEL İŞLEM
     else if (gameMode === 'league') {
         const weekID = localGameData.leagueWeekID;
         const matchId = localGameData.leagueMatchId;
@@ -2048,7 +1598,6 @@ export async function failTurn(guessWord = '') {
                     const mData = mDoc.data();
                     const playerKey = (mData.p1 === currentUserId) ? 'p1_data' : 'p2_data';
                     
-                    // Tahminleri kaydet (varsa) ve başarısız olarak işaretle
                     transaction.update(matchRef, {
                         [`${playerKey}.guesses`]: localGameData.players[currentUserId].guesses || [],
                         [`${playerKey}.completed`]: true,
@@ -2057,7 +1606,7 @@ export async function failTurn(guessWord = '') {
                 });
                 
                 localGameData.status = 'finished';
-                localGameData.roundWinner = null; // Kaybetti
+                localGameData.roundWinner = null; 
                 state.setLocalGameData(localGameData);
                 
                 showToast("Süre doldu!", true);
@@ -2067,10 +1616,7 @@ export async function failTurn(guessWord = '') {
         }
     }
     
-    // 3. OFFLINE / BOT MODLARI (vsCPU, Daily)
     else {
-        // ... (Eski kodun aynısı buraya gelecek) ...
-        // Eski else bloğunun içindekileri buraya taşı:
         localGameData.status = 'finished';
         localGameData.roundWinner = (gameMode === 'vsCPU') ? 'cpu' : null;
         await updateStats(false, 0);
@@ -2101,12 +1647,7 @@ export function handleKeyPress(key) {
     }
     const playerGuesses = playerState.guesses || [];
     const isPlayerActive = playerGuesses.length < GUESS_COUNT;
-    const isOnlineMode = gameMode === 'multiplayer';
-    // --- DEĞİŞİKLİK: isMyTurnOnline KONTROLÜNÜ KALDIR ---
-    // const isMyTurnOnline = isOnlineMode && localGameData.currentPlayerId === currentUserId; 
-    // const canPlay = isPlayerActive && (isLocalMode || isMyTurnOnline || isBattleRoyale(gameMode));
     
-    // YENİ KONTROL: Sadece aktifsen yazabilirsin
     if (isPlayerActive) {
         const processedKey = key.toLocaleUpperCase('tr-TR');
         if (processedKey === 'ENTER') {
@@ -2127,7 +1668,6 @@ function addLetter(letter) {
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
-    // Kullanıcı yazmaya başladığında flag'i set et
     if (!state.getHasUserStartedTyping()) {
         state.setHasUserStartedTyping(true);
     }
@@ -2141,20 +1681,17 @@ function addLetter(letter) {
             const isStatic = tile.classList.contains('static');
             const isEmpty = front.textContent === '';
 
-            // Eğer kutu boşsa VEYA Statikse (Jokerse) -> Oraya yaz!
-            // (Önceki kodda '&& !isStatic' diyerek engelliyorduk, şimdi kaldırdık)
             if (isEmpty || isStatic) {
                 
-                // Eğer statik bir kutunun üzerine yazıyorsak, statik özelliğini kaldır
                 if (isStatic) {
-                    tile.classList.remove('static', 'correct'); // Yeşil rengi ve statikliği sil
-                    back.className = 'tile-inner back'; // Arka yüzü temizle
+                    tile.classList.remove('static', 'correct'); 
+                    back.className = 'tile-inner back'; 
                     back.textContent = ''; 
                 }
 
                 front.textContent = letter;
                 playSound('click');
-                break; // Harfi yazdık, döngüden çık
+                break; 
             }
         }
     }
@@ -2168,17 +1705,12 @@ function deleteLetter() {
 
     if (!state.getHasUserStartedTyping()) return; 
 
-    // Sondan başa doğru tarayıp, STATİK OLMAYAN ilk dolu kutuyu bulup silelim
     for (let i = wordLength - 1; i >= 0; i--) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
         
-        // Eğer kutu doluysa VE statik (joker) DEĞİLSE sil
         if (tile && tile.querySelector('.front').textContent !== '' && !tile.classList.contains('static')) {
             tile.querySelector('.front').textContent = '';
-            
-            // Eğer sildiğimiz harften sonra hiç "kullanıcı harfi" kalmadıysa typing modunu kapatabiliriz
-            // (Bu opsiyonel ama temizlik için iyi)
-            return; // Sildik ve çıktık
+            return; 
         }
     }
 }
@@ -2206,11 +1738,8 @@ function calculateColors(guess, secret) {
     return colors;
 }
 
-// js/game.js -> findBestCpuGuess (GÜNCELLENMİŞ - GENEL KULLANIM)
-
 function findBestCpuGuess(botId = 'cpu') {
     const localGameData = state.getLocalGameData();
-    // Sadece o anki botun tahminlerini al
     const botGuesses = localGameData.players[botId]?.guesses || [];
     
     const wordLenStr = String(localGameData.wordLength);
@@ -2221,7 +1750,6 @@ function findBestCpuGuess(botId = 'cpu') {
     const absentLetters = new Set(); 
     const positionMisplaced = {}; 
 
-    // Botun önceki tahminlerini analiz et
     botGuesses.forEach(g => {
         for (let i = 0; i < g.word.length; i++) {
             const letter = g.word[i];
@@ -2235,7 +1763,6 @@ function findBestCpuGuess(botId = 'cpu') {
                 if (!positionMisplaced[letter]) positionMisplaced[letter] = new Set();
                 positionMisplaced[letter].add(i);
             } else if (color === 'absent') {
-                // Eğer harf başka bir yerde yeşil/sarı ise 'absent' listesine ekleme
                 let isKnownPresent = false;
                 for (let k = 0; k < g.word.length; k++) {
                     if ((g.colors[k] === 'correct' || g.colors[k] === 'present') && g.word[k] === letter) {
@@ -2250,21 +1777,16 @@ function findBestCpuGuess(botId = 'cpu') {
         }
     });
 
-    // Olası kelimeleri filtrele (Yapay Zeka Mantığı)
     possibleWords = possibleWords.filter(word => {
-        // 1. Yeşil harfler kesinlikle doğru yerde olmalı
         for (const pos in correctLetters) {
             if (word[pos] !== correctLetters[pos]) return false;
         }
-        // 2. Gri harfler kelimede OLMAMALI
         for (const letter of absentLetters) {
             if (word.includes(letter)) return false;
         }
-        // 3. Sarı harfler kelimede OLMALI
         for (const letter of presentLetters) {
             if (!word.includes(letter)) return false;
         }
-        // 4. Sarı harfler YANLIŞ YERDE olmamalı (Yani eski yerine tekrar gelmemeli)
         for (const letter in positionMisplaced) {
              for (const pos of positionMisplaced[letter]) {
                  if (word[pos] === letter) return false;
@@ -2273,45 +1795,28 @@ function findBestCpuGuess(botId = 'cpu') {
         return true;
     });
     
-    // Botun daha önce denediği kelimeleri çıkar
     const guessedWords = new Set(botGuesses.map(g => g.word));
     let finalWords = possibleWords.filter(w => !guessedWords.has(w));
     
     const secretWord = localGameData.secretWord;
     
-    // --- ZORLUK AYARI VE "İNSAN" DAVRANIŞI ---
-    // Botun hemen bulmasını engellemek için bazen "hata" payı bırakabiliriz 
-    // veya sadece final listesinden rastgele seçeriz.
-    
-    // Eğer hiç kelime kalmadıysa (çok nadir), rastgele salla
     if (finalWords.length === 0) {
         const emergencyList = (allWordList[wordLenStr] || []).filter(w => !guessedWords.has(w));
         return emergencyList.length > 0 ? emergencyList[Math.floor(Math.random() * emergencyList.length)] : "KALEM";
     }
 
-    // Kazanma şansı varsa (Secret word listedeyse)
     const winningWordIndex = finalWords.indexOf(secretWord);
     
-    // İlk 2 tahminde hemen bilmesin (Biraz gerçekçi olsun)
     if (botGuesses.length < 2 && winningWordIndex !== -1 && finalWords.length > 1) {
-        // Doğru cevabı listeden geçici olarak çıkar, heyecan olsun
         finalWords.splice(winningWordIndex, 1);
     }
-    // 4. tahminden sonra kazanma şansı %50 artsın
     else if (botGuesses.length >= 3 && winningWordIndex !== -1) {
-        if (Math.random() > 0.4) return secretWord; // %60 ihtimalle doğruyu seçer
+        if (Math.random() > 0.4) return secretWord; 
     }
 
-    // Kalan olası kelimelerden rastgele birini seç
     const randomIndex = Math.floor(Math.random() * finalWords.length);
     return finalWords[randomIndex]; 
 }
-
-// js/game.js -> cpuTurn (GÜNCELLENMİŞ - GENEL BOT DESTEĞİ)
-
-// js/game.js -> cpuTurn (GÜNCELLENMİŞ - AKILLI BOT DESTEĞİ)
-
-// js/game.js -> cpuTurn (DÜZELTİLMİŞ - KAZANMA KONTROLÜ)
 
 async function cpuTurn(botId = 'cpu') {
     const localGameData = state.getLocalGameData();
@@ -2319,7 +1824,6 @@ async function cpuTurn(botId = 'cpu') {
 
     const botState = localGameData.players[botId];
     
-    // Güvenlik kontrolü: Zaten bitirmişse işlem yapma
     if (botState.hasSolved || botState.hasFailed) return;
 
     const finalGuess = findBestCpuGuess(botId);
@@ -2327,17 +1831,16 @@ async function cpuTurn(botId = 'cpu') {
     const colors = calculateColors(finalGuess, secretWord);
     const newGuess = { word: finalGuess, colors: colors };
     
-    // A) vsCPU Modu (Yerel İşlem)
     if (botId === 'cpu') {
         localGameData.players['cpu'].guesses.push(newGuess);
         
         if (finalGuess === secretWord) {
             console.log("BOT: Doğru bildi!");
-            localGameData.players['cpu'].hasSolved = true; // <-- Kritik
+            localGameData.players['cpu'].hasSolved = true; 
             localGameData.players['cpu'].score += calculateRoundScore(localGameData.players['cpu'].guesses.length, true);
         }
         else if (localGameData.players['cpu'].guesses.length >= GUESS_COUNT) {
-            localGameData.players['cpu'].hasFailed = true; // <-- Kritik
+            localGameData.players['cpu'].hasFailed = true; 
         }
         
         state.setLocalGameData(localGameData);
@@ -2345,7 +1848,6 @@ async function cpuTurn(botId = 'cpu') {
         checkVsCpuGameEnd();
     } 
     
-    // B) Online Bot Modu (Firebase İşlemi)
     else {
         const currentGuesses = botState.guesses || [];
         const updatedGuesses = [...currentGuesses, newGuess];
@@ -2356,12 +1858,12 @@ async function cpuTurn(botId = 'cpu') {
 
         if (finalGuess === secretWord) {
             console.log(`BOT (${botState.username}): KAZANDI!`);
-            updates[`players.${botId}.hasSolved`] = true; // <-- Kritik: Veritabanına işlenmeli
+            updates[`players.${botId}.hasSolved`] = true; 
             const roundScore = calculateRoundScore(updatedGuesses.length, true);
             updates[`players.${botId}.score`] = (botState.score || 0) + roundScore;
         } else if (updatedGuesses.length >= GUESS_COUNT) {
             console.log(`BOT (${botState.username}): KAYBETTİ!`);
-            updates[`players.${botId}.hasFailed`] = true; // <-- Kritik
+            updates[`players.${botId}.hasFailed`] = true; 
         }
 
         try {
@@ -2453,8 +1955,6 @@ export async function getDailyLeaderboardStats(currentUserId, secretWord) {
     }
 }
 
-// js/game.js -> startNewRound (DÜZELTİLMİŞ HALİ)
-
 export async function startNewRound() {
     state.resetKnownCorrectPositions();
     state.resetHasUserStartedTyping();
@@ -2468,7 +1968,7 @@ export async function startNewRound() {
     }
     if (!localGameData) return;
 
-    // BATTLE ROYALE MANTIĞI (Aynı kalıyor)
+    // BATTLE ROYALE MANTIĞI
     if (isBattleRoyale(gameMode) && localGameData.status === 'finished') {
         if (localGameData.matchWinnerId !== undefined || localGameData.currentRound >= 10) { 
             leaveGame();
@@ -2505,7 +2005,6 @@ export async function startNewRound() {
         return; 
     }
 
-    // STANDART MODLAR (Seri / Multi / vsCPU)
     if (localGameData.currentRound >= localGameData.matchLength) {
         if (gameMode === 'multiplayer') leaveGame();
         else startNewGame({ mode: gameMode });
@@ -2527,7 +2026,6 @@ export async function startNewRound() {
         turnStartTime: serverTimestamp(), 
     };
 
-    // Oyuncu durumlarını sıfırla
     Object.keys(localGameData.players).forEach(pid => {
         updates[`players.${pid}.guesses`] = [];
         updates[`players.${pid}.hasSolved`] = false;
@@ -2535,15 +2033,11 @@ export async function startNewRound() {
         updates[`players.${pid}.jokersUsed`] = { present: false, correct: false, remove: false };
     });
 
-    // --- vsCPU GÜNCELLEMESİ BURADA ---
     if (gameMode === 'vsCPU') {
-        // Yerel objeyi güncelle
-        // vsCPU için turnStartTime'ı Date objesi yapıyoruz (serverTimestamp yerelde çalışmaz)
         updates.turnStartTime = new Date(); 
         
         const newLocalData = { ...localGameData, ...updates };
         
-        // Nested player objelerini manuel sıfırla
         Object.keys(newLocalData.players).forEach(pid => {
             newLocalData.players[pid].guesses = [];
             newLocalData.players[pid].hasSolved = false;
@@ -2554,15 +2048,11 @@ export async function startNewRound() {
         showScreen('game-screen');
         initializeGameUI(newLocalData);
         
-        // 1. Sayacı Yeniden Başlat (Eksikti)
         startTurnTimer(); 
-        
-        // 2. CPU Döngüsünü Yeniden Başlat (Eksikti)
         setTimeout(startCpuLoop, 1000);
 
         await renderGameState(newLocalData);
     } 
-    // Multiplayer Modu
     else if (gameMode === 'multiplayer' || gameMode === 'friend' || gameMode === 'random_series') {
          await updateDoc(doc(db, 'games', state.getCurrentGameId()), updates);
     } 
@@ -2571,71 +2061,55 @@ export async function startNewRound() {
     }
 }
 
-// js/game.js -> startTurnTimer GÜNCELLENMİŞ HALİ
-
-// js/game.js -> startTurnTimer (DÜZELTİLMİŞ FİNAL HALİ)
-
-// js/game.js -> startTurnTimer (GÜNCELLENMİŞ)
-
 export function startTurnTimer() {
     const gameMode = state.getGameMode();
     const localGameData = state.getLocalGameData();
     const currentUserId = state.getUserId(); 
 
-    // Günlük modda veya BR modunda bu sayaç kullanılmaz (BR'nin kendi sayacı var)
     if (isBattleRoyale(gameMode) || gameMode === 'daily') return;
     
-    stopTurnTimer(); // Önceki sayacı temizle
+    stopTurnTimer(); 
 
-    // Eğer oyun 'playing' değilse sayacı çalıştırma
     if (!localGameData || localGameData.status !== 'playing') return;
     
-    // Eğer ben oyunu zaten bitirdiysem (Bildim, Elendim veya Hakkım Bitti), sayaç çalışmasın.
     const myState = localGameData.players[currentUserId];
     if (myState && (myState.hasSolved || myState.hasFailed || myState.isEliminated)) {
         if (timerDisplay) timerDisplay.textContent = "0";
         return;
     }
 
-    // --- TARİH DÜZELTMESİ VE GÜVENLİK KONTROLÜ ---
     let turnStartTime;
     const startTimeObj = localGameData.turnStartTime;
 
-    // Eğer veri yoksa veya hatalıysa şu anı baz al (Hata alıp durmasını engeller)
     if (!startTimeObj) {
         console.warn("Zaman verisi yok, sayaç manuel başlatılıyor.");
         turnStartTime = new Date();
     } else if (startTimeObj.toDate) {
-        turnStartTime = startTimeObj.toDate(); // Firebase Timestamp
+        turnStartTime = startTimeObj.toDate(); 
     } else if (startTimeObj instanceof Date) {
-        turnStartTime = startTimeObj; // JS Date
+        turnStartTime = startTimeObj; 
     } else {
-        turnStartTime = new Date(startTimeObj); // String/Number
+        turnStartTime = new Date(startTimeObj); 
     }
-    // ----------------------------------------------
     
     const limit = (gameMode === 'league') ? 120 : (localGameData.timeLimit || 45);
 
-    // Sayaç Elementini Görünür Yap (Garanti Olsun)
     if (timerDisplay) {
         timerDisplay.style.display = 'block';
-        timerDisplay.textContent = limit; // İlk değer
+        timerDisplay.textContent = limit; 
     }
 
-    // Sayaç Döngüsü
     const updateTimer = async () => {
         let now = new Date();
         let elapsed = Math.floor((now - turnStartTime) / 1000);
         if (elapsed < 0) elapsed = 0;
         let timeLeft = limit - elapsed; 
         
-        // Negatif süreleri engelle
         if (timeLeft < 0) timeLeft = 0; 
 
         if (timerDisplay) { 
             timerDisplay.textContent = timeLeft;
             
-            // Son 10 saniye uyarısı
             if (timeLeft <= 10 && timeLeft > 0) {
                 timerDisplay.classList.add('text-red-500', 'pulsate');
             } else {
@@ -2643,10 +2117,8 @@ export function startTurnTimer() {
             }
         }
         
-        // SÜRE BİTTİĞİNDE
         if (timeLeft <= 0) {
-            stopTurnTimer(); // Sayacı durdur
-            // Sadece ben henüz kaybetmediysem failTurn çağır
+            stopTurnTimer(); 
             if (myState && !myState.hasFailed && !myState.hasSolved) {
                 console.log("Süre bitti, tur başarısız.");
                 await failTurn(''); 
@@ -2654,7 +2126,6 @@ export function startTurnTimer() {
         }
     };
 
-    // İlk hesaplama ve başlatma
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     state.setTurnTimerInterval(interval);
@@ -2682,18 +2153,14 @@ function startBRTimer() {
     state.setTurnTimerInterval(interval);
 }
 
-// js/game.js -> stopTurnTimer (GÜNCELLENMİŞ HALİ)
-
 export function stopTurnTimer() {
     clearInterval(state.getTurnTimerInterval());
     state.setTurnTimerInterval(null);
     
-    // --- EKLEME: Bot Döngüsünü Durdur ---
     if (cpuLoopTimeout) {
         clearTimeout(cpuLoopTimeout);
         cpuLoopTimeout = null;
     }
-    // ------------------------------------
 
     if (timerDisplay) {
         timerDisplay.textContent = '';
@@ -2706,22 +2173,18 @@ export function stopTurnTimer() {
     }
 }
 
-// js/game.js -> leaveGame (GÜNCELLENMİŞ HALİ)
-
 export function leaveGame() {
     console.log("LOG: leaveGame fonksiyonu çalıştı.");
     
     const gameUnsubscribe = state.getGameUnsubscribe();
     if (gameUnsubscribe) gameUnsubscribe();
     
-    // --- EKLEME: Bot Döngüsünü Kesin Olarak Durdur ---
     if (cpuLoopTimeout) {
         clearTimeout(cpuLoopTimeout);
         cpuLoopTimeout = null;
     }
-    // -------------------------------------------------
 
-    stopTurnTimer(); // Bu fonksiyon zaten yukarıda güncellediğimiz için oradaki temizliği de yapar.
+    stopTurnTimer(); 
     
     localStorage.removeItem('activeGameId');
     state.setGameUnsubscribe(null);
@@ -2761,7 +2224,8 @@ export async function createBRGame(options = {}) {
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const gameData = {
         gameId, wordLength: wordLength, secretWord: secretWord, timeLimit: timeLimit,
-        creatorId: currentUserId, isHardMode, matchLength: 1,
+        creatorId: currentUserId, isHardMode, 
+        matchLength: 10, // <-- DÜZELTME BURADA: 10 Tur olarak ayarlandı
         players: { 
             [currentUserId]: { 
                 userId: currentUserId, 
@@ -2875,11 +2339,6 @@ export async function joinBRGame(gameId) {
     }
 }
 
-// ===================================
-// === JOKER MANTIK FONKSİYONLARI (ENVANTER SİSTEMİ) ===
-// ===================================
-
-// Joker kullanıldığında envanterden düşen fonksiyon
 async function consumeJokerItem(itemKey) {
     const currentUserId = state.getUserId();
     const profile = state.getCurrentUserProfile();
@@ -2889,43 +2348,36 @@ async function consumeJokerItem(itemKey) {
     const currentAmount = profile.inventory[itemKey] || 0;
     
     if (currentAmount <= 0) {
-        return false; // Yetersiz bakiye
+        return false; 
     }
 
     const newInventory = { ...profile.inventory };
     newInventory[itemKey] = currentAmount - 1;
 
-    // 1. Önce yerel state'i güncelle (Hızlı tepki için)
     const newProfile = { ...profile, inventory: newInventory };
     state.setCurrentUserProfile(newProfile);
 
-    // 2. UI'ı güncelle
     import('./ui.js').then(ui => {
-        ui.updateMarketUI(); // Market stok yazısını güncelle
-        // Oyun içi buton durumlarını güncelle
+        ui.updateMarketUI(); 
         const gameData = state.getLocalGameData();
         const isMyTurn = (gameData.currentPlayerId === currentUserId);
         ui.updateJokerUI(null, isMyTurn, 'playing'); 
     });
 
-    // 3. Veritabanını güncelle (Arka planda)
     try {
         const userRef = doc(db, "users", currentUserId);
         await updateDoc(userRef, { inventory: newInventory });
     } catch (error) {
         console.error("Joker harcama hatası:", error);
-        // Hata olursa geri al (opsiyonel, şimdilik basit tutalım)
     }
     
     return true;
 }
 
-// 1. TURUNCU KALEM (Harf İpucu)
 export async function usePresentJoker() {
     const gameData = state.getLocalGameData();
     if (!gameData || gameData.status !== 'playing') return;
 
-    // Stok Kontrolü
     const profile = state.getCurrentUserProfile();
     const stock = profile?.inventory?.present || 0;
     
@@ -2955,7 +2407,6 @@ export async function usePresentJoker() {
         return;
     }
 
-    // Stoktan düş
     const consumed = await consumeJokerItem('present');
     if (!consumed) return;
 
@@ -2970,19 +2421,16 @@ export async function usePresentJoker() {
         keyButton.style.borderColor = "#f59e0b";
         setTimeout(() => { keyButton.style.transform = "scale(1)"; }, 300);
         
-        // Hafızaya al (Sarı yanmaya devam etsin)
         import('./state.js').then(s => s.addPresentJokerLetter(hintLetter));
         
         showToast(`İpucu: "${hintLetter}" harfi kelimede var! (Kalan: ${stock-1})`, false);
     }
 }
 
-// 2. YEŞİL KALEM (Kesin Harf)
 export async function useCorrectJoker() {
     const gameData = state.getLocalGameData();
     if (!gameData || gameData.status !== 'playing') return;
 
-    // Stok Kontrolü
     const profile = state.getCurrentUserProfile();
     const stock = profile?.inventory?.correct || 0;
     
@@ -3009,7 +2457,6 @@ export async function useCorrectJoker() {
         return;
     }
 
-    // Stoktan düş
     const consumed = await consumeJokerItem('correct');
     if (!consumed) return;
 
@@ -3032,13 +2479,10 @@ export async function useCorrectJoker() {
     showToast(`İpucu: ${hintIndex + 1}. harf "${hintLetter}"! (Kalan: ${stock-1})`, false);
 }
 
-// js/game.js -> useRemoveJoker (DÜZELTİLMİŞ)
-
 export async function useRemoveJoker() {
     const gameData = state.getLocalGameData();
     if (!gameData || gameData.status !== 'playing') return;
 
-    // Stok Kontrolü
     const profile = state.getCurrentUserProfile();
     const stock = profile?.inventory?.remove || 0;
     
@@ -3053,11 +2497,8 @@ export async function useRemoveJoker() {
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const key = btn.dataset.key;
         
-        // --- DÜZELTME BURADA ---
-        // Silme (⌫) ve Enter tuşlarını HEDEF ALMA!
-        // Sadece harfleri hedef al.
         if (key && key.length === 1 && 
-            key !== '⌫' && key !== 'ENTER' && // <-- Bu satır eklendi
+            key !== '⌫' && key !== 'ENTER' && 
             !btn.classList.contains('correct') && 
             !btn.classList.contains('present') && 
             !btn.classList.contains('absent')) 
@@ -3073,7 +2514,6 @@ export async function useRemoveJoker() {
         return;
     }
 
-    // Stoktan düş
     const consumed = await consumeJokerItem('remove');
     if (!consumed) return;
 
@@ -3216,7 +2656,7 @@ export async function startRematch() {
     
     try {
         await createGame({ 
-            invitedFriendId: opponentId, 
+            invitedFriendId: opponentId,
             timeLimit: 43200, 
             matchLength: 1,   
             gameType: 'friend' 
@@ -3257,9 +2697,6 @@ export async function checkLeagueStatus() {
         const participantDoc = await getDoc(participantRef);
         
         if (participantDoc.exists()) {
-            const now = new Date();
-            const day = now.getDay(); 
-            
             const isLeagueStarted = true; 
 
             document.getElementById('league-intro-section').classList.add('hidden');
@@ -3307,8 +2744,6 @@ export async function joinCurrentLeague(weekID) {
         showToast("Lige başarıyla katıldın!");
 
         setTimeout(() => {
-            // checkLeagueStatus fonksiyonu, kullanıcının kayıtlı olduğunu görüp
-            // otomatik olarak Intro'yu gizleyip Dashboard'u (Fikstürü) açacaktır.
             checkLeagueStatus(); 
         }, 2000);
 
@@ -3467,8 +2902,6 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
     renderLeagueStandings(standingsList, userId); 
 }
 
-// js/game.js -> startLeagueMatch (HATA KORUMALI VERSİYON)
-
 export async function startLeagueMatch(matchId, opponentId, opponentName) {
     const weekID = getCurrentWeekID();
     const userId = state.getUserId();
@@ -3479,28 +2912,21 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
     let matchData;
     let secretWord;
 
-    // DURUM 1: Maç veritabanında YOKSA -> Oluştur
     if (!matchSnap.exists()) {
         console.log("LOG: Maç veritabanında yok, yeni oluşturuluyor...");
         const len = 5; 
         
-        // --- DÜZELTME BURADA: Sunucu Hatasına Karşı Koruma ---
         try {
-            // Önce sunucudan istemeyi dene
             secretWord = await getNewSecretWord(len);
         } catch (error) {
             console.warn("Sunucu hatası, yerel kelime seçiliyor:", error);
-            // Hata alırsan yerel listeden seç
             secretWord = getRandomLocalWord(len);
         }
 
-        // Eğer sunucu null dönerse yine yerel seç
         if (!secretWord) {
             secretWord = getRandomLocalWord(len);
         }
-        // -----------------------------------------------------
 
-        // ID sıralamasına göre P1 ve P2'yi belirle
         const p1 = userId < opponentId ? userId : opponentId;
         const p2 = userId < opponentId ? opponentId : userId;
 
@@ -3515,31 +2941,26 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
             p2_data: {}
         };
 
-        // Veritabanına kaydet
         await setDoc(matchRef, matchData);
     } 
-    // DURUM 2: Maç VARSA -> Veriyi çek
     else {
         matchData = matchSnap.data();
         secretWord = matchData.secretWord;
 
         if (!secretWord) {
             const len = 5;
-            // --- BURAYA DA KORUMA EKLEDİK ---
             try {
                 secretWord = await getNewSecretWord(len);
             } catch (e) {
                 secretWord = getRandomLocalWord(len);
             }
             if(!secretWord) secretWord = getRandomLocalWord(len);
-            // -------------------------------
             
             matchData.secretWord = secretWord;
             await setDoc(matchRef, { secretWord: secretWord }, { merge: true });
         }
     }
 
-    // --- OYUNCU VE SÜRE KONTROLÜ ---
     const playerKey = (matchData.p1 === userId) ? 'p1' : 'p2';
     const dataKey = (matchData.p1 === userId) ? 'p1_data' : 'p2_data';
     const startTimeField = `${playerKey}_startedAt`;
@@ -3560,7 +2981,6 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
         startTime = startTime.toDate ? startTime.toDate() : new Date(startTime);
     }
 
-    // Süre Kontrolü (120 Saniye)
     const now = new Date();
     const elapsed = Math.floor((now - startTime) / 1000);
     const timeLimit = 120;
@@ -3570,7 +2990,6 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
         return; 
     }
 
-    // Oyunu Başlat
     await startNewGame({
         mode: 'league',
         secretWord: secretWord,
@@ -3586,7 +3005,6 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
 
     showToast(`${opponentName} ile maç başladı!`, false);
     
-    // Sayaç başlat
     import('./game.js').then(mod => mod.startTurnTimer());
 }
 
@@ -3673,7 +3091,7 @@ export async function loadDictionary() {
         if (userSnap.exists()) {
             const data = userSnap.data();
             const dict = data.dictionary || [];
-            dict.reverse(); // En yeniler üstte
+            dict.reverse(); 
             import('./ui.js').then(ui => ui.renderDictionaryList(dict));
         }
     } catch (error) { 
@@ -3719,7 +3137,7 @@ export async function removeWordFromDictionary(wordToRemove, cardEl) {
                 await updateDoc(userRef, { dictionary: arrayRemove(item) });
                 if(cardEl) {
                     cardEl.style.transform = 'translateX(100%)';
-                    cardElement.style.opacity = '0';
+                    cardEl.style.opacity = '0';
                     setTimeout(() => cardEl.remove(), 300);
                 }
                 showToast("Silindi.", false);
@@ -3732,66 +3150,47 @@ export function setupDictionaryButton(word) {
     const btn = document.getElementById('btn-add-word-to-dict');
     if (!btn) return;
     
-    // Butonu sıfırla ve göster
     btn.classList.remove('hidden', 'bg-green-600');
     btn.classList.add('bg-amber-600');
     btn.innerHTML = '<span>📖</span> Sözlüğe Ekle';
     btn.disabled = false;
     
-    // Event listener'ı temizlemek için klonla
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
     
     newBtn.onclick = () => addWordToDictionary(word);
 }
 
-// js/game.js -> cpuLoop (Yeni Fonksiyon)
-
-// js/game.js -> startCpuLoop (GÜNCELLENMİŞ - GENEL BOT DESTEĞİ)
-
-// js/game.js -> startCpuLoop (DÜZELTİLMİŞ - TEK DÖNGÜ GARANTİSİ)
-
 async function startCpuLoop(botId = 'cpu') {
-    // Önceki bekleyen döngüyü iptal et (Üst üste binmeyi önler)
     if (cpuLoopTimeout) clearTimeout(cpuLoopTimeout);
 
     const localGameData = state.getLocalGameData();
     
-    // Oyun bitmişse veya oynanmıyorsa dur
     if (!localGameData || localGameData.status !== 'playing') return;
 
-    // Botun durumunu kontrol et
     const botState = localGameData.players[botId];
-    // Bot zaten çözmüşse veya hakkı bitmişse DUR
     if (!botState || botState.hasSolved || botState.hasFailed) {
         console.log(`BOT (${botState?.username}): Zaten bitirdi, döngü durduruldu.`);
         return;
     }
 
-    // Rastgele bekleme süresi: 8 - 12 saniye arası
     const randomDelay = Math.floor(Math.random() * 4000) + 8000;
     
     console.log(`BOT (${botState.username}): Bir sonraki tahmin ${randomDelay / 1000} sn sonra.`);
 
-    // Zamanlayıcıyı değişkene ata ki iptal edebilelim
     cpuLoopTimeout = setTimeout(async () => {
-        // Bekleme bittikten sonra tekrar durumu kontrol et
         const currentData = state.getLocalGameData();
         const currentBotState = currentData?.players[botId];
 
         if (!currentData || currentData.status !== 'playing') return;
         
-        // Beklerken bot kazanmışsa veya elenmişse işlem yapma
         if (currentBotState.hasSolved || currentBotState.hasFailed) return;
 
         await cpuTurn(botId);
 
-        // Döngüyü devam ettir (Recursive)
         startCpuLoop(botId);
     }, randomDelay);
 }
-
-// js/game.js -> checkVsCpuGameEnd (BERABERLİK DÜZELTMESİ)
 
 function checkVsCpuGameEnd() {
     const localGameData = state.getLocalGameData();
@@ -3805,15 +3204,11 @@ function checkVsCpuGameEnd() {
     const p1Done = p1.hasSolved || p1.hasFailed;
     const cpuDone = cpu.hasSolved || cpu.hasFailed;
 
-    // İki taraf da bitirdiyse
     if (p1Done && cpuDone) {
         console.log("vsCPU: İki taraf da bitirdi. Oyun sonlanıyor.");
         localGameData.status = 'finished';
         
-        // Tur Kazananını Belirle
         if (p1.hasSolved && cpu.hasSolved) {
-             // DÜZELTME: Eşitlik durumunda (<=) oyuncuyu kazanan yap. 
-             // Böylece "Kimse Bulamadı" hatası çıkmaz.
              if (p1.guesses.length <= cpu.guesses.length) localGameData.roundWinner = userId;
              else localGameData.roundWinner = 'cpu';
         } 
@@ -3824,7 +3219,7 @@ function checkVsCpuGameEnd() {
             localGameData.roundWinner = 'cpu';
         } 
         else {
-            localGameData.roundWinner = null; // İkisi de bilemedi (Kimse Bulamadı)
+            localGameData.roundWinner = null; 
         }
 
         state.setLocalGameData(localGameData);
@@ -3836,21 +3231,15 @@ function checkVsCpuGameEnd() {
     }
 }
 
-// js/game.js dosyasının içine, en alta ekle:
-
 function getRandomLocalWord(length) {
     const lenStr = String(length);
-    // allWordList dosyanın en başında import edilmiş olmalı
     const list = allWordList[lenStr] || allWordList["5"]; 
     if (list && list.length > 0) {
         return list[Math.floor(Math.random() * list.length)];
     }
-    return "KALEM"; // Hiçbir şey bulunamazsa acil durum kelimesi
+    return "KALEM"; 
 }
 
-// js/game.js (EN ALTA EKLE)
-
-// --- BOT İSİM HAVUZU ---
 const botNames = [
   "KelimeBaz", "LügatEfendisi", "HarfAvcısı", "BilginBaykuş", "KitapKurdu",
   "GeceMavisi", "RüzgarınOğlu", "SessizFırtına", "Ahmet_1905", "AyşeGül_Tr",
@@ -3869,22 +3258,20 @@ function getRandomBotName() {
     return botNames[randomIndex];
 }
 
-// --- BOT OYUNCUYU OYUNA DAHİL ETME ---
 async function assignBotToGame(gameId) {
-    const botId = 'bot_' + Date.now(); // Benzersiz bir ID oluştur
+    const botId = 'bot_' + Date.now(); 
     const botName = getRandomBotName();
     
     console.log(`LOG: 45sn doldu. Bot atanıyor: ${botName}`);
 
     const gameRef = doc(db, "games", gameId);
     
-    // Bot için oyuncu verisi
     const botPlayerState = { 
         username: botName, 
         guesses: [], 
         score: 0, 
         jokersUsed: { present: false, correct: false, remove: false },
-        isBot: true // <-- KRİTİK: Bu bayrak sayesinde yapay zeka devreye girecek
+        isBot: true 
     };
 
     try {
@@ -3894,7 +3281,6 @@ async function assignBotToGame(gameId) {
             
             const gameData = gameDoc.data();
             
-            // Eğer son anda gerçek biri girdiyse iptal et
             if (Object.keys(gameData.players).length >= 2) {
                 console.log("LOG: Gerçek oyuncu girdiği için bot iptal edildi.");
                 return;
@@ -3915,63 +3301,47 @@ async function assignBotToGame(gameId) {
     }
 }
 
-// js/game.js (EN ALTA EKLE)
-
-// --- HIZLI ARKADAŞ OYUNU BAŞLATMA ---
 export async function startQuickFriendGame(friendId) {
     if (!friendId) return;
 
     showToast("Oyun oluşturuluyor...", false);
 
-    // Ayar ekranını atla, direkt standart ayarlarla kur
     await createGame({
         invitedFriendId: friendId,
-        timeLimit: 120, // İsteğin üzerine 120 saniye
-        matchLength: 5, // İsteğin üzerine 5 Tur
-        gameType: 'friend' // Arkadaş modu
+        timeLimit: 120, 
+        matchLength: 5, 
+        gameType: 'friend' 
     });
-    
-    // createGame fonksiyonu zaten otomatik olarak oyun ekranını açıyor 
-    // ve updateTurnDisplay fonksiyonu "Arkadaşın bekleniyor" yazısını gösteriyor.
 }
 
-// js/game.js (EN ALTA EKLE)
-
-// --- LİGE BOT EKLEME (DEV TOOLS) ---
 export async function populateLeagueWithBots() {
     const weekID = getCurrentWeekID();
     const botsToAdd = [];
     const usedIndices = new Set();
 
-    // 15 adet benzersiz bot ismi seç
-    // (botNames dizisi js/game.js içinde tanımlı olmalı)
     while (botsToAdd.length < 15) {
         const randomIndex = Math.floor(Math.random() * botNames.length);
         if (!usedIndices.has(randomIndex)) {
             usedIndices.add(randomIndex);
             botsToAdd.push(botNames[randomIndex]);
         }
-        // Eğer 50 isimden az kaldıysa döngü sonsuza girmesin
         if (usedIndices.size >= botNames.length) break;
     }
 
     console.log("Lige eklenecek botlar:", botsToAdd);
     showToast("Botlar lige ekleniyor...", false);
 
-    // Hepsini veritabanına kaydet
     const promises = botsToAdd.map((name, index) => {
-        // Bot için benzersiz ID (bot_league_zaman_sıra)
         const botId = `bot_league_${Date.now()}_${index}`;
         
         const botData = {
             username: name,
             joinedAt: serverTimestamp(),
             score: 0,
-            isBot: true, // Bot olduğunu işaretle
-            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } // Başlangıç istatistikleri
+            isBot: true, 
+            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } 
         };
         
-        // Katılımcılar koleksiyonuna ekle
         return setDoc(doc(db, "leagues", weekID, "participants", botId), botData);
     });
 
@@ -3979,7 +3349,6 @@ export async function populateLeagueWithBots() {
         await Promise.all(promises);
         showToast("✅ 15 Bot başarıyla lige eklendi!");
         
-        // Ekranı yenilemek için lig durumunu tekrar kontrol et
         checkLeagueStatus();
         
     } catch (error) {
@@ -3988,16 +3357,12 @@ export async function populateLeagueWithBots() {
     }
 }
 
-// js/game.js (EN ALTA EKLE)
-
-// --- LOBİYE ARKADAŞ DAVET ETME ---
 export async function sendLobbyInvite(friendId) {
     const gameId = state.getCurrentGameId();
     if (!gameId || !friendId) return;
 
     try {
         const gameRef = doc(db, "games", gameId);
-        // Arkadaşın ID'sini davetliler listesine ekle
         await updateDoc(gameRef, {
             invitedPlayerIds: arrayUnion(friendId)
         });

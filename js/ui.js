@@ -1,14 +1,10 @@
-// js/ui.js - TAM DOSYA (Sözlük Özelliği Eklendi)
+// js/ui.js - DÜZELTİLMİŞ VERSİYON
 
 import * as state from './state.js'; 
 import { getStatsFromProfile, createElement } from './utils.js';
-import { 
-    joinGame, joinBRGame, acceptInvite, rejectInvite, abandonGame, 
-    checkLeagueStatus, joinCurrentLeague, buyItem, addGold,
-    loadDictionary, removeWordFromDictionary // <-- Sözlük için eklendi
-} from './game.js';
-import { sendLobbyInvite } from './game.js';
+// DİKKAT: game.js importunu buradan kaldırdık (Döngüsel bağımlılığı kırmak için)
 import { getMyFriendsList } from './friends.js';
+
 // Değişkenler
 export let 
     // Game Screen
@@ -60,16 +56,12 @@ export let
 
     matchmakingScreen, matchmakingMyAvatar, matchmakingMyName, cancelMatchmakingBtn,
 
-    // --- SÖZLÜK ELEMENTLERİ (YENİ) ---
+    // --- SÖZLÜK ELEMENTLERİ ---
     dictionaryMenuBtn, dictionaryScreen, backToMainFromDictionaryBtn, 
     dictionaryListContainer, dictionaryEmptyMsg, btnAddWordToDict;
 
 const brPlayerSlots = []; 
-// initUI fonksiyonu içinde uygun bir yere:
-// (brPlayerSlots... satırlarının altına ekleyebilirsin)
-export let opponentMiniGrid; // En üste export listesine de eklemeyi unutma veya direkt document.getElementById kullan.
-// En iyisi initUI içine şunu eklemek yeterli (biz fonksiyonda getElementById kullandık zaten):
-// Sadece export listesine eklemene gerek yok, doğrudan DOM'dan çekiyoruz.
+export let opponentMiniGrid;
 let currentScreen = '';
 
 export function initUI() {
@@ -88,12 +80,10 @@ export function initUI() {
     brRoundCounter = document.getElementById('br-round-counter');
     brTimerDisplay = document.getElementById('br-timer-display');
     brTurnDisplay = document.getElementById('br-turn-display');
-    brPlayerSlots.length = 0; // Diziyi temizle
+    brPlayerSlots.length = 0; 
     for (let i = 0; i < 8; i++) {
         brPlayerSlots.push(document.getElementById(`br-player-slot-${i}`));
     }
-    
-    
 
     // Jokers
     jokerPresentBtn = document.getElementById('joker-present');
@@ -194,7 +184,7 @@ export function initUI() {
     stockCorrect = document.getElementById('stock-correct');
     stockRemove = document.getElementById('stock-remove');
 
-    // --- SÖZLÜK ELEMENTLERİ (YENİ) ---
+    // --- SÖZLÜK ELEMENTLERİ ---
     dictionaryMenuBtn = document.getElementById('dictionary-menu-btn');
     dictionaryScreen = document.getElementById('dictionary-screen');
     backToMainFromDictionaryBtn = document.getElementById('back-to-main-from-dictionary-btn');
@@ -209,7 +199,7 @@ export function showScreen(screenId, isBackNavigation = false) {
         'my-games-screen', 'game-screen', 'scoreboard-screen', 'profile-screen',
         'how-to-play-screen', 'friends-screen', 'br-setup-screen', 'multiplayer-setup-screen',
         'edit-profile-screen', 'kelimelig-screen', 'kirtasiye-screen', 'matchmaking-screen', 
-        'dictionary-screen' // <-- Sözlük Ekranı Eklendi
+        'dictionary-screen'
     ];
     
     if (currentScreen === screenId) return;
@@ -232,13 +222,10 @@ export function showScreen(screenId, isBackNavigation = false) {
 
 export function createGrid(wordLength, GUESS_COUNT) {
     if (!guessGrid) return;
-    
-    // Önceki tüm stilleri ve içeriği tamamen temizle
     guessGrid.innerHTML = '';
-    guessGrid.className = 'grid gap-1 w-full'; // Temel sınıfları sıfırla
+    guessGrid.className = 'grid gap-1 w-full';
     guessGrid.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
     
-    // Mini ızgarayı da gizle (eğer varsa)
     const miniGrid = document.getElementById('opponent-mini-grid');
     if (miniGrid) miniGrid.innerHTML = '';
 
@@ -296,9 +283,8 @@ export function updateKeyboard(gameData) {
     if (!currentUserId) return; 
 
     const keyStates = {};
-
-    // 1. Tahminlerden Gelen Renkler
     const myGuesses = gameData.players[currentUserId]?.guesses || [];
+    
     myGuesses.forEach(({ word, colors }) => {
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
@@ -309,8 +295,6 @@ export function updateKeyboard(gameData) {
         }
     });
 
-    // Eğer bir harf yeşil jokerle açıldıysa, klavyede her zaman yeşil kalsın.
-    // --- DÜZELTME BAŞLANGIÇ: Yeşil Joker Hafızasını da Ekle ---
     const knownPositions = state.getKnownCorrectPositions(); 
     if (knownPositions) {
         Object.values(knownPositions).forEach(letter => {
@@ -318,29 +302,21 @@ export function updateKeyboard(gameData) {
         });
     }
 
-    // --- YENİ EKLEME: Turuncu Joker Hafızasını da Ekle ---
     const presentLetters = state.getPresentJokerLetters(); 
-    
     if (presentLetters) {
         presentLetters.forEach(letter => {
-            // Eğer harf zaten YEŞİL değilse, SARI yap
             if (keyStates[letter] !== 'correct') {
                 keyStates[letter] = 'present';
             }
         });
     }
     
-    // 3. Klavyeyi Boya
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         const keyId = btn.dataset.key;
         if (keyId === 'ENTER' || keyId === '⌫') return;
         
         const guessColor = keyStates[keyId]; 
-        
-        // Mevcut renkleri temizle
         btn.classList.remove('correct', 'present', 'absent');
-        
-        // Yeni rengi ekle
         if (guessColor === 'correct') btn.classList.add('correct');
         else if (guessColor === 'present') btn.classList.add('present');
         else if (guessColor === 'absent') btn.classList.add('absent');
@@ -422,8 +398,6 @@ export function updateMultiplayerScoreBoard(gameData) {
             const player = players[i]; 
 
             if (slot) {
-                // HTML yapısındaki p etiketlerini seçiyoruz
-                // index.html'de soldaki isim, sağdaki durum olacak
                 const nameEl = slot.querySelector('p:first-child');
                 const statusEl = slot.querySelector('p:last-child');
 
@@ -433,21 +407,18 @@ export function updateMultiplayerScoreBoard(gameData) {
                     const hasFailed = player.hasFailed;
                     const guessCount = (player.guesses || []).length;
 
-                    // Arkaplan Rengi (Ben: İndigo, Başkası: Gri)
                     let bgColor = isMe ? 'bg-indigo-600' : 'bg-gray-700';
                     let nameColor = isMe ? 'text-white' : 'text-gray-300';
                     let statusColor = 'text-gray-400';
                     let statusText = '';
 
-                    // Durum Metni Belirleme
                     if (hasSolved) {
-                        statusText = "✅"; // Bildiyse sadece Tik
+                        statusText = "✅"; 
                         statusColor = 'text-green-400';
                     } else if (hasFailed || player.isEliminated) {
-                        statusText = "❌"; // Yandıysa Çarpı
+                        statusText = "❌"; 
                         statusColor = 'text-red-400';
                     } else if (gameData.status === 'playing') {
-                        // Oynuyorsa sadece kaçıncı hakta olduğunu yaz (Örn: 2/6)
                         statusText = `${guessCount}/${gameData.GUESS_COUNT || 6}`;
                         statusColor = 'text-yellow-400 font-mono font-bold';
                     } else if (gameData.status === 'waiting') {
@@ -456,17 +427,13 @@ export function updateMultiplayerScoreBoard(gameData) {
                         statusText = '-';
                     }
 
-                    // Elementleri Güncelle
                     slot.className = `${bgColor} px-2 py-1 rounded shadow flex justify-between items-center h-7 border border-gray-600/50`;
-                    
                     nameEl.textContent = player.username;
                     nameEl.className = `font-bold text-xs truncate w-20 text-left ${nameColor}`;
-                    
                     statusEl.textContent = statusText;
                     statusEl.className = `text-xs text-right ${statusColor}`;
 
                 } else {
-                    // Boş Slot Görünümü
                     slot.className = 'bg-gray-800/50 px-2 py-1 rounded border border-gray-700/50 flex justify-between items-center h-7 opacity-50';
                     nameEl.textContent = '---';
                     statusEl.textContent = '';
@@ -582,7 +549,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
 
             const infoDiv = createElement('div', {
                 className: 'cursor-pointer hover:opacity-75 flex-grow',
-                onclick: () => (game.gameType === 'multiplayer-br' ? joinBRGame(game.id) : joinGame(game.id)),
+                onclick: () => import('./game.js').then(m => (game.gameType === 'multiplayer-br' ? m.joinBRGame(game.id) : m.joinGame(game.id))),
             });
             
             const titleContainer = createElement('div', { className: 'flex flex-col mb-1' });
@@ -615,7 +582,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                     e.stopPropagation(); 
                     const gameName = game.gameType === 'multiplayer-br' ? 'Battle Royale' : opponentUsername;
                     if (confirm(`'${gameName}' oyunundan ayrılmak istediğinize emin misiniz?`)) {
-                        abandonGame(game.id, gameDiv); 
+                        import('./game.js').then(m => m.abandonGame(game.id, gameDiv)); 
                     }
                 }
             });
@@ -696,7 +663,7 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                 textContent: 'Reddet',
                 onclick: (e) => {
                     e.stopPropagation(); 
-                    rejectInvite(invite.id); 
+                    import('./game.js').then(m => m.rejectInvite(invite.id)); 
                 }
             });
 
@@ -705,11 +672,13 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
                 textContent: 'Kabul Et',
                 onclick: (e) => {
                     e.stopPropagation();
-                    if (invite.gameType === 'multiplayer-br') {
-                        joinBRGame(invite.id);
-                    } else {
-                        acceptInvite(invite.id); 
-                    }
+                    import('./game.js').then(m => {
+                        if (invite.gameType === 'multiplayer-br') {
+                            m.joinBRGame(invite.id);
+                        } else {
+                            m.acceptInvite(invite.id); 
+                        }
+                    });
                 }
             });
 
@@ -727,7 +696,6 @@ export function updateJokerUI(unusedParam, isMyTurn, gameStatus) {
     const jokers = [jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn];
     const jokerKeys = ['present', 'correct', 'remove'];
 
-    // Profil bilgisinden stok durumunu al
     const profile = state.getCurrentUserProfile();
     const inventory = profile ? (profile.inventory || {}) : {};
 
@@ -739,23 +707,18 @@ export function updateJokerUI(unusedParam, isMyTurn, gameStatus) {
         const key = jokerKeys[index];
         const stock = inventory[key] || 0;
 
-        // Rozeti güncelle (Stok sayısını yaz)
         const badge = btn.querySelector('.joker-badge');
         if (badge) {
             badge.textContent = `x${stock}`;
-            // Stok yoksa rozeti gri yap, varsa kırmızı
             badge.style.backgroundColor = stock > 0 ? '#ef4444' : '#6b7280';
         }
 
-        // Butonu aktif/pasif yap
-        // Kural: Sıra sendeyse VE stok varsa aktiftir.
         if (canPlay && stock > 0) {
             btn.disabled = false;
             btn.style.opacity = "1";
             btn.style.cursor = "pointer";
         } else {
             btn.disabled = true;
-            // Eğer stok yoksa biraz daha silik görünsün
             btn.style.opacity = stock <= 0 ? "0.5" : "1"; 
             btn.style.cursor = "not-allowed";
         }
@@ -787,7 +750,7 @@ export async function openKelimeligScreen() {
         };
     }
     
-    await checkLeagueStatus();
+    import('./game.js').then(m => m.checkLeagueStatus());
 }
 
 export function renderLeagueMatches(matches, currentUserId) {
@@ -844,9 +807,9 @@ export function renderLeagueMatches(matches, currentUserId) {
 
                 buttonHTML = `<div class="text-right"><span class="block text-xs font-bold ${resultColor}">${resultText}</span></div>`;
                 scoreDisplay = `<div class="flex flex-col items-center justify-center bg-gray-900 rounded p-2 ml-3 w-12 h-12 border border-gray-700 shadow-inner">
-                                    <span class="text-lg font-black text-white leading-none">${myPoints}</span>
-                                    <span class="text-[8px] text-gray-500 uppercase">Puan</span>
-                                </div>`;
+                                        <span class="text-lg font-black text-white leading-none">${myPoints}</span>
+                                        <span class="text-[8px] text-gray-500 uppercase">Puan</span>
+                                    </div>`;
                 cardClass = myPoints === 3 ? 'bg-green-900/20 border-green-900/50' : (myPoints === 1 ? 'bg-blue-900/20 border-blue-900/50' : 'bg-red-900/10 border-red-900/30');
             }
         } else {
@@ -886,7 +849,7 @@ export function renderLeagueMatches(matches, currentUserId) {
     });
 }
 
-// --- TUTORIAL (Animasyon Kodları) ---
+// ... Tutorial kodları (değişmedi) ...
 let tutorialTimeoutIds = []; 
 let isTutorialRunning = false; 
 
@@ -932,181 +895,32 @@ function cleanTutorialBoard() {
     });
 }
 
-async function typeTutorialTile(row, col, letter, delay) {
-    await wait(delay);
-    const tile = document.getElementById(`t-${row}-${col}`);
-    if (tile) {
-        const front = tile.querySelector('.front');
-        front.textContent = letter;
-        front.classList.add('pop');
-    }
-}
-
-async function flipTutorialTile(row, col, colorClass, delay) {
-    await wait(delay);
-    const tile = document.getElementById(`t-${row}-${col}`);
-    if (tile) {
-        const front = tile.querySelector('.front');
-        const back = tile.querySelector('.back');
-        
-        back.textContent = front.textContent; 
-        back.className = 'tile-inner back ' + colorClass; 
-        tile.classList.add('flip'); 
-    }
-}
-
-async function updateTutorialKeyboard(keys, colorClass, delay) {
-    await wait(delay);
-    keys.forEach(key => {
-        const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`);
-        if (!keyEl) return; 
-
-        if (keyEl.classList.contains('correct')) return;
-        if (keyEl.classList.contains('present') && colorClass === 'absent') return;
-        if (keyEl.classList.contains(colorClass)) return;
-        
-        if (colorClass === 'correct') {
-            keyEl.className = 'tutorial-key correct';
-        } else if (colorClass === 'present') {
-            keyEl.className = 'tutorial-key present';
-        } else { 
-            keyEl.className = 'tutorial-key absent';
-        }
-        
-        keyEl.classList.add('key-pop');
-        setTimeout(() => keyEl.classList.remove('key-pop'), 200); 
-    });
-}
-
-async function highlightTutorialJoker(jokerId, delay, duration = 1000) {
-    await wait(delay);
-    const jokerBtn = document.getElementById(jokerId);
-    if (jokerBtn) {
-        jokerBtn.classList.add('tutorial-highlight');
-        await wait(duration);
-        jokerBtn.classList.remove('tutorial-highlight');
-    }
-}
-
-async function disableTutorialJoker(jokerId, delay) {
-    await wait(delay);
-    const jokerBtn = document.getElementById(jokerId);
-    if (jokerBtn) {
-        jokerBtn.disabled = true;
-    }
-}
-
-async function animateJokerRemove(delay) {
-    await wait(delay);
-    const keysToEliminate = ['Y', 'I', 'P', 'A']; 
-    
-    let eliminationDelay = 100; 
-    for (const key of keysToEliminate) {
-        const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`);
-        if (keyEl && !keyEl.classList.contains('absent')) {
-            await wait(eliminationDelay);
-            keyEl.className = 'tutorial-key absent'; 
-            keyEl.classList.add('key-pop');
-            setTimeout(() => keyEl.classList.remove('key-pop'), 200);
-        }
-    }
-}
+// ... Diğer tutorial helper fonksiyonları ... (Aynı kalacak)
+async function typeTutorialTile(row, col, letter, delay) { await wait(delay); const tile = document.getElementById(`t-${row}-${col}`); if (tile) { const front = tile.querySelector('.front'); front.textContent = letter; front.classList.add('pop'); } }
+async function flipTutorialTile(row, col, colorClass, delay) { await wait(delay); const tile = document.getElementById(`t-${row}-${col}`); if (tile) { const front = tile.querySelector('.front'); const back = tile.querySelector('.back'); back.textContent = front.textContent; back.className = 'tile-inner back ' + colorClass; tile.classList.add('flip'); } }
+async function updateTutorialKeyboard(keys, colorClass, delay) { await wait(delay); keys.forEach(key => { const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`); if (!keyEl) return; if (keyEl.classList.contains('correct')) return; if (keyEl.classList.contains('present') && colorClass === 'absent') return; if (keyEl.classList.contains(colorClass)) return; if (colorClass === 'correct') { keyEl.className = 'tutorial-key correct'; } else if (colorClass === 'present') { keyEl.className = 'tutorial-key present'; } else { keyEl.className = 'tutorial-key absent'; } keyEl.classList.add('key-pop'); setTimeout(() => keyEl.classList.remove('key-pop'), 200); }); }
+async function highlightTutorialJoker(jokerId, delay, duration = 1000) { await wait(delay); const jokerBtn = document.getElementById(jokerId); if (jokerBtn) { jokerBtn.classList.add('tutorial-highlight'); await wait(duration); jokerBtn.classList.remove('tutorial-highlight'); } }
+async function disableTutorialJoker(jokerId, delay) { await wait(delay); const jokerBtn = document.getElementById(jokerId); if (jokerBtn) { jokerBtn.disabled = true; } }
+async function animateJokerRemove(delay) { await wait(delay); const keysToEliminate = ['Y', 'I', 'P', 'A']; let eliminationDelay = 100; for (const key of keysToEliminate) { const keyEl = document.querySelector(`#tutorial-keyboard .tutorial-key[data-key="${key}"]`); if (keyEl && !keyEl.classList.contains('absent')) { await wait(eliminationDelay); keyEl.className = 'tutorial-key absent'; keyEl.classList.add('key-pop'); setTimeout(() => keyEl.classList.remove('key-pop'), 200); } } }
 
 export async function playTutorialAnimation() {
     if (isTutorialRunning) return; 
     isTutorialRunning = true; 
     cleanTutorialBoard(); 
-    
     try {
         const guess1 = { word: ['Ö', 'L', 'Ç', 'Ü', 'T'], colors: ['correct', 'absent', 'absent', 'absent', 'absent'], keys: { correct: ['Ö'], absent: ['L', 'Ç', 'Ü', 'T'] } };
-        await typeTutorialTile(0, 0, guess1.word[0], 50); 
-        await typeTutorialTile(0, 1, guess1.word[1], 150);
-        await typeTutorialTile(0, 2, guess1.word[2], 150);
-        await typeTutorialTile(0, 3, guess1.word[3], 150);
-        await typeTutorialTile(0, 4, guess1.word[4], 150);
-        await wait(1000);
-        for (let i = 0; i < 5; i++) await flipTutorialTile(0, i, guess1.colors[i], 300);
-        await updateTutorialKeyboard(guess1.keys.correct, 'correct', 0);
-        await updateTutorialKeyboard(guess1.keys.absent, 'absent', 0);
-        await wait(2000); 
-
+        await typeTutorialTile(0, 0, guess1.word[0], 50); await typeTutorialTile(0, 1, guess1.word[1], 150); await typeTutorialTile(0, 2, guess1.word[2], 150); await typeTutorialTile(0, 3, guess1.word[3], 150); await typeTutorialTile(0, 4, guess1.word[4], 150); await wait(1000); for (let i = 0; i < 5; i++) await flipTutorialTile(0, i, guess1.colors[i], 300); await updateTutorialKeyboard(guess1.keys.correct, 'correct', 0); await updateTutorialKeyboard(guess1.keys.absent, 'absent', 0); await wait(2000); 
         const guess2 = { word: ['Ö', 'Z', 'L', 'E', 'M'], colors: ['correct', 'absent', 'absent', 'correct', 'absent'], keys: { correct: ['E'], absent: ['Z', 'M'] } };
-        await wait(500); 
-        await typeTutorialTile(1, 0, 'Ö', 0); 
-        await flipTutorialTile(1, 0, 'correct', 0); 
-        await wait(1500); 
-        await typeTutorialTile(1, 1, guess2.word[1], 150); 
-        await typeTutorialTile(1, 2, guess2.word[2], 150); 
-        await typeTutorialTile(1, 3, guess2.word[3], 150); 
-        await typeTutorialTile(1, 4, guess2.word[4], 150); 
-        await wait(1000);
-        for (let i = 1; i < 5; i++) await flipTutorialTile(1, i, guess2.colors[i], 300);
-        await updateTutorialKeyboard(guess2.keys.correct, 'correct', 0);
-        await updateTutorialKeyboard(guess2.keys.absent, 'absent', 0);
-        await wait(2000); 
-
-        await wait(500); 
-        await typeTutorialTile(2, 0, 'Ö', 0); 
-        await flipTutorialTile(2, 0, 'correct', 0);
-        await typeTutorialTile(2, 3, 'E', 150); 
-        await flipTutorialTile(2, 3, 'correct', 0);
-        await wait(2000); 
-
-        await highlightTutorialJoker('tutorial-joker-present', 0, 1000);
-        await disableTutorialJoker('tutorial-joker-present', 1000);
-        await wait(1000); 
-
-        await typeTutorialTile(2, 1, 'N', 500); 
-        await flipTutorialTile(2, 1, 'present', 0); 
-        await wait(2000); 
-        
-        await typeTutorialTile(2, 2, 'D', 150);
-        await typeTutorialTile(2, 4, 'R', 150);
-
+        await wait(500); await typeTutorialTile(1, 0, 'Ö', 0); await flipTutorialTile(1, 0, 'correct', 0); await wait(1500); await typeTutorialTile(1, 1, guess2.word[1], 150); await typeTutorialTile(1, 2, guess2.word[2], 150); await typeTutorialTile(1, 3, guess2.word[3], 150); await typeTutorialTile(1, 4, guess2.word[4], 150); await wait(1000); for (let i = 1; i < 5; i++) await flipTutorialTile(1, i, guess2.colors[i], 300); await updateTutorialKeyboard(guess2.keys.correct, 'correct', 0); await updateTutorialKeyboard(guess2.keys.absent, 'absent', 0); await wait(2000); 
+        await wait(500); await typeTutorialTile(2, 0, 'Ö', 0); await flipTutorialTile(2, 0, 'correct', 0); await typeTutorialTile(2, 3, 'E', 150); await flipTutorialTile(2, 3, 'correct', 0); await wait(2000); 
+        await highlightTutorialJoker('tutorial-joker-present', 0, 1000); await disableTutorialJoker('tutorial-joker-present', 1000); await wait(1000); await typeTutorialTile(2, 1, 'N', 500); await flipTutorialTile(2, 1, 'present', 0); await wait(2000); await typeTutorialTile(2, 2, 'D', 150); await typeTutorialTile(2, 4, 'R', 150);
         const guess3 = { word: ['Ö', 'N', 'D', 'E', 'R'], colors: ['correct', 'present', 'absent', 'correct', 'present'], keys: { present: ['N', 'R'], absent: ['D'] } };
-        await wait(1000);
-        await flipTutorialTile(2, 2, guess3.colors[2], 300); 
-        await flipTutorialTile(2, 4, guess3.colors[4], 300); 
-        await updateTutorialKeyboard(guess3.keys.present, 'present', 0);
-        await updateTutorialKeyboard(guess3.keys.absent, 'absent', 0);
-        await wait(2000); 
-
-        await wait(500); 
-        await typeTutorialTile(3, 0, 'Ö', 0); 
-        await flipTutorialTile(3, 0, 'correct', 0);
-        await typeTutorialTile(3, 3, 'E', 150); 
-        await flipTutorialTile(3, 3, 'correct', 0);
-        await wait(2000); 
-
-        await highlightTutorialJoker('tutorial-joker-remove', 0, 1000);
-        await disableTutorialJoker('tutorial-joker-remove', 1000);
-        await animateJokerRemove(1000); 
-        await wait(2000); 
-
-        await wait(500); 
-        await highlightTutorialJoker('tutorial-joker-correct', 0, 1000);
-        await disableTutorialJoker('tutorial-joker-correct', 1000);
-        await wait(1000); 
-        
-        await typeTutorialTile(3, 4, 'K', 500); 
-        await flipTutorialTile(3, 4, 'correct', 0); 
-        await wait(2000); 
-        
+        await wait(1000); await flipTutorialTile(2, 2, guess3.colors[2], 300); await flipTutorialTile(2, 4, guess3.colors[4], 300); await updateTutorialKeyboard(guess3.keys.present, 'present', 0); await updateTutorialKeyboard(guess3.keys.absent, 'absent', 0); await wait(2000); 
+        await wait(500); await typeTutorialTile(3, 0, 'Ö', 0); await flipTutorialTile(3, 0, 'correct', 0); await typeTutorialTile(3, 3, 'E', 150); await flipTutorialTile(3, 3, 'correct', 0); await wait(2000); await highlightTutorialJoker('tutorial-joker-remove', 0, 1000); await disableTutorialJoker('tutorial-joker-remove', 1000); await animateJokerRemove(1000); await wait(2000); 
+        await wait(500); await highlightTutorialJoker('tutorial-joker-correct', 0, 1000); await disableTutorialJoker('tutorial-joker-correct', 1000); await wait(1000); await typeTutorialTile(3, 4, 'K', 500); await flipTutorialTile(3, 4, 'correct', 0); await wait(2000); 
         const guess4 = { word: ['Ö', 'R', 'N', 'E', 'K'], colors: ['correct', 'correct', 'correct', 'correct', 'correct'], keys: { correct: ['R', 'N', 'K'] } };
-        await typeTutorialTile(3, 1, guess4.word[1], 150); 
-        await typeTutorialTile(3, 2, guess4.word[2], 150); 
-        
-        await wait(1000);
-        await flipTutorialTile(3, 1, guess4.colors[1], 300);
-        await flipTutorialTile(3, 2, guess4.colors[2], 300);
-        
-        await updateTutorialKeyboard(guess4.keys.correct, 0);
-        
-    } catch (e) {
-        console.log("Tutorial animation stopped by user.");
-    } finally {
-        isTutorialRunning = false;
-    }
+        await typeTutorialTile(3, 1, guess4.word[1], 150); await typeTutorialTile(3, 2, guess4.word[2], 150); await wait(1000); await flipTutorialTile(3, 1, guess4.colors[1], 300); await flipTutorialTile(3, 2, guess4.colors[2], 300); await updateTutorialKeyboard(guess4.keys.correct, 0); 
+    } catch (e) { console.log("Tutorial animation stopped by user."); } finally { isTutorialRunning = false; }
 }
 
 export function stopTutorialAnimation() {
@@ -1173,32 +987,47 @@ export function renderLeagueStandings(standingsData, currentUserId) {
     });
 }
 
+// js/ui.js -> updateMarketUI (GÜVENLİ VERSİYON)
+
 export function updateMarketUI() {
     const profile = state.getCurrentUserProfile();
     if (!profile) return;
 
-    const gold = profile.gold || 0;
-    if (userGoldDisplay) userGoldDisplay.textContent = gold;
+    const userGoldDisplay = document.getElementById('user-gold-display');
+    if (userGoldDisplay) {
+        userGoldDisplay.textContent = profile.gold || 0;
+    }
 
     const inventory = profile.inventory || { present: 0, correct: 0, remove: 0 };
     
-    if (stockPresent) stockPresent.textContent = inventory.present || 0;
-    if (stockCorrect) stockCorrect.textContent = inventory.correct || 0;
-    if (stockRemove) stockRemove.textContent = inventory.remove || 0;
+    const elStockPresent = document.getElementById('stock-present');
+    const elStockCorrect = document.getElementById('stock-correct');
+    const elStockRemove = document.getElementById('stock-remove');
 
-    document.querySelectorAll('.buy-item-btn').forEach(btn => {
-        btn.onclick = () => {
-            const type = btn.dataset.type; 
-            const item = btn.dataset.item; 
-            const price = parseInt(btn.dataset.price);
-            buyItem(type, item, price);
+    if (elStockPresent) elStockPresent.textContent = inventory.present || 0;
+    if (elStockCorrect) elStockCorrect.textContent = inventory.correct || 0;
+    if (elStockRemove) elStockRemove.textContent = inventory.remove || 0;
+
+    document.querySelectorAll('.buy-item-btn').forEach(oldBtn => {
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        
+        newBtn.onclick = () => {
+            const type = newBtn.dataset.type; 
+            const item = newBtn.dataset.item; 
+            const price = parseInt(newBtn.dataset.price);
+            
+            import('./game.js').then(m => m.buyItem(type, item, price));
         };
     });
 
-    document.querySelectorAll('.buy-gold-btn').forEach(btn => {
-        btn.onclick = () => {
-            const amount = parseInt(btn.dataset.amount);
-            addGold(amount);
+    document.querySelectorAll('.buy-gold-btn').forEach(oldBtn => {
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        
+        newBtn.onclick = () => {
+            const amount = parseInt(newBtn.dataset.amount);
+            import('./game.js').then(m => m.addGold(amount));
         };
     });
 }
@@ -1208,16 +1037,14 @@ export function openKirtasiyeScreen() {
     updateMarketUI();
 }
 
-// --- SÖZLÜK (DICTIONARY) FONKSİYONLARI (YENİ) ---
+// --- SÖZLÜK (DICTIONARY) FONKSİYONLARI ---
 
 export async function openDictionaryScreen() {
     showScreen('dictionary-screen');
-    
     if (dictionaryListContainer) {
         dictionaryListContainer.innerHTML = '<p class="text-center text-gray-500 mt-10 animate-pulse">Sözlük yükleniyor...</p>';
     }
-
-    await loadDictionary();
+    import('./game.js').then(m => m.loadDictionary());
 }
 
 export function renderDictionaryList(words) {
@@ -1232,7 +1059,6 @@ export function renderDictionaryList(words) {
     words.forEach(item => {
         const card = document.createElement('div');
         card.className = 'dictionary-card';
-        
         const meaning = item.meaning ? item.meaning : 'Anlam bulunamadı.';
 
         card.innerHTML = `
@@ -1252,23 +1078,18 @@ export function renderDictionaryList(words) {
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
                 if (confirm(`"${item.word}" kelimesini sözlüğünden silmek istiyor musun?`)) {
-                    removeWordFromDictionary(item.word, card);
+                    import('./game.js').then(m => m.removeWordFromDictionary(item.word, card));
                 }
             };
         }
-
         dictionaryListContainer.appendChild(card);
     });
 }
-
-// js/ui.js EN ALTINA EKLE
 
 export function updateOpponentMiniGrid(opponentGuesses, wordLength, maxGuesses) {
     const container = document.getElementById('opponent-mini-grid');
     if (!container) return;
 
-    // Eğer ızgara henüz oluşturulmadıysa veya boyut değiştiyse oluştur
-    // 6 satır x Kelime Uzunluğu kadar minik kutu
     const totalTiles = maxGuesses * wordLength;
     if (container.children.length !== totalTiles) {
         container.innerHTML = '';
@@ -1285,12 +1106,10 @@ export function updateOpponentMiniGrid(opponentGuesses, wordLength, maxGuesses) 
         }
     }
 
-    // Renkleri Boya
     opponentGuesses.forEach((guess, rowIndex) => {
         guess.colors.forEach((color, colIndex) => {
             const tile = document.getElementById(`mini-${rowIndex}-${colIndex}`);
             if (tile) {
-                // Mevcut sınıfları temizle ve yenisini ekle
                 tile.className = `mini-tile ${color}`;
             }
         });
@@ -1298,17 +1117,13 @@ export function updateOpponentMiniGrid(opponentGuesses, wordLength, maxGuesses) 
 }
 
 export function resetUIForNewRound() {
-    // 1. Klavyedeki renkleri temizle
     document.querySelectorAll('.keyboard-key').forEach(btn => {
         btn.classList.remove('correct', 'present', 'absent');
-        // Eğer 'disabled' veya stili değiştirilmişse sıfırla
         btn.style.opacity = "1";
         btn.style.transform = "none";
         btn.style.pointerEvents = "auto";
     });
 
-    // 2. Izgaradaki "static" (joker) sınıflarını temizle
-    // createGrid zaten HTML'i siliyor ama biz yine de DOM'da kalan kırıntı varsa diye:
     const tiles = document.querySelectorAll('.tile');
     tiles.forEach(tile => {
         tile.className = 'tile';
@@ -1322,10 +1137,8 @@ export function resetUIForNewRound() {
 export function openMatchmakingScreen() {
     const profile = state.getCurrentUserProfile();
 
-    // Kullanıcı bilgilerini doldur
     if (matchmakingMyName) matchmakingMyName.textContent = profile?.username || 'Oyuncu';
     if (matchmakingMyAvatar) {
-        // Avatar URL'sini belirle (varsayılan veya profil avatarı)
         const avatarUrl = profile?.avatar || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
         matchmakingMyAvatar.src = avatarUrl;
     }
@@ -1333,12 +1146,7 @@ export function openMatchmakingScreen() {
     showScreen('matchmaking-screen');
 }
 
-export function closeMatchmakingScreen() {
-    // Arama bitince veya iptal edilince ne olacağı main.js'de veya game.js'de yönetilecek
-    // Genellikle showScreen('game-screen') veya showScreen('new-game-screen') çağrılır.
-}
-
-// js/ui.js (EN ALTA EKLE)
+export function closeMatchmakingScreen() {}
 
 // --- LOBİ DAVET MODALI ---
 export async function openLobbyInviteModal() {
@@ -1351,7 +1159,6 @@ export async function openLobbyInviteModal() {
     modal.classList.remove('hidden');
     listContainer.innerHTML = '<div class="flex justify-center p-4"><div class="radar-ring relative w-8 h-8 border-2 border-indigo-500 rounded-full animate-spin border-t-transparent"></div></div>';
 
-    // Kapatma butonu olayı
     closeBtn.onclick = () => modal.classList.add('hidden');
 
     try {
@@ -1379,7 +1186,7 @@ export async function openLobbyInviteModal() {
                 btn.textContent = "Gönderildi";
                 btn.className = "bg-gray-600 text-gray-400 text-xs font-bold py-1.5 px-3 rounded cursor-not-allowed";
                 
-                await sendLobbyInvite(friend.id);
+                import('./game.js').then(m => m.sendLobbyInvite(friend.id));
             };
 
             listContainer.appendChild(div);

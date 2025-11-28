@@ -12,17 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
-        .back-button-hitbox {
-            padding: 8px !important;
-            margin-left: -8px !important;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-        }
-        #leave-game-button, #main-menu-btn {
-            cursor: pointer;
-        }
-        /* Özel Scrollbar */
+        .back-button-hitbox { padding: 8px !important; margin-left: -8px !important; cursor: pointer; display: flex; align-items: center; }
+        #leave-game-button, #main-menu-btn { cursor: pointer; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
@@ -188,7 +179,7 @@
             </button>
             <h1 class="text-3xl font-bold text-center mb-6" id="multiplayer-setup-title">Online Oyun Kurulumu</h1>
             <div class="mb-4">
-                <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4">Arkadaşına Meydan Oku</button>
+                <button id="invite-friend-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hidden">Arkadaşına Meydan Oku</button>
                 <hr class="border-gray-600 my-4">
                 <h2 class="text-2xl font-semibold mb-3">Oyun Ayarları</h2>
                 <div class="grid grid-cols-3 gap-2">
@@ -404,66 +395,28 @@
                 </div>
 
                 <div id="tutorial-joker-container" class="joker-container" style="padding: 10px 0;">
-                    
                     <button id="tutorial-joker-present" class="joker-button" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.2);">
                         <span class="joker-badge">x1</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));">
-                            <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                            <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" /><path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" /></svg>
                     </button>
-                    
                     <button id="tutorial-joker-correct" class="joker-button" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.2);">
                         <span class="joker-badge">x1</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5));">
-                            <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                            <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5));"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" /><path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" /></svg>
                     </button>
-                    
                     <button id="tutorial-joker-remove" class="joker-button" style="border-color: #9ca3af; background-color: rgba(156, 163, 175, 0.1);">
                         <span class="joker-badge">x1</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
-                            <path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" />
-                            <path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" /><path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" /></svg>
                     </button>
                 </div>
                 <div id="tutorial-keyboard" class="w-full flex-shrink-0" style="padding: 8px 2px 2px 2px; box-sizing: border-box;">
                     <div class="tutorial-key-row" style="display: flex; justify-content: center; gap: 4px; margin-bottom: 4px;">
-                        <button class="tutorial-key" data-key="E">E</button>
-                        <button class="tutorial-key" data-key="R">R</button>
-                        <button class="tutorial-key" data-key="T">T</button>
-                        <button class="tutorial-key" data-key="Y">Y</button>
-                        <button class="tutorial-key" data-key="U">U</button>
-                        <button class="tutorial-key" data-key="I">I</button>
-                        <button class="tutorial-key" data-key="O">O</button>
-                        <button class="tutorial-key" data-key="P">P</button>
-                        <button class="tutorial-key" data-key="Ğ">Ğ</button>
-                        <button class="tutorial-key" data-key="Ü">Ü</button>
+                        <button class="tutorial-key" data-key="E">E</button><button class="tutorial-key" data-key="R">R</button><button class="tutorial-key" data-key="T">T</button><button class="tutorial-key" data-key="Y">Y</button><button class="tutorial-key" data-key="U">U</button><button class="tutorial-key" data-key="I">I</button><button class="tutorial-key" data-key="O">O</button><button class="tutorial-key" data-key="P">P</button><button class="tutorial-key" data-key="Ğ">Ğ</button><button class="tutorial-key" data-key="Ü">Ü</button>
                     </div>
                     <div class="tutorial-key-row" style="display: flex; justify-content: center; gap: 4px; margin-bottom: 4px;">
-                        <button class="tutorial-key" data-key="A">A</button>
-                        <button class="tutorial-key" data-key="S">S</button>
-                        <button class="tutorial-key" data-key="D">D</button>
-                        <button class="tutorial-key" data-key="F">F</button>
-                        <button class="tutorial-key" data-key="G">G</button>
-                        <button class="tutorial-key" data-key="H">H</button>
-                        <button class="tutorial-key" data-key="J">J</button>
-                        <button class="tutorial-key" data-key="K">K</button>
-                        <button class="tutorial-key" data-key="L">L</button>
-                        <button class="tutorial-key" data-key="Ş">Ş</button>
-                        <button class="tutorial-key" data-key="İ">İ</button>
+                        <button class="tutorial-key" data-key="A">A</button><button class="tutorial-key" data-key="S">S</button><button class="tutorial-key" data-key="D">D</button><button class="tutorial-key" data-key="F">F</button><button class="tutorial-key" data-key="G">G</button><button class="tutorial-key" data-key="H">H</button><button class="tutorial-key" data-key="J">J</button><button class="tutorial-key" data-key="K">K</button><button class="tutorial-key" data-key="L">L</button><button class="tutorial-key" data-key="Ş">Ş</button><button class="tutorial-key" data-key="İ">İ</button>
                     </div>
                     <div class="tutorial-key-row" style="display: flex; justify-content: center; gap: 4px; margin-bottom: 4px;">
-                        <button class="tutorial-key" data-key="Z">Z</button>
-                        <button class="tutorial-key" data-key="C">C</button>
-                        <button class="tutorial-key" data-key="V">V</button>
-                        <button class="tutorial-key" data-key="B">B</button>
-                        <button class="tutorial-key" data-key="N">N</button>
-                        <button class="tutorial-key" data-key="M">M</button>
-                        <button class="tutorial-key" data-key="Ö">Ö</button>
-                        <button class="tutorial-key" data-key="Ç">Ç</button>
+                        <button class="tutorial-key" data-key="Z">Z</button><button class="tutorial-key" data-key="C">C</button><button class="tutorial-key" data-key="V">V</button><button class="tutorial-key" data-key="B">B</button><button class="tutorial-key" data-key="N">N</button><button class="tutorial-key" data-key="M">M</button><button class="tutorial-key" data-key="Ö">Ö</button><button class="tutorial-key" data-key="Ç">Ç</button>
                     </div>
                 </div>
             </div>
@@ -484,20 +437,17 @@
 
             <div id="multiplayer-score-board" class="hidden w-full bg-gray-800/80 p-1 rounded-lg shadow-sm flex-shrink-0 mb-1 mt-1 backdrop-blur-sm">
                 <div class="grid grid-cols-5 gap-1 w-full items-start">
-                    
                     <div class="col-span-2 flex flex-col gap-1">
                         <div id="br-player-slot-0" class="h-7"><p></p><p></p></div>
                         <div id="br-player-slot-1" class="h-7"><p></p><p></p></div>
                         <div id="br-player-slot-2" class="h-7"><p></p><p></p></div>
                         <div id="br-player-slot-3" class="h-7"><p></p><p></p></div>
                     </div>
-
                     <div class="col-span-1 flex flex-col items-center justify-center pt-1">
                          <p id="br-timer-display" class="font-bold text-3xl font-mono text-amber-400 leading-none drop-shadow-md">60</p>
                          <p id="br-round-counter" class="text-[9px] text-gray-400 uppercase tracking-wider mt-1">Tur 1</p>
                          <p id="br-turn-display" class="text-[9px] text-gray-300 text-center leading-tight hidden">...</p>
                     </div>
-
                     <div class="col-span-2 flex flex-col gap-1">
                         <div id="br-player-slot-4" class="h-7"><p></p><p></p></div>
                         <div id="br-player-slot-5" class="h-7"><p></p><p></p></div>
@@ -517,6 +467,14 @@
                 </div>
                 <div id="player2-score" class="text-right w-2/5 truncate pr-12"></div>
             </div>
+            
+            <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
+                 <div class="flex items-center gap-2">
+                     <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
+                     <button id="copy-game-id-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-0 px-2 rounded text-xs">Kopyala</button>
+                     <button id="share-game-btn" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-0 px-2 rounded text-xs flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg><span>Paylaş</span></button>
+                 </div>
+            </div>
 
             <div class="w-full flex-grow flex flex-col justify-center overflow-y-auto min-h-0">
                 <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
@@ -534,108 +492,45 @@
             <div id="joker-container" class="joker-container">
                 <button id="joker-present" class="joker-button" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.2);">
                     <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));">
-                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" /><path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" /></svg>
                 </button>
                 <button id="joker-correct" class="joker-button" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.2);">
                     <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5));">
-                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5));"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" /><path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" /></svg>
                 </button>
                 <button id="joker-remove" class="joker-button" style="border-color: #6b7280; background-color: rgba(156, 163, 175, 0.1);">
                     <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
-                        <path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" />
-                        <path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" />
-                    </svg>
-                </button>
-            </div>
-            <div id="keyboard" class="w-full flex-shrink-0"></div>
-        </div>
-                <div id="player2-score" class="text-right w-2/5 truncate"></div>
-            </div>
-            
-            <div id="game-info-bar" class="w-full text-center py-1 flex justify-between items-center px-2 flex-shrink-0">
-                 <div class="flex items-center gap-2">
-                     <p class="text-xs">Oyun ID: <strong id="game-id-display" class="text-indigo-400"></strong></p>
-                     <button id="copy-game-id-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-0 px-2 rounded text-xs">Kopyala</button>
-                     <button id="share-game-btn" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-0 px-2 rounded text-xs flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg><span>Paylaş</span></button>
-                 </div>
-                 <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Ayrıl</button>
-            </div>
-
-            <div class="w-full flex-grow flex flex-col justify-center overflow-y-auto min-h-0">
-                <div id="guess-grid" class="grid gap-1 w-full" style="margin: 0 auto;"></div>
-            </div>
-            
-            <button id="invite-to-lobby-btn" class="hidden w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 flex items-center justify-center gap-2 shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-            </svg>
-            Arkadaş Davet Et
-            </button>
-            
-            <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
-            
-            <div id="joker-container" class="joker-container">
-                <button id="joker-present" class="joker-button" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.2);">
-                    <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));">
-                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" />
-                    </svg>
-                </button>
-                
-                <button id="joker-correct" class="joker-button" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.2);">
-                    <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5));">
-                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" />
-                    </svg>
-                </button>
-                
-                <button id="joker-remove" class="joker-button" style="border-color: #6b7280; background-color: rgba(156, 163, 175, 0.1);">
-                    <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
-                        <path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" />
-                        <path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" /><path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" /></svg>
                 </button>
             </div>
             <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
 
-        <div id="scoreboard-screen" class="hidden flex-1 flex flex-col justify-center">
-            <div class="text-center bg-gray-800 p-4 rounded-lg shadow-lg">
-                <h2 id="round-winner-display" class="text-3xl font-bold mb-2"></h2>
-                <h3 id="match-winner-display" class="text-2xl font-bold mb-4 text-yellow-400"></h3>
+        <div id="scoreboard-screen" class="hidden flex-1 flex flex-col items-center justify-center p-4 bg-gray-900 overflow-y-auto">
+            <div class="w-full max-w-md bg-gray-800 p-6 rounded-xl shadow-2xl border border-gray-700 text-center relative">
                 
-                <div id="daily-stats-container" class="hidden">
-                </div>
-
-                <div class="mb-4" id="default-word-display-container">
-                    <p>Doğru Kelime: <strong id="correct-word-display" class="text-green-400 text-xl"></strong></p>
-                    <p id="word-meaning-display" class="text-sm text-gray-400 mt-2 italic"></p>
-                    
-                    <button id="btn-add-word-to-dict" class="hidden mt-3 text-xs bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-full items-center gap-2 justify-center mx-auto transition shadow-md border border-amber-500/50">
+                <h2 id="round-winner-display" class="text-3xl font-black mb-2 tracking-wide uppercase drop-shadow-md"></h2>
+                <h3 id="match-winner-display" class="text-2xl font-bold mb-6 text-yellow-400 hidden animate-pulse"></h3>
+                
+                <div id="default-word-display-container" class="mb-6 bg-gray-900/50 p-4 rounded-lg border border-gray-600">
+                    <p class="text-xs text-gray-400 uppercase mb-1">Doğru Kelime</p>
+                    <p id="correct-word-display" class="text-3xl font-black text-green-400 tracking-[0.2em]"></p>
+                    <p id="word-meaning-display" class="text-sm text-gray-300 mt-2 italic font-serif leading-relaxed"></p>
+                    <button id="btn-add-word-to-dict" class="hidden mt-3 text-xs bg-amber-600 hover:bg-amber-500 text-white py-1.5 px-4 rounded-full transition items-center gap-2 justify-center mx-auto shadow-md">
                         <span>📖</span> Sözlüğe Ekle
                     </button>
+                </div>
+
+                <div id="final-scores" class="w-full mb-6 space-y-2 text-sm bg-gray-700/30 p-3 rounded-lg max-h-40 overflow-y-auto custom-scrollbar"></div>
+                
+                <div class="flex flex-col gap-3 w-full" id="default-round-buttons">
+                    <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition transform active:scale-95">Sonraki Tur</button>
+                    <button id="new-word-rematch-btn" class="hidden w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition">Yeni Kelime (Rövanş)</button>
+                    
+                    <div class="flex gap-2">
+                        <button id="share-results-btn" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-4 rounded-lg text-sm shadow-md transition">Paylaş</button>
+                        <button id="main-menu-btn" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-lg text-sm shadow-md transition">Menü</button>
                     </div>
-                
-                <div id="final-scores" class="w-full max-w-xs mx-auto mb-6 text-left"></div>
-                
-                <div class="flex gap-2" id="default-round-buttons">
-                <button id="new-round-btn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Yeni Oyun</button>
-    
-                 <button id="new-word-rematch-btn" class="hidden w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">
-                Yeni Kelime (Rövanş)
-                </button>
-                <button id="share-results-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg mb-3">Sonucu Paylaş</button>
-                <button id="main-menu-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Ana Menü</button>
                 </div>
             </div>
         </div>
@@ -724,194 +619,99 @@
              </div>
         </div>
 
-        <div id="kirtasiye-screen" class="hidden flex-1 flex flex-col p-3 bg-gray-900 h-full">
-            <header class="flex items-center mb-3 border-b border-gray-700 pb-2 flex-shrink-0">
-                <button id="back-to-main-from-market-btn" class="back-button-hitbox scale-90 origin-left">
-                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+        <div id="kirtasiye-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-900 h-full overflow-hidden">
+            <header class="flex items-center mb-4 border-b border-gray-700 pb-3 flex-shrink-0">
+                <button id="back-to-main-from-market-btn" class="back-button-hitbox">
+                    <svg class="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 </button>
                 <h1 class="text-2xl font-black text-center flex-grow -ml-10 text-amber-500 tracking-wider flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
-                    KIRTASİYE
+                    <span class="text-3xl">✏️</span> KIRTASİYE
                 </h1>
             </header>
 
-            <div class="bg-gray-800 rounded-xl p-3 mb-4 flex justify-between items-center shadow-lg border border-amber-500/30 flex-shrink-0">
+            <div class="bg-gradient-to-r from-gray-800 to-gray-700 rounded-xl p-4 mb-6 flex justify-between items-center shadow-lg border border-amber-500/20 flex-shrink-0">
                 <div>
-                    <p class="text-gray-400 text-xs uppercase font-bold">Cüzdanım</p>
-                    <p class="text-white text-md font-medium">Hoşgeldin!</p>
+                    <p class="text-gray-400 text-xs uppercase font-bold tracking-wider">Mevcut Bakiye</p>
+                    <p class="text-white text-sm font-medium opacity-80">Alışverişe Başla!</p>
                 </div>
-                <div class="flex items-center gap-2 bg-gray-900 px-3 py-1.5 rounded-full border border-yellow-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                        <text x="12" y="16" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                    </svg>
+                <div class="flex items-center gap-2 bg-gray-900/80 px-4 py-2 rounded-full border border-yellow-500/50 shadow-inner">
+                    <span class="text-2xl">💰</span>
                     <span id="user-gold-display" class="text-xl font-bold text-yellow-400">0</span>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                
-                <div class="mb-5">
-                    <h2 class="text-sm font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
-                        Kırtasiye Malzemeleri
-                    </h2>
-                    <div class="grid grid-cols-1 gap-1.5">
-                        
-                        <div class="bg-gray-800 p-2.5 rounded-xl flex items-center justify-between border border-gray-700">
-                            <div class="flex items-center gap-3">
-                                <div class="flex items-center justify-center rounded-full" style="background-color: rgba(245, 158, 11, 0.1); width: 44px; height: 44px; border: 1px solid #f59e0b;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 1px rgba(251, 191, 36, 0.5));">
-                                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm">Turuncu Kalem</h3>
-                                    <p class="text-xs text-gray-400">Harf ipucu verir.</p>
-                                    <p class="text-xs text-indigo-400 mt-0.5">Stok: <span id="stock-present" class="font-bold text-white">0</span></p>
-                                </div>
-                            </div>
-                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow flex flex-col items-center justify-center min-w-[70px]" data-type="joker" data-item="present" data-price="100">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-sm font-bold">100</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="2" />
-                                        <text x="12" y="17" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                    </svg>
-                                </div>
-                                <span class="text-[10px] font-normal opacity-90">Satın Al</span>
-                            </button>
-                        </div>
-
-                        <div class="bg-gray-800 p-2.5 rounded-xl flex items-center justify-between border border-gray-700">
-                            <div class="flex items-center gap-3">
-                                <div class="flex items-center justify-center rounded-full" style="background-color: rgba(16, 185, 129, 0.1); width: 44px; height: 44px; border: 1px solid #10b981;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 1px rgba(52, 211, 153, 0.5));">
-                                        <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" />
-                                        <path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm">Yeşil Kalem</h3>
-                                    <p class="text-xs text-gray-400">Harfi yerine yazar.</p>
-                                    <p class="text-xs text-indigo-400 mt-0.5">Stok: <span id="stock-correct" class="font-bold text-white">0</span></p>
-                                </div>
-                            </div>
-                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow flex flex-col items-center justify-center min-w-[70px]" data-type="joker" data-item="correct" data-price="250">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-sm font-bold">250</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="2" />
-                                        <text x="12" y="17" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                    </svg>
-                                </div>
-                                <span class="text-[10px] font-normal opacity-90">Satın Al</span>
-                            </button>
-                        </div>
-
-                        <div class="bg-gray-800 p-2.5 rounded-xl flex items-center justify-between border border-gray-700">
-                            <div class="flex items-center gap-3">
-                                <div class="flex items-center justify-center rounded-full" style="background-color: rgba(156, 163, 175, 0.1); width: 44px; height: 44px; border: 1px solid #9ca3af;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
-                                        <path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" />
-                                        <path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm">Silgi</h3>
-                                    <p class="text-xs text-gray-400">Gereksizleri siler.</p>
-                                    <p class="text-xs text-indigo-400 mt-0.5">Stok: <span id="stock-remove" class="font-bold text-white">0</span></p>
-                                </div>
-                            </div>
-                            <button class="buy-item-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow flex flex-col items-center justify-center min-w-[70px]" data-type="joker" data-item="remove" data-price="150">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-sm font-bold">150</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10" fill="#fbbf24" stroke="#b45309" stroke-width="2" />
-                                        <text x="12" y="17" font-size="14" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                    </svg>
-                                </div>
-                                <span class="text-[10px] font-normal opacity-90">Satın Al</span>
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-
+            <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-6">
                 <div>
-                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
-                        Altın Kasası
-                    </h2>
+                    <h2 class="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2 ml-1">🚀 Güçlendirmeler</h2>
+                    <div class="space-y-3">
+                        <div class="bg-gray-800 p-3 rounded-xl flex items-center justify-between border border-gray-700 shadow-md">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500 flex items-center justify-center text-2xl">🔦</div>
+                                <div><h3 class="font-bold text-white text-md">Turuncu Kalem</h3><p class="text-xs text-gray-400">Harf var mı diye bakar.</p><p class="text-xs text-indigo-400 mt-1 font-bold">Stok: <span id="stock-present" class="text-white">0</span></p></div>
+                            </div>
+                            <button class="buy-item-btn bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg text-xs shadow-lg transition transform active:scale-95 flex flex-col items-center min-w-[80px]" data-type="joker" data-item="present" data-price="100"><span class="text-sm">100 💰</span><span class="text-[10px] opacity-80 font-normal">Satın Al</span></button>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-xl flex items-center justify-between border border-gray-700 shadow-md">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full bg-green-500/10 border border-green-500 flex items-center justify-center text-2xl">🎯</div>
+                                <div><h3 class="font-bold text-white text-md">Yeşil Kalem</h3><p class="text-xs text-gray-400">Harfi yerine yazar.</p><p class="text-xs text-indigo-400 mt-1 font-bold">Stok: <span id="stock-correct" class="text-white">0</span></p></div>
+                            </div>
+                            <button class="buy-item-btn bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg text-xs shadow-lg transition transform active:scale-95 flex flex-col items-center min-w-[80px]" data-type="joker" data-item="correct" data-price="250"><span class="text-sm">250 💰</span><span class="text-[10px] opacity-80 font-normal">Satın Al</span></button>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-xl flex items-center justify-between border border-gray-700 shadow-md">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full bg-gray-500/10 border border-gray-500 flex items-center justify-center text-2xl">🧹</div>
+                                <div><h3 class="font-bold text-white text-md">Silgi</h3><p class="text-xs text-gray-400">Gereksiz harfleri eler.</p><p class="text-xs text-indigo-400 mt-1 font-bold">Stok: <span id="stock-remove" class="text-white">0</span></p></div>
+                            </div>
+                            <button class="buy-item-btn bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg text-xs shadow-lg transition transform active:scale-95 flex flex-col items-center min-w-[80px]" data-type="joker" data-item="remove" data-price="150"><span class="text-sm">150 💰</span><span class="text-[10px] opacity-80 font-normal">Satın Al</span></button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2 ml-1">💎 Altın Kasası</h2>
                     <div class="grid grid-cols-2 gap-3">
-                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-700 border border-yellow-600 p-3 rounded-xl flex flex-col items-center transition transform active:scale-95" data-amount="500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-1" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
-                                <circle cx="8" cy="14" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="8" y="16" font-size="5" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="16" cy="14" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="16" y="16" font-size="5" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="12" cy="9" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="12" y="11" font-size="5" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                            </svg>
-                            <span class="font-bold text-white text-sm">500 Altın</span>
-                            <span class="text-green-400 text-[10px] mt-0.5">REKLAM İZLE</span>
+                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-750 border border-yellow-600/50 p-4 rounded-xl flex flex-col items-center transition transform active:scale-95 shadow-md relative overflow-hidden group" data-amount="500">
+                            <div class="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition"></div>
+                            <span class="text-3xl mb-2 filter drop-shadow">📺</span>
+                            <span class="font-bold text-white text-lg">500</span>
+                            <span class="text-xs text-yellow-500 font-bold uppercase mt-1">Reklam İzle</span>
                         </button>
-                        
-                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-700 border border-yellow-600 p-3 rounded-xl flex flex-col items-center transition transform active:scale-95" data-amount="2000">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-1" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
-                                <circle cx="5" cy="17" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="5" y="18.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="12" cy="17" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="12" y="18.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="19" cy="17" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="19" y="18.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="8.5" cy="12" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="8.5" y="13.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="15.5" cy="12" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="15.5" y="13.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                                <circle cx="12" cy="7" r="3.5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
-                                <text x="12" y="8.5" font-size="4" text-anchor="middle" fill="#78350f" font-weight="bold">$</text>
-                            </svg>
-                            <span class="font-bold text-white text-sm">2.000 Altın</span>
-                            <span class="text-green-400 text-[10px] font-bold mt-0.5">20 TL</span>
+                        <button class="buy-gold-btn bg-gray-800 hover:bg-gray-750 border border-yellow-600/50 p-4 rounded-xl flex flex-col items-center transition transform active:scale-95 shadow-md relative overflow-hidden group" data-amount="2000">
+                            <div class="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition"></div>
+                            <span class="text-3xl mb-2 filter drop-shadow">💎</span>
+                            <span class="font-bold text-white text-lg">2.000</span>
+                            <span class="text-xs text-green-400 font-bold uppercase mt-1">20 TL</span>
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
 
-        <div id="dictionary-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-800">
-            <header class="flex items-center mb-4 border-b border-gray-700 pb-3">
+        <div id="dictionary-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-900 h-full">
+            <header class="flex items-center mb-4">
                 <button id="back-to-main-from-dictionary-btn" class="back-button-hitbox">
-                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <svg class="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 </button>
-                <h1 class="text-2xl font-bold text-center flex-grow -ml-10 text-amber-500 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-                    </svg>
-                    SÖZLÜĞÜM
-                </h1>
+                <h1 class="text-2xl font-bold text-center flex-grow -ml-10 text-amber-500">Sözlüğüm</h1>
             </header>
-
-            <div class="text-center mb-4">
-                <p class="text-gray-400 text-sm">Oyunda ilgini çeken kelimeleri buraya kaydedebilirsin.</p>
-            </div>
-
-            <div id="dictionary-list-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                <p id="dictionary-empty-msg" class="text-gray-500 text-center mt-10 italic">Sözlüğün henüz boş.</p>
+            <div id="dictionary-list-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                <p id="dictionary-empty-msg" class="text-center text-gray-500 mt-10">Sözlüğün henüz boş.</p>
             </div>
         </div>
+
         <div id="avatar-selection-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 class="text-2xl font-bold text-white mb-4">Avatar Seç</h3>
-            
-            <div id="avatar-grid" class="grid grid-cols-4 gap-4 mb-4">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+                <h3 class="text-2xl font-bold text-white mb-4">Avatar Seç</h3>
+                
+                <div id="avatar-grid" class="grid grid-cols-4 gap-4 mb-4">
                 </div>
-            
-            <button id="close-avatar-modal-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
-                Kapat
-            </button>
+                
+                <button id="close-avatar-modal-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Kapat
+                </button>
+            </div>
         </div>
+
     </div>
 
     <div id="toast" class="toast"></div>
@@ -923,7 +723,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     
-    <script type="module" src="js/main.js?v=3.0.0"></script> 
+    <script type="module" src="js/main.js?v=3.0.1"></script> 
 
     <div id="lobby-invite-modal" class="hidden fixed inset-0 bg-gray-900/90 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
         <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm border border-gray-700 flex flex-col max-h-[80vh]">
@@ -939,5 +739,6 @@
             </div>
         </div>
     </div>
+
 </body>
 </html>
