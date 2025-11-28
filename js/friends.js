@@ -24,7 +24,7 @@ import { showToast, createElement } from './utils.js';
 import { showScreen, displayStats, renderMyGamesLists, gameInviteCount } from './ui.js';
 // -----------------------
 
-import { joinGame } from './game.js';
+import { joinGame, startQuickFriendGame } from './game.js';
 
 // Elementler
 const friendsList = document.getElementById('friends-list');
@@ -169,9 +169,10 @@ export function listenToFriendships() {
 }
 
 function challengeFriend(friend) {
-    state.setChallengedFriendId(friend.id);
-    showScreen('multiplayer-setup-screen');
-    showToast(`Lütfen ${friend.username} adlı arkadaşına meydan okumak için ayarları yap.`, false);
+    // Ayar ekranı yok, direkt oyunu başlatıyoruz
+    startQuickFriendGame(friend.id); 
+    // Kullanıcıya bilgi ver (Zaten startQuickFriendGame de toast gösteriyor ama bu ekstra netlik sağlar)
+    // showToast(`${friend.username} kişisine oyun açılıyor...`, false);
 }
 
 function renderFriends(friends, requests) {

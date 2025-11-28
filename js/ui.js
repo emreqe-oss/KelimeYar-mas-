@@ -769,6 +769,16 @@ export async function openKelimeligScreen() {
     if(joinStatus) joinStatus.classList.add('hidden');
     if(joinBtn) joinBtn.classList.remove('hidden');
 
+    const titleEl = document.querySelector('#kelimelig-screen h1');
+    if (titleEl) {
+        titleEl.style.cursor = "pointer";
+        titleEl.onclick = () => {
+            if(confirm("Lige 15 adet bot eklemek istiyor musun?")) {
+                import('./game.js').then(m => m.populateLeagueWithBots());
+            }
+        };
+    }
+    
     await checkLeagueStatus();
 }
 

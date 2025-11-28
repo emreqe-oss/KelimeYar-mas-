@@ -624,13 +624,17 @@ export function updateTurnDisplay(gameData) {
         } 
         // vsCPU Modu
         else if (gameMode === 'vsCPU') {
-            const currentPlayerUsername = gameData.players[gameData.currentPlayerId]?.username;
-            if (gameData.currentPlayerId === currentUserId) {
+            const myState = gameData.players[currentUserId];
+            
+            // DÜZELTME: Eğer ben bitirdiysem (Bildi veya Yandı), Bilgisayarı bekle
+            if (myState && (myState.hasSolved || myState.hasFailed)) {
+                turnDisplay.textContent = "Bilgisayar Bekleniyor...";
+                turnDisplay.className = "font-bold text-yellow-400 animate-pulse text-sm";
+            } 
+            // Ben bitirmedim, sıra bende
+            else {
                 turnDisplay.textContent = "Sıra Sende!";
                 turnDisplay.className = "font-bold text-white pulsate text-md";
-            } else {
-                turnDisplay.textContent = `Sıra: ${currentPlayerUsername || '...'}`;
-                turnDisplay.className = "font-bold text-gray-300 text-md";
             }
         }
     } 
@@ -1541,6 +1545,14 @@ export async function startNewGame(config) {
     showScreen('game-screen');
     initializeGameUI(gameData);
     await renderGameState(gameData);
+    if (config.mode === 'vsCPU') {
+        // Önceki zamanlayıcı varsa temizle (Çakışmayı önle)
+        if (typeof cpuLoopTimeout !== 'undefined' && cpuLoopTimeout) clearTimeout(cpuLoopTimeout);
+        
+        console.log("vsCPU Başlatılıyor: Bot 1.5sn sonra devreye girecek.");
+        // Yeni döngüyü başlat
+        setTimeout(() => startCpuLoop('cpu'), 1500); 
+    }
 }
 
 function getDailyGameState() {
@@ -3699,7 +3711,7 @@ async function startCpuLoop(botId = 'cpu') {
     }, randomDelay);
 }
 
-// js/game.js -> checkVsCpuGameEnd (DÜZELTİLMİŞ HALİ)
+// js/game.js -> checkVsCpuGameEnd (BERABERLİK DÜZELTMESİ)
 
 function checkVsCpuGameEnd() {
     const localGameData = state.getLocalGameData();
@@ -3720,25 +3732,25 @@ function checkVsCpuGameEnd() {
         
         // Tur Kazananını Belirle
         if (p1.hasSolved && cpu.hasSolved) {
-             if (p1.guesses.length < cpu.guesses.length) localGameData.roundWinner = userId;
-             else if (cpu.guesses.length < p1.guesses.length) localGameData.roundWinner = 'cpu';
-             else localGameData.roundWinner = null; // Berabere
-        } else if (p1.hasSolved) {
+             // DÜZELTME: Eşitlik durumunda (<=) oyuncuyu kazanan yap. 
+             // Böylece "Kimse Bulamadı" hatası çıkmaz.
+             if (p1.guesses.length <= cpu.guesses.length) localGameData.roundWinner = userId;
+             else localGameData.roundWinner = 'cpu';
+        } 
+        else if (p1.hasSolved) {
             localGameData.roundWinner = userId;
-        } else if (cpu.hasSolved) {
+        } 
+        else if (cpu.hasSolved) {
             localGameData.roundWinner = 'cpu';
-        } else {
-            localGameData.roundWinner = null;
+        } 
+        else {
+            localGameData.roundWinner = null; // İkisi de bilemedi (Kimse Bulamadı)
         }
 
         state.setLocalGameData(localGameData);
         stopTurnTimer();
         
-        // --- DÜZELTME BURADA ---
-        // 'import' KULLANMIYORUZ. renderGameState zaten bu dosyanın içinde.
-        // Doğrudan çağırıyoruz:
         renderGameState(localGameData, true).then(() => {
-            // showScoreboard da bu dosyanın (game.js) içinde olduğu için doğrudan çağırıyoruz
             setTimeout(() => showScoreboard(localGameData), 1500);
         });
     }
@@ -3820,5 +3832,78 @@ async function assignBotToGame(gameId) {
         });
     } catch (error) {
         console.error("Bot atama hatası:", error);
+    }
+}
+
+// js/game.js (EN ALTA EKLE)
+
+// --- HIZLI ARKADAŞ OYUNU BAŞLATMA ---
+export async function startQuickFriendGame(friendId) {
+    if (!friendId) return;
+
+    showToast("Oyun oluşturuluyor...", false);
+
+    // Ayar ekranını atla, direkt standart ayarlarla kur
+    await createGame({
+        invitedFriendId: friendId,
+        timeLimit: 120, // İsteğin üzerine 120 saniye
+        matchLength: 5, // İsteğin üzerine 5 Tur
+        gameType: 'friend' // Arkadaş modu
+    });
+    
+    // createGame fonksiyonu zaten otomatik olarak oyun ekranını açıyor 
+    // ve updateTurnDisplay fonksiyonu "Arkadaşın bekleniyor" yazısını gösteriyor.
+}
+
+// js/game.js (EN ALTA EKLE)
+
+// --- LİGE BOT EKLEME (DEV TOOLS) ---
+export async function populateLeagueWithBots() {
+    const weekID = getCurrentWeekID();
+    const botsToAdd = [];
+    const usedIndices = new Set();
+
+    // 15 adet benzersiz bot ismi seç
+    // (botNames dizisi js/game.js içinde tanımlı olmalı)
+    while (botsToAdd.length < 15) {
+        const randomIndex = Math.floor(Math.random() * botNames.length);
+        if (!usedIndices.has(randomIndex)) {
+            usedIndices.add(randomIndex);
+            botsToAdd.push(botNames[randomIndex]);
+        }
+        // Eğer 50 isimden az kaldıysa döngü sonsuza girmesin
+        if (usedIndices.size >= botNames.length) break;
+    }
+
+    console.log("Lige eklenecek botlar:", botsToAdd);
+    showToast("Botlar lige ekleniyor...", false);
+
+    // Hepsini veritabanına kaydet
+    const promises = botsToAdd.map((name, index) => {
+        // Bot için benzersiz ID (bot_league_zaman_sıra)
+        const botId = `bot_league_${Date.now()}_${index}`;
+        
+        const botData = {
+            username: name,
+            joinedAt: serverTimestamp(),
+            score: 0,
+            isBot: true, // Bot olduğunu işaretle
+            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 } // Başlangıç istatistikleri
+        };
+        
+        // Katılımcılar koleksiyonuna ekle
+        return setDoc(doc(db, "leagues", weekID, "participants", botId), botData);
+    });
+
+    try {
+        await Promise.all(promises);
+        showToast("✅ 15 Bot başarıyla lige eklendi!");
+        
+        // Ekranı yenilemek için lig durumunu tekrar kontrol et
+        checkLeagueStatus();
+        
+    } catch (error) {
+        console.error("Bot ekleme hatası:", error);
+        showToast("Bot eklenirken hata oluştu.", true);
     }
 }
