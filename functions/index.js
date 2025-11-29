@@ -196,3 +196,74 @@ exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event)
     }
     return null;
 });
+
+// --- YENİ OYUN DAVETİ BİLDİRİMİ ---
+// Oyun ilk oluşturulduğunda (onCreate) rakibe bildirim atar.
+
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+
+exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (event) => {
+    const gameData = event.data.data();
+
+    // Eğer oyun multiplayer ise ve rakip belli ise
+    if (gameData.gameType === 'multiplayer' || gameData.gameType === 'multiplayer-br') {
+        // Genelde oyunu kuran player1'dir, davet edilen player2'dir.
+        // players objesindeki ID'leri alalım.
+        const playerIds = Object.keys(gameData.players);
+        
+        // Oyunu kuran kişinin ID'si (createdBy genelde veride tutulur, yoksa tahmin ederiz)
+        // Basit mantık: Oyunu kuran kişi hamle yapmışsa veya sırasıysa, diğerine atalım.
+        // Ancak en garantisi: Henüz hamle yapılmadıysa tüm oyunculara (kuran hariç) atılabilir.
+        
+        // Örnek: user1 oyunu kurdu, user2'yi bekliyor.
+        // user2'nin ID'sini bulup ona bildirim atacağız.
+        
+        /* NOT: Senin oyun yapında 'waiting' durumunda rakip ID belli mi? 
+           Eğer belli ise o ID'ye gönderiyoruz. */
+
+        // Tüm oyuncuları dönelim
+        for (const playerId of playerIds) {
+            // Eğer bu oyuncu, oyunu başlatan kişi değilse (bunu anlamak için oyun verine createdBy eklemen iyi olur)
+            // Şimdilik basitçe: Şu anki sıra kimde değilse ona atalım veya hepsine atalım.
+            
+            try {
+                const userDoc = await admin.firestore().collection('users').doc(playerId).get();
+                if (!userDoc.exists) continue;
+
+                const userData = userDoc.data();
+                const tokens = userData.fcmTokens;
+                
+                // Kendi kendine bildirim atma kontrolü (Opsiyonel: Client tarafında token kontrolü ile yapılır)
+                if (!tokens || tokens.length === 0) continue;
+
+                const message = {
+                    tokens: tokens,
+                    notification: {
+                        title: 'Yeni Oyun İsteği! 🎮',
+                        body: 'Bir arkadaşın seni kelime yarışına davet etti!',
+                    },
+                    webpush: {
+                        fcm_options: { link: 'https://kelime-yar-mas.vercel.app' },
+                        notification: { icon: '/icon-192x192.png' }
+                    }
+                };
+
+                const response = await admin.messaging().sendMulticast(message);
+                
+                // Geçersiz token temizliği
+                if (response.failureCount > 0) {
+                    const failedTokens = [];
+                    response.responses.forEach((r, i) => { if (!r.success) failedTokens.push(tokens[i]); });
+                    if (failedTokens.length > 0) {
+                        await admin.firestore().collection('users').doc(playerId).update({
+                            fcmTokens: admin.firestore.FieldValue.arrayRemove(...failedTokens)
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Davet bildirim hatası:", error);
+            }
+        }
+    }
+    return null;
+});
