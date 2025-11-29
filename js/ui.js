@@ -389,6 +389,14 @@ export function updateMultiplayerScoreBoard(gameData) {
     multiplayerScoreBoard.classList.toggle('hidden', !isBR);
 
     if (isBR) {
+        // --- TUR SAYACI GÜNCELLEMESİ (1/10 FORMATI) ---
+        if (brRoundCounter) {
+            const current = gameData.currentRound || 1;
+            const total = gameData.matchLength || 10; 
+            brRoundCounter.textContent = `TUR ${current}/${total}`;
+        }
+        // ----------------------------------------------
+
         const players = Object.entries(gameData.players)
             .map(([id, data]) => ({ id, ...data }))
             .sort((a, b) => (b.score || 0) - (a.score || 0)); 

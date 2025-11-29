@@ -83,6 +83,10 @@ function initApp() {
     addEventListeners();
     initAuthListener();
     initTheme();
+    // Kullanıcı sayfada herhangi bir yere ilk tıkladığında bildirim izni iste
+    document.addEventListener('click', () => {
+       import('./notifications.js').then(m => m.requestNotificationPermission());
+    }, { once: true });
 }
 
 // Global Oyun Takibi (Bildirimler İçin)

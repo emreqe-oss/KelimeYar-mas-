@@ -70,33 +70,64 @@ export async function showScoreboard(gameData) {
     const mainMenuBtn = document.getElementById('main-menu-btn');
 
     const currentUserId = state.getUserId();
-    const gameMode = state.getGameMode();
-
-    // 3. Temizlik ve Hazırlık
+    
+    // 3. Temizlik
     if (finalScores) finalScores.innerHTML = '';
     if (newRoundBtn) newRoundBtn.classList.add('hidden');
     if (newWordRematchBtn) newWordRematchBtn.classList.add('hidden');
     if (matchWinnerDisplay) matchWinnerDisplay.classList.add('hidden');
 
-    // 4. Kazanma/Kaybetme Mesajı
+    // 4. Maç Bitti mi Kontrolü
+    const currentRound = gameData.currentRound || 1;
+    const totalRounds = gameData.matchLength || (gameData.gameType === 'multiplayer-br' ? 10 : 1);
+    
+    let isMatchFinished = false;
+    if (gameData.gameType === 'multiplayer-br') {
+        isMatchFinished = (currentRound >= totalRounds) || (gameData.matchWinnerId !== undefined);
+    } else {
+        isMatchFinished = (totalRounds > 1 && currentRound < totalRounds) ? false : true;
+    }
+
+    // 5. Başlık Mesajını Belirle (BR Modu İçin Özel Ayar)
     let titleText = "";
     let titleColor = "";
 
-    const isMyTurnWinner = gameData.roundWinner === currentUserId;
-    const winnerName = gameData.roundWinner ? (gameData.players[gameData.roundWinner]?.username || 'Rakip') : 'Kimse';
-
-    if (isMyTurnWinner) {
-        titleText = "TEBRİKLER! 🎉";
-        titleColor = "text-green-400";
-        playSound('win');
-    } else if (gameData.roundWinner === null) {
-        titleText = "SÜRE BİTTİ / BERABERE";
-        titleColor = "text-gray-400";
-        playSound('lose');
+    if (gameData.gameType === 'multiplayer-br') {
+        if (isMatchFinished) {
+            titleText = "OYUN TAMAMLANDI";
+            titleColor = "text-yellow-400";
+            playSound('win');
+        } else {
+            // Ara turlarda kendi durumuna bak
+            const myState = gameData.players[currentUserId];
+            if (myState && myState.hasSolved) {
+                titleText = "BİLDİNİZ! 👏";
+                titleColor = "text-green-400";
+                playSound('win');
+            } else {
+                titleText = "BİLEMEDİNİZ";
+                titleColor = "text-red-400";
+                playSound('lose');
+            }
+        }
     } else {
-        titleText = `${winnerName} KAZANDI`;
-        titleColor = "text-red-400";
-        playSound('lose');
+        // Standart Modlar (1v1)
+        const isMyTurnWinner = gameData.roundWinner === currentUserId;
+        const winnerName = gameData.roundWinner ? (gameData.players[gameData.roundWinner]?.username || 'Rakip') : 'Kimse';
+
+        if (isMyTurnWinner) {
+            titleText = "TEBRİKLER! 🎉";
+            titleColor = "text-green-400";
+            playSound('win');
+        } else if (gameData.roundWinner === null) {
+            titleText = "SÜRE BİTTİ / BERABERE";
+            titleColor = "text-gray-400";
+            playSound('lose');
+        } else {
+            titleText = `${winnerName} KAZANDI`;
+            titleColor = "text-red-400";
+            playSound('lose');
+        }
     }
 
     if (roundWinnerDisplay) {
@@ -104,7 +135,7 @@ export async function showScoreboard(gameData) {
         roundWinnerDisplay.className = `text-3xl font-black mb-2 tracking-wide uppercase drop-shadow-md ${titleColor}`;
     }
 
-    // 5. Kelime ve Anlamı
+    // 6. Kelime ve Anlamı
     if (correctWordDisplay) correctWordDisplay.textContent = gameData.secretWord;
     if (meaningDisplay) {
         meaningDisplay.textContent = "Anlam yükleniyor...";
@@ -114,10 +145,9 @@ export async function showScoreboard(gameData) {
     }
     setupDictionaryButton(gameData.secretWord);
 
-    // 6. Puan Tablosu Oluşturma
+    // 7. Puan Tablosu
     if (finalScores) {
         const playersArr = Object.values(gameData.players).sort((a, b) => (b.score || 0) - (a.score || 0));
-        
         playersArr.forEach((p, index) => {
             const isMe = p.username === getUsername();
             const row = document.createElement('div');
@@ -133,24 +163,7 @@ export async function showScoreboard(gameData) {
         });
     }
 
-    // 7. Buton Yönetimi (KRİTİK DÜZELTME)
-    const currentRound = gameData.currentRound || 1;
-    const totalRounds = gameData.matchLength || (gameData.gameType === 'multiplayer-br' ? 10 : 1);
-    
-    let isMatchFinished = false;
-
-    if (gameData.gameType === 'multiplayer-br') {
-        isMatchFinished = (currentRound >= totalRounds) || (gameData.matchWinnerId !== undefined);
-    } else {
-        // Çok turlu oyunlarda, tur sayısı dolana kadar maç bitmez
-        if (totalRounds > 1 && currentRound < totalRounds) {
-            isMatchFinished = false;
-        } else {
-            // Tek turlu veya son tur
-            isMatchFinished = true;
-        }
-    }
-
+    // 8. Buton Yönetimi
     if (isMatchFinished) {
         // MAÇ BİTTİ
         if (matchWinnerDisplay) {
@@ -167,22 +180,19 @@ export async function showScoreboard(gameData) {
     } else {
         // SONRAKİ TUR
         if (newRoundBtn) {
-            // --- FİX: Butonu her zaman aktif başlat ---
             newRoundBtn.disabled = false;
             newRoundBtn.style.opacity = "1";
             newRoundBtn.style.cursor = "pointer";
             newRoundBtn.textContent = "Sonraki Tur";
-            // ------------------------------------------
-
+            
             newRoundBtn.onclick = async () => {
+                // BR modunda sadece kurucu başlatabilir
                 if (gameData.gameType === 'multiplayer-br' && gameData.creatorId !== currentUserId) {
                     showToast("Oyun kurucunun turu başlatması bekleniyor...", false);
                     return;
                 }
-                
                 newRoundBtn.disabled = true;
                 newRoundBtn.textContent = "Hazırlanıyor...";
-                
                 try {
                     await startNewRound();
                 } catch (error) {

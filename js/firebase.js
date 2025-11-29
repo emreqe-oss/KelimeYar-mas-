@@ -1,14 +1,11 @@
-// js/firebase.js - YENİ VE DOĞRU KOD (startNextBRRound eklendi)
+// js/firebase.js - GÜNCEL GEN 2 URL'LERİ İLE
 
-// Gerekli Firebase fonksiyonlarını doğrudan paketten içe aktarıyoruz
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-
 import { showToast } from './utils.js';
 
-// Vite'nin .env dosyasından okuduğu environment değişkenleri
-// NOT: Bu config, projenizin kök dizinindeki .env dosyasından okunur.
+// Vite environment değişkenleri
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_API_KEY,
     authDomain: import.meta.env.VITE_AUTH_DOMAIN,
@@ -19,15 +16,16 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
-// Firebase uygulamasını başlatıyoruz
+// Firebase uygulamasını başlat
 const app = initializeApp(firebaseConfig);
 
-// Başlatılan uygulamadan ihtiyacımız olan servisleri (Firestore, Auth) alıyoruz
+// Servisleri dışarı aktar
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export { app }; // Bildirim izni için app'i de export ediyoruz
 
 // ========================================================================
-// CLOUD FUNCTIONS ÇAĞRILARI (Tüm fonksiyonlar export edilmiştir)
+// CLOUD FUNCTIONS ÇAĞRILARI (GEN 2 URL'LERİ GİRİLDİ)
 // ========================================================================
 
 /**
@@ -35,7 +33,9 @@ export const auth = getAuth(app);
  */
 export const checkWordValidity = async (wordToTest) => {
     try {
-        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/checkWordValidity";
+        // GÜNCEL GEN 2 URL
+        const functionUrl = "https://checkwordvalidity-wxw6bd452q-uc.a.run.app";
+        
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -45,8 +45,8 @@ export const checkWordValidity = async (wordToTest) => {
         const jsonResponse = await response.json();
         return jsonResponse.isValid;
     } catch (error) {
-        console.error("checkWordValidity 'fetch' hatası:", error);
-        showToast("Kelime kontrol edilemedi. Lütfen tekrar deneyin.", true);
+        console.error("checkWordValidity hatası:", error);
+        showToast("Kelime kontrol edilemedi.", true);
         return false;
     }
 };
@@ -56,7 +56,9 @@ export const checkWordValidity = async (wordToTest) => {
  */
 export const getNewSecretWord = async (length) => {
     try {
-        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/getNewSecretWord";
+        // GÜNCEL GEN 2 URL
+        const functionUrl = "https://getnewsecretword-wxw6bd452q-uc.a.run.app";
+        
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -66,7 +68,7 @@ export const getNewSecretWord = async (length) => {
         const jsonResponse = await response.json();
         return jsonResponse.secretWord;
     } catch (error) {
-        console.error("getNewSecretWord 'fetch' hatası:", error);
+        console.error("getNewSecretWord hatası:", error);
         showToast("Yeni oyun için kelime alınamadı.", true);
         return null;
     }
@@ -77,7 +79,9 @@ export const getNewSecretWord = async (length) => {
  */
 export const submitMultiplayerGuess = async (gameId, word, userId, isBR) => {
     try {
-        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/submitMultiplayerGuess";
+        // GÜNCEL GEN 2 URL
+        const functionUrl = "https://submitmultiplayerguess-wxw6bd452q-uc.a.run.app";
+        
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -85,45 +89,44 @@ export const submitMultiplayerGuess = async (gameId, word, userId, isBR) => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Tahmin sunucuda işlenemedi.');
+            throw new Error(errorData.error || 'Tahmin işlenemedi.');
         }
         return await response.json();
     } catch (error) {
-        console.error("submitMultiplayerGuess 'fetch' hatası:", error);
-        showToast(error.message || "Tahmin gönderilirken kritik bir hata oluştu.", true);
+        console.error("submitMultiplayerGuess hatası:", error);
+        showToast(error.message || "Tahmin gönderilemedi.", true);
         return { success: false };
     }
 };
 
 /**
- * Sunucuya çoklu oyuncu turunun bittiğini (zaman dolduğunu) bildirir.
+ * Sunucuya turun bittiğini bildirir.
  */
 export const failMultiplayerTurn = async (gameId, userId) => {
     try {
-        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/failMultiplayerTurn";
+        // GÜNCEL GEN 2 URL
+        const functionUrl = "https://failmultiplayerturn-wxw6bd452q-uc.a.run.app";
+        
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ gameId, userId })
         });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Tur sonlandırma sunucuda işlenemedi.');
-        }
+        if (!response.ok) throw new Error('Tur sonlandırılamadı.');
         return await response.json();
     } catch (error) {
-        console.error("failMultiplayerTurn 'fetch' hatası:", error);
-        showToast(error.message || "Tur sonlandırılırken kritik bir hata oluştu.", true);
+        console.error("failMultiplayerTurn hatası:", error);
         return { success: false };
     }
 };
 
 /**
- * Sunucudan kelime anlamını çeker (Yerel JSON'dan okur).
+ * Kelime anlamını çeker.
  */
 export const getWordMeaning = async (wordToSearch) => {
     try {
-        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/getWordMeaning"; 
+        // GÜNCEL GEN 2 URL
+        const functionUrl = "https://getwordmeaning-wxw6bd452q-uc.a.run.app"; 
         
         const response = await fetch(functionUrl, {
             method: 'POST',
@@ -131,37 +134,31 @@ export const getWordMeaning = async (wordToSearch) => {
             body: JSON.stringify({ word: wordToSearch })
         });
         
-        if (!response.ok) throw new Error('Sunucudan kelime anlamı alınamadı.');
-        
-        const jsonResponse = await response.json();
-        return jsonResponse; 
-        
+        if (!response.ok) throw new Error('Anlam alınamadı.');
+        return await response.json(); 
     } catch (error) {
-        console.error("getWordMeaning 'fetch' hatası:", error);
-        // Hata durumunda game.js'in anlayacağı bir nesne döndürülür.
-        return { success: false, meaning: "Anlam yüklenirken bir sorun oluştu. (Sunucuya ulaşılamadı)" };
+        console.error("getWordMeaning hatası:", error);
+        return { success: false, meaning: "Anlam servisine ulaşılamadı." };
     }
 };
 
 /**
- * Sunucuya BR Turu bittiğinde sonraki turu başlatma/maçı bitirme isteği gönderir. (YENİ)
+ * BR modunda sonraki tura geçer.
  */
 export const startNextBRRound = async (gameId, userId) => {
     try {
-        const functionUrl = "https://us-central1-kelime-oyunu-flaneur.cloudfunctions.net/startNextBRRound";
+        // GÜNCEL GEN 2 URL
+        const functionUrl = "https://startnextbrround-wxw6bd452q-uc.a.run.app";
+        
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ gameId, userId })
         });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Sonraki tur başlatma sunucuda işlenemedi.');
-        }
+        if (!response.ok) throw new Error('Sonraki tura geçilemedi.');
         return await response.json();
     } catch (error) {
-        console.error("startNextBRRound 'fetch' hatası:", error);
-        showToast(error.message || "Sonraki tura geçilirken kritik bir hata oluştu.", true);
+        console.error("startNextBRRound hatası:", error);
         return { success: false };
     }
 };

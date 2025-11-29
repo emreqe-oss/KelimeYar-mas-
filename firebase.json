@@ -2,21 +2,20 @@
   "firestore": {
     "rules": "firestore.rules"
   },
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs20",
-    "ignore": [
-      "node_modules",
-      ".git",
-      ".eslintrc.js",
-      "*.log",
-      "tdk_guncel.json",
-      "tdk_anlamlar.json",
-      "find_missing.js",
-      "scrape_meanings.js",
-      "check_meanings.js"
-    ]
-  },
+  "functions": [
+    {
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "source": "functions",
+      "runtime": "nodejs20"
+    }
+  ],
   "hosting": {
     "public": "public",
     "ignore": [
