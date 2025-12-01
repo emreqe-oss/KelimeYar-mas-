@@ -1,40 +1,57 @@
-// --- GEN 2 (YENİ NESİL) FORMATI ---
-// Artık v2 kütüphanesini kullanıyoruz. Bu sürüm CPU hatası vermez.
+/**
+ * functions/index.js - TAM DOSYA
+ *
+ * Bu dosya:
+ * 1. Oyun mantığını (kelime kontrolü, sıra değişimi) yönetir.
+ * 2. Bildirimleri (Sıra sende, Yeni davet) yönetir.
+ */
+
 const { onRequest } = require("firebase-functions/v2/https");
-const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 
 const admin = require("firebase-admin");
 const cors = require("cors");
-const corsHandler = cors({ origin: true });
 
-// Gen 2 için global ayarlar (Gen 1 hatasını engeller)
+// Gen 2 Global Ayarlar
 setGlobalOptions({ maxInstances: 10 });
 
+// Admin SDK Başlatma
 if (admin.apps.length === 0) {
     admin.initializeApp();
 }
 
+// Gerekli JSON Dosyaları
 const kelimeler = require("./kelimeler.json");
 const cevaplar = require("./cevaplar.json");
+
+// Oyun Sabitleri
 const SCORE_POINTS = [1000, 800, 600, 400, 200, 100];
 const GUESS_COUNT = 6;
 
-// --- YARDIMCI FONKSİYONLAR ---
+// ==================================================================
+// YARDIMCI FONKSİYONLAR
+// ==================================================================
+
 function calculateColors(guess, secret, wordLength) {
     const secretLetters = secret.split('');
     const guessLetters = guess.split('');
     const colors = Array(wordLength).fill('absent');
     const letterCounts = {};
+
     for (const letter of secretLetters) {
         letterCounts[letter] = (letterCounts[letter] || 0) + 1;
     }
+
+    // Önce yeşilleri (correct) bul
     for (let i = 0; i < wordLength; i++) {
         if (guessLetters[i] === secretLetters[i]) {
             colors[i] = 'correct';
             letterCounts[guessLetters[i]]--;
         }
     }
+
+    // Sonra sarıları (present) bul
     for (let i = 0; i < wordLength; i++) {
         if (colors[i] !== 'correct' && secret.includes(guessLetters[i]) && letterCounts[guessLetters[i]] > 0) {
             colors[i] = 'present';
@@ -56,8 +73,9 @@ async function getNewSecretWordFromLocal(wordLength) {
     }
 }
 
-// --- HTTP FONKSİYONLARI (GEN 2) ---
-// Not: Gen 2'de cors özelliği yerleşiktir, { cors: true } parametresi işi çözer.
+// ==================================================================
+// HTTP FONKSİYONLARI (OYUN MANTIĞI)
+// ==================================================================
 
 exports.getNewSecretWord = onRequest({ cors: true }, async (request, response) => {
     try {
@@ -83,6 +101,7 @@ exports.checkWordValidity = onRequest({ cors: true }, async (request, response) 
 });
 
 exports.getWordMeaning = onRequest({ cors: true }, (request, response) => {
+    // Şimdilik pasif, ileride TDK API eklenebilir.
     return response.status(200).send({ success: false, meaning: "Bakımda." });
 });
 
@@ -105,6 +124,7 @@ exports.submitMultiplayerGuess = onRequest({ cors: true }, async (request, respo
             const secretWord = gameData.secretWord;
             const wordLength = gameData.wordLength;
             
+            // BR modunda herkes aynı anda oynar, normal modda sıra beklenir
             if (!isBR && gameData.currentPlayerId !== userId) throw new Error("Sıra sizde değil!");
             
             const colors = calculateColors(word, secretWord, wordLength);
@@ -123,18 +143,21 @@ exports.submitMultiplayerGuess = onRequest({ cors: true }, async (request, respo
                     updates[`players.${userId}.hasFailed`] = true;
                 }
             } else {
+                // Normal Multiplayer (Sıralı)
                 if (isWinner) {
                     updates.status = 'finished';
                     updates.roundWinner = userId;
                     const roundScore = SCORE_POINTS[playerGuesses.length - 1] || 0;
                     updates[`players.${userId}.score`] = (playerState.score || 0) + roundScore;
                 } else {
+                    // Sırayı diğer oyuncuya geçir
                     const playerIds = Object.keys(gameData.players);
                     const nextIndex = (playerIds.indexOf(userId) + 1) % playerIds.length;
                     updates.currentPlayerId = playerIds[nextIndex];
                     updates.turnStartTime = admin.firestore.FieldValue.serverTimestamp();
                 }
             }
+            
             transaction.update(gameRef, updates);
             return { isWinner, newGuess };
         });
@@ -146,6 +169,7 @@ exports.submitMultiplayerGuess = onRequest({ cors: true }, async (request, respo
 });
 
 exports.failMultiplayerTurn = onRequest({ cors: true }, (request, response) => {
+    // Gerekirse buraya mantık eklenebilir, şu an client yönetiyor.
     response.status(200).send({ success: true });
 });
 
@@ -153,34 +177,53 @@ exports.startNextBRRound = onRequest({ cors: true }, (request, response) => {
     response.status(200).send({ success: true });
 });
 
-// --- BİLDİRİM SİSTEMİ (GEN 2 TETİKLEYİCİSİ) ---
+// ==================================================================
+// BİLDİRİM TETİKLEYİCİLERİ (TRIGGERS)
+// ==================================================================
+
+/**
+ * 1. OYUN SIRASI DEĞİŞTİĞİNDE (Hamle Yapıldı)
+ * - Rakibe "Sıra Sende" bildirimi gönderir.
+ * - Tıklayınca ilgili oyuna yönlendirir.
+ */
 exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event) => {
     const newData = event.data.after.data();
     const previousData = event.data.before.data();
+    const gameId = event.params.gameId;
 
+    // Sadece 'playing' durumunda ve sıra değiştiyse çalış
     if (newData.status === 'playing' && newData.currentPlayerId && newData.currentPlayerId !== previousData.currentPlayerId) {
         const nextPlayerId = newData.currentPlayerId;
+        
         try {
             const userDoc = await admin.firestore().collection('users').doc(nextPlayerId).get();
             if (!userDoc.exists) return null;
             
             const userData = userDoc.data();
             const tokens = userData.fcmTokens;
+            
             if (!tokens || tokens.length === 0) return null;
 
+            // Bildirim Payload'ı
             const message = {
                 tokens: tokens,
                 notification: {
-                    title: 'Hamle Sırası Sende! 🎲',
-                    body: 'Rakibin oynadı, sıra sende.',
+                    title: 'Sıra Sende! 🎲',
+                    body: 'Rakibin hamlesini yaptı, cevap verme sırası sende.',
+                },
+                data: {
+                    // Service Worker bu URL'i kullanacak
+                    url: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` 
                 },
                 webpush: {
-                    fcm_options: { link: 'https://kelime-yar-mas.vercel.app' },
+                    fcm_options: { link: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` },
                     notification: { icon: '/icon-192x192.png' }
                 }
             };
             
             const response = await admin.messaging().sendMulticast(message);
+            
+            // Geçersiz Token Temizliği
             if (response.failureCount > 0) {
                 const failedTokens = [];
                 response.responses.forEach((r, i) => { if (!r.success) failedTokens.push(tokens[i]); });
@@ -191,41 +234,32 @@ exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event)
                 }
             }
         } catch (error) {
-            console.error("Bildirim hatası:", error);
+            console.error("Sıra bildirimi hatası:", error);
         }
     }
     return null;
 });
 
-// --- YENİ OYUN DAVETİ BİLDİRİMİ ---
-// Oyun ilk oluşturulduğunda (onCreate) rakibe bildirim atar.
-
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-
+/**
+ * 2. YENİ OYUN OLUŞTURULDUĞUNDA (Davet)
+ * - Oyunu kuran HARİÇ diğer oyunculara bildirim gönderir.
+ * - Tıklayınca davet edilen oyuna yönlendirir.
+ */
 exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (event) => {
     const gameData = event.data.data();
+    const gameId = event.params.gameId;
 
-    // Eğer oyun multiplayer ise ve rakip belli ise
+    // Sadece Multiplayer oyunlar için
     if (gameData.gameType === 'multiplayer' || gameData.gameType === 'multiplayer-br') {
-        // Genelde oyunu kuran player1'dir, davet edilen player2'dir.
-        // players objesindeki ID'leri alalım.
+        
+        // Oyunu kuranı bul (Eğer createdBy yoksa currentPlayerId varsayılır)
+        const creatorId = gameData.createdBy || gameData.currentPlayerId;
         const playerIds = Object.keys(gameData.players);
-        
-        // Oyunu kuran kişinin ID'si (createdBy genelde veride tutulur, yoksa tahmin ederiz)
-        // Basit mantık: Oyunu kuran kişi hamle yapmışsa veya sırasıysa, diğerine atalım.
-        // Ancak en garantisi: Henüz hamle yapılmadıysa tüm oyunculara (kuran hariç) atılabilir.
-        
-        // Örnek: user1 oyunu kurdu, user2'yi bekliyor.
-        // user2'nin ID'sini bulup ona bildirim atacağız.
-        
-        /* NOT: Senin oyun yapında 'waiting' durumunda rakip ID belli mi? 
-           Eğer belli ise o ID'ye gönderiyoruz. */
 
-        // Tüm oyuncuları dönelim
         for (const playerId of playerIds) {
-            // Eğer bu oyuncu, oyunu başlatan kişi değilse (bunu anlamak için oyun verine createdBy eklemen iyi olur)
-            // Şimdilik basitçe: Şu anki sıra kimde değilse ona atalım veya hepsine atalım.
-            
+            // Kendine bildirim atma
+            if (playerId === creatorId) continue;
+
             try {
                 const userDoc = await admin.firestore().collection('users').doc(playerId).get();
                 if (!userDoc.exists) continue;
@@ -233,24 +267,26 @@ exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (even
                 const userData = userDoc.data();
                 const tokens = userData.fcmTokens;
                 
-                // Kendi kendine bildirim atma kontrolü (Opsiyonel: Client tarafında token kontrolü ile yapılır)
                 if (!tokens || tokens.length === 0) continue;
 
                 const message = {
                     tokens: tokens,
                     notification: {
-                        title: 'Yeni Oyun İsteği! 🎮',
-                        body: 'Bir arkadaşın seni kelime yarışına davet etti!',
+                        title: 'Yeni Oyun İsteği! ⚔️',
+                        body: 'Bir arkadaşın seni kelime düellosuna davet etti!',
+                    },
+                    data: {
+                        url: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}`
                     },
                     webpush: {
-                        fcm_options: { link: 'https://kelime-yar-mas.vercel.app' },
+                        fcm_options: { link: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` },
                         notification: { icon: '/icon-192x192.png' }
                     }
                 };
 
                 const response = await admin.messaging().sendMulticast(message);
-                
-                // Geçersiz token temizliği
+
+                // Geçersiz Token Temizliği
                 if (response.failureCount > 0) {
                     const failedTokens = [];
                     response.responses.forEach((r, i) => { if (!r.success) failedTokens.push(tokens[i]); });
@@ -260,6 +296,7 @@ exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (even
                         });
                     }
                 }
+
             } catch (error) {
                 console.error("Davet bildirim hatası:", error);
             }
