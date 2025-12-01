@@ -2152,25 +2152,49 @@ export function startTurnTimer() {
     state.setTurnTimerInterval(interval);
 }
 
+// game.js dosyasındaki startBRTimer fonksiyonunu bununla değiştir:
+
 function startBRTimer() {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
+    
     stopTurnTimer();
-    const turnStartTime = localGameData.turnStartTime?.toDate ? localGameData.turnStartTime.toDate() : new Date(); 
+    
+    // Server timestamp ile uyumlu süre hesaplama
+    const turnStartTime = localGameData.turnStartTime?.toDate ? localGameData.turnStartTime.toDate() : new Date();
+    
     const interval = setInterval(async () => {
         let now = new Date();
         let elapsed = Math.floor((now - turnStartTime) / 1000);
-        let timeLeft = (localGameData.timeLimit || 60) - elapsed; 
+        let timeLeft = (localGameData.timeLimit || 60) - elapsed;
+        
+        // EKRAN GÜNCELLEME
         if (brTimerDisplay) {
             brTimerDisplay.textContent = timeLeft > 0 ? timeLeft : 0;
-            if (timeLeft <= 5) brTimerDisplay.classList.add('text-red-500');
-            else brTimerDisplay.classList.remove('text-red-500');
+            if (timeLeft <= 10) brTimerDisplay.classList.add('text-red-500', 'pulsate'); // Son 10sn efekti
+            else brTimerDisplay.classList.remove('text-red-500', 'pulsate');
         }
+
+        // SÜRE BİTTİĞİNDE ÇALIŞACAK KISIM
         if (timeLeft <= 0) {
-            stopTurnTimer();
-            await failMultiplayerTurn(state.getCurrentGameId(), state.getUserId()); 
+            stopTurnTimer(); // Sayacı durdur
+
+            // 1. ÖNCE ARAYÜZÜ KİLİTLE (Kullanıcı beklemek zorunda kalmasın)
+            if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+            showToast("Süre doldu!", true);
+
+            // 2. SONRA SUNUCUYA BİLDİR
+            try {
+                // Backend fonksiyonunu çağır (Functions deploy ettiğinden emin ol)
+                await failMultiplayerTurn(state.getCurrentGameId(), state.getUserId());
+            } catch (error) {
+                console.error("Süre bitimi sunucuya bildirilemedi:", error);
+                // Yedek plan: Eğer sunucu fonksiyonu çalışmazsa yerel olarak bitirmeyi dene
+                // failTurn(); 
+            }
         }
     }, 1000);
+    
     state.setTurnTimerInterval(interval);
 }
 

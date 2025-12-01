@@ -168,9 +168,32 @@ exports.submitMultiplayerGuess = onRequest({ cors: true }, async (request, respo
     }
 });
 
-exports.failMultiplayerTurn = onRequest({ cors: true }, (request, response) => {
-    // Gerekirse buraya mantık eklenebilir, şu an client yönetiyor.
-    response.status(200).send({ success: true });
+exports.failMultiplayerTurn = onRequest({ cors: true }, async (request, response) => {
+    if (request.method !== 'POST') return response.status(405).send({ error: 'Method Not Allowed' });
+
+    const { gameId, userId } = request.body;
+    if (!gameId || !userId) return response.status(400).send({ error: 'Eksik parametreler.' });
+
+    const gameRef = admin.firestore().collection('games').doc(gameId);
+
+    try {
+        await admin.firestore().runTransaction(async (transaction) => {
+            const gameDoc = await transaction.get(gameRef);
+            if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
+
+            // Oyuncunun durumunu "hasFailed: true" olarak güncelle
+            // Bu sayede oyun mantığı bu kişinin elendiğini veya turu kaybettiğini anlar.
+            transaction.update(gameRef, {
+                [`players.${userId}.hasFailed`]: true,
+                [`players.${userId}.lastActionTime`]: admin.firestore.FieldValue.serverTimestamp()
+            });
+        });
+
+        return response.status(200).send({ success: true });
+    } catch (error) {
+        console.error("Tur başarısızlık hatası:", error);
+        return response.status(500).send({ error: error.message });
+    }
 });
 
 exports.startNextBRRound = onRequest({ cors: true }, (request, response) => {
