@@ -74,6 +74,18 @@ import {
 
 import { showToast, playSound } from './utils.js'; // <-- Düzeltildi
 
+// --- SERVICE WORKER KAYDI (Bunu Ekle) ---
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then((registration) => {
+      console.log('Service Worker başarıyla kaydedildi, Scope:', registration.scope);
+    })
+    .catch((err) => {
+      console.error('Service Worker kaydı başarısız:', err);
+    });
+}
+// ----------------------------------------
+
 // 2. DEĞİŞKENLER
 let globalGamesUnsubscribe = null;
 

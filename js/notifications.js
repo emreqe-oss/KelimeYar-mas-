@@ -14,9 +14,11 @@ export async function requestNotificationPermission() {
         if (permission === 'granted') {
             console.log('Bildirim izni verildi.');
             
+            const registration = await navigator.serviceWorker.ready;
             // DİKKAT: 2. Ekran görüntüsündeki 'BO3e...' ile başlayan uzun kodu tırnak içine yapıştır:
             const currentToken = await getToken(messaging, { 
-                vapidKey: 'BO3eHaAFhgLoP-51vSJDM2ZqzzdVhhNLTIQUdZZK9TU8VCSYVzuMOT16E21hGugw3pp4x3GXfDU5JJFKnJqb3Qw' 
+                vapidKey: 'BO3eHaAFhgLoP-51vSJDM2ZqzzdVhhNLTIQUdZZK9TU8VCSYVzuMOT16E21hGugw3pp4x3GXfDU5JJFKnJqb3Qw', 
+                serviceWorkerRegistration: registration
             });
 
             if (currentToken) {
