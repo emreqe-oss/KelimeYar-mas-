@@ -19,8 +19,8 @@
     "path": "C:\\Users\\USER\\Desktop\\kelime oyunu klasörü\\Kelime OyunuWebsitesi - eski\\KelimeYar-mas-\\android.keystore",
     "alias": "mykey"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "2",
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://kelime-yar-mas.vercel.app/manifest.json",
@@ -42,5 +42,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1"
+  "appVersion": "2"
 }
