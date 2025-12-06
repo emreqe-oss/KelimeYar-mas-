@@ -4,23 +4,23 @@
   "name": "KELİME LİG",
   "launcherName": "K LİG",
   "display": "standalone",
-  "themeColor": "#FFFFFF",
+  "themeColor": "#111827",
   "themeColorDark": "#000000",
   "navigationColor": "#000000",
   "navigationColorDark": "#000000",
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
-  "backgroundColor": "#FFFFFF",
+  "backgroundColor": "#111827",
   "enableNotifications": true,
-  "startUrl": "/",
+  "startUrl": "/index.html",
   "iconUrl": "https://kelime-yar-mas.vercel.app/icon.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "C:\\Users\\USER\\Desktop\\kelime oyunu klasörü\\Kelime OyunuWebsitesi - eski\\KelimeYar-mas-\\android.keystore",
-    "alias": "mykey"
+    "path": "C:\\klig\\KelimeYar-mas-\\android.keystore",
+    "alias": "key0"
   },
-  "appVersionName": "2",
-  "appVersionCode": 2,
+  "appVersionName": "1",
+  "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://kelime-yar-mas.vercel.app/manifest.json",
@@ -42,5 +42,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "2"
+  "appVersion": "1"
 }

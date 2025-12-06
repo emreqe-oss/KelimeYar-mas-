@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.klig.oyun",
+      "sha256_cert_fingerprints": [
+        "7B:56:A1:D4:7E:2:B1:1F:A2:A7:46:52:62:74:D:52:E:CD:ED:54:6A:24:1C:3A:2C:CF:9E:42:D3:B2:40:15"
+      ]
+    }
+  }
+]
