@@ -12,7 +12,7 @@ export let
     startGameBtn, roundCounter, shareGameBtn, multiplayerScoreBoard,
     
     // BR Scoreboard
-    brRoundCounter, brTimerDisplay, brTurnDisplay,
+    brRoundCounter, brTimerDisplay, brTurnDisplay,btnCreatePublicBr, btnCreatePrivateBr, btnJoinRandomBr,
     
     // Jokers
     jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
@@ -85,6 +85,10 @@ export function initUI() {
         brPlayerSlots.push(document.getElementById(`br-player-slot-${i}`));
     }
 
+    // Yeni BR Butonları
+btnCreatePublicBr = document.getElementById('btn-create-public-br');
+btnCreatePrivateBr = document.getElementById('btn-create-private-br');
+btnJoinRandomBr = document.getElementById('btn-join-random-br');
     // Jokers
     jokerPresentBtn = document.getElementById('joker-present');
     jokerCorrectBtn = document.getElementById('joker-correct');

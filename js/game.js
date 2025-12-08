@@ -2259,13 +2259,16 @@ export function startGame() {
     });
 }
 
-export async function createBRGame(options = {}) {
+// js/game.js -> createBRGame fonksiyonunu güncelle:
+
+export async function createBRGame(visibility = 'public') { // Varsayılan public
     state.resetKnownCorrectPositions();
     state.resetHasUserStartedTyping();
     
     const timeLimit = 120; 
     const wordLength = getRandomWordLength(); 
-    const { isHardMode = false } = options;
+    // isHardMode BR'de şimdilik kapalı veya false
+    
     if (!db || !state.getUserId()) {
          return showToast("Sunucuya bağlanılamıyor.", true);
     }
@@ -2273,11 +2276,14 @@ export async function createBRGame(options = {}) {
     const username = getUsername();
     const secretWord = await getNewSecretWord(wordLength);
     if (!secretWord) return;
+    
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
     const gameData = {
-        gameId, wordLength: wordLength, secretWord: secretWord, timeLimit: timeLimit,
-        creatorId: currentUserId, isHardMode, 
-        matchLength: 10, // <-- DÜZELTME BURADA: 10 Tur olarak ayarlandı
+        gameId, wordLength, secretWord, timeLimit,
+        creatorId: currentUserId, 
+        isHardMode: false, 
+        matchLength: 10,
         players: { 
             [currentUserId]: { 
                 userId: currentUserId, 
@@ -2296,21 +2302,30 @@ export async function createBRGame(options = {}) {
         roundWinner: null,
         createdAt: serverTimestamp(),
         turnStartTime: serverTimestamp(),
-        GUESS_COUNT: GUESS_COUNT, 
+        GUESS_COUNT: 6, 
         gameType: 'multiplayer-br',
-        maxPlayers: 8,
+        maxPlayers: 4, // 4 Kişilik
         currentRound: 1,
+        visibility: visibility // <-- YENİ: 'public' veya 'private'
     };
+
     try {
         await setDoc(doc(db, "games", gameId), gameData);
         state.setGameMode('multiplayer-br');
         localStorage.setItem('activeGameId', gameId);
         state.setCurrentGameId(gameId);
         state.setLocalGameData(gameData);
-        showScreen('game-screen');
+        
+        import('./ui.js').then(ui => ui.showScreen('game-screen'));
         initializeGameUI(gameData); 
         listenToGameUpdates(gameId);
-        showToast("Battle Royale oyunu kuruldu! Arkadaşlarını davet et.", false);
+        
+        if (visibility === 'private') {
+            showToast("Gizli oda kuruldu. Arkadaşlarını davet et!", false);
+        } else {
+            showToast("Oda kuruldu. Oyuncu bekleniyor...", false);
+        }
+        
     } catch (error) {
         console.error("Error creating BR game:", error);
         showToast("BR Oyunu oluşturulamadı!", true);
@@ -3438,5 +3453,49 @@ export async function sendLobbyInvite(friendId) {
     } catch (error) {
         console.error("Davet gönderme hatası:", error);
         showToast("Davet gönderilemedi.", true);
+    }
+}
+
+// js/game.js içine yeni fonksiyon ekle:
+
+export async function joinRandomBRGame() {
+    const userId = state.getUserId();
+    if (!userId) return showToast("Giriş yapmalısın.", true);
+
+    showToast("Açık oyun aranıyor...", false);
+
+    try {
+        const gamesRef = collection(db, 'games');
+        // Sorgu: BR oyunu + Bekliyor + Public (Herkese Açık)
+        const q = query(
+            gamesRef, 
+            where('gameType', '==', 'multiplayer-br'),
+            where('status', '==', 'waiting'),
+            where('visibility', '==', 'public'), 
+            limit(5)
+        );
+
+        const snapshot = await getDocs(q);
+        let foundGameId = null;
+
+        // Kendi kurmadığımız ve dolu olmayan ilk oyunu bul
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            if (data.creatorId !== userId && data.playerIds.length < (data.maxPlayers || 4)) {
+                foundGameId = doc.id;
+                break;
+            }
+        }
+
+        if (foundGameId) {
+            showToast("Oyun bulundu! Katılınıyor...");
+            await joinBRGame(foundGameId);
+        } else {
+            showToast("Açık oyun bulunamadı. Yeni bir tane kurabilirsin.", true);
+        }
+
+    } catch (error) {
+        console.error("Rastgele oyun arama hatası:", error);
+        showToast("Hata oluştu.", true);
     }
 }

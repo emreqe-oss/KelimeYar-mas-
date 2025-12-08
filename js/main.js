@@ -51,7 +51,8 @@ import {
     // Sözlük
     dictionaryMenuBtn, 
     backToMainFromDictionaryBtn,
-    openDictionaryScreen
+    openDictionaryScreen,
+    btnCreatePublicBr, btnCreatePrivateBr, btnJoinRandomBr
 } from './ui.js';
 
 import { 
@@ -69,7 +70,8 @@ import {
     useCorrectJoker, 
     useRemoveJoker,
     startRematch,
-    abandonGame // <-- Eklendi
+    abandonGame,
+    joinRandomBRGame // <-- Eklendi
 } from './game.js';
 
 import { showToast, playSound } from './utils.js'; // <-- Düzeltildi
@@ -359,6 +361,25 @@ const openEditProfileScreen = () => {
 
 // Tüm butonlara tıklama olaylarını ekleyen fonksiyon
 function addEventListeners() {
+
+    // --- YENİ BR BUTONLARI ---
+    if (btnCreatePublicBr) {
+        btnCreatePublicBr.addEventListener('click', () => {
+            createBRGame('public'); // Herkese açık kur
+        });
+    }
+
+    if (btnCreatePrivateBr) {
+        btnCreatePrivateBr.addEventListener('click', () => {
+            createBRGame('private'); // Gizli kur (Sadece davet)
+        });
+    }
+
+    if (btnJoinRandomBr) {
+        btnJoinRandomBr.addEventListener('click', () => {
+            joinRandomBRGame(); // Rastgele açık oyun bul ve gir
+        });
+    }
 
     // Kırtasiye Butonları
     if (marketBtn) {
