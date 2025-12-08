@@ -529,12 +529,7 @@ function addEventListeners() {
     });
 
     // Battle Royale
-    createBRGameBtn.addEventListener('click', () => createBRGame());
-    joinBRGameBtn.addEventListener('click', () => {
-        const gameId = document.getElementById('game-id-input-br').value.toUpperCase();
-        if (gameId) joinBRGame(gameId);
-    });
-
+    
     // Oyunlarım Sekmeleri
     showActiveGamesTabBtn.addEventListener('click', () => switchMyGamesTab('active'));
     showFinishedGamesTabBtn.addEventListener('click', () => switchMyGamesTab('finished'));

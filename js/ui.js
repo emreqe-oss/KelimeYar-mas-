@@ -32,7 +32,7 @@ export let
     // Game Setup
     randomGameBtn, seriesGameBtn, withFriendsBtn, vsCpuBtn, multiplayerBrBtn,
     dailyWordBtn, 
-    createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn,
+    createGameBtn, joinGameBtn,
     
     // Kelimelig UI
     kelimeligBtn, joinLeagueBtn, backToMainFromLeagueBtn, 
@@ -151,8 +151,6 @@ btnJoinRandomBr = document.getElementById('btn-join-random-br');
     dailyWordBtn = document.getElementById('daily-word-btn'); 
     createGameBtn = document.getElementById('create-game-btn');
     joinGameBtn = document.getElementById('join-game-btn');
-    createBRGameBtn = document.getElementById('create-br-game-btn');
-    joinBRGameBtn = document.getElementById('join-br-game-btn');
 
     // Friends Tabs
     friendsTab = document.getElementById('friends-tab');
