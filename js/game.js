@@ -2154,6 +2154,8 @@ export function startTurnTimer() {
 
 // game.js dosyasındaki startBRTimer fonksiyonunu bununla değiştir:
 
+// js/game.js içinde startBRTimer fonksiyonunu BUL ve BUNUNLA DEĞİŞTİR:
+
 function startBRTimer() {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
@@ -2162,38 +2164,43 @@ function startBRTimer() {
     
     // Server timestamp ile uyumlu süre hesaplama
     const turnStartTime = localGameData.turnStartTime?.toDate ? localGameData.turnStartTime.toDate() : new Date();
-    
+    const timeLimit = localGameData.timeLimit || 60;
+
+    // 1000ms yerine 100ms (Saniyede 10 kontrol) yaparak hassasiyeti artırıyoruz
     const interval = setInterval(async () => {
         let now = new Date();
-        let elapsed = Math.floor((now - turnStartTime) / 1000);
-        let timeLeft = (localGameData.timeLimit || 60) - elapsed;
+        // Saniye değil, milisaniye cinsinden hassas fark
+        let elapsedSeconds = (now - turnStartTime) / 1000; 
+        let timeLeft = timeLimit - elapsedSeconds;
         
-        // EKRAN GÜNCELLEME
+        // EKRAN GÜNCELLEME (Görsel olarak tam sayı gösteriyoruz)
         if (brTimerDisplay) {
-            brTimerDisplay.textContent = timeLeft > 0 ? timeLeft : 0;
-            if (timeLeft <= 10) brTimerDisplay.classList.add('text-red-500', 'pulsate'); // Son 10sn efekti
+            // Math.ceil kullanarak 0.1 sn kalsa bile ekranda "1" görünmesini sağlıyoruz (daha doğal durur)
+            let displayTime = Math.ceil(timeLeft);
+            brTimerDisplay.textContent = displayTime > 0 ? displayTime : 0;
+            
+            if (displayTime <= 10) brTimerDisplay.classList.add('text-red-500', 'pulsate');
             else brTimerDisplay.classList.remove('text-red-500', 'pulsate');
         }
 
-        // SÜRE BİTTİĞİNDE ÇALIŞACAK KISIM
+        // SÜRE BİTTİĞİNDE ÇALIŞACAK KISIM (Hassas Kontrol)
         if (timeLeft <= 0) {
             stopTurnTimer(); // Sayacı durdur
 
-            // 1. ÖNCE ARAYÜZÜ KİLİTLE (Kullanıcı beklemek zorunda kalmasın)
+            // 1. ÖNCE ARAYÜZÜ KİLİTLE
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+            if (brTimerDisplay) brTimerDisplay.textContent = "0"; // Ekranda 0 olduğundan emin ol
+            
             showToast("Süre doldu!", true);
 
             // 2. SONRA SUNUCUYA BİLDİR
             try {
-                // Backend fonksiyonunu çağır (Functions deploy ettiğinden emin ol)
                 await failMultiplayerTurn(state.getCurrentGameId(), state.getUserId());
             } catch (error) {
                 console.error("Süre bitimi sunucuya bildirilemedi:", error);
-                // Yedek plan: Eğer sunucu fonksiyonu çalışmazsa yerel olarak bitirmeyi dene
-                // failTurn(); 
             }
         }
-    }, 1000);
+    }, 100); // <-- BURASI DEĞİŞTİ: 1000 yerine 100 yaptık.
     
     state.setTurnTimerInterval(interval);
 }
