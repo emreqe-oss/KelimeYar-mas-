@@ -40,7 +40,7 @@ import {
     showActiveGamesTabBtn, showFinishedGamesTabBtn, showInvitesTabBtn,
     showFriendsTabBtn, showRequestsTabBtn, showAddFriendTabBtn, searchFriendBtn,
     closeProfileBtn,
-    createGameBtn, joinGameBtn, createBRGameBtn, joinBRGameBtn, 
+    createGameBtn, joinGameBtn, 
     backToModeMultiBtn, backToModeBrBtn,
     leaveGameButton, startGameBtn, copyGameIdBtn, shareGameBtn,
     newRoundBtn, mainMenuBtn, shareResultsBtn,
