@@ -11,6 +11,8 @@ export let
     guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, 
     startGameBtn, roundCounter, shareGameBtn, multiplayerScoreBoard,
     
+    openDailyResultModal, changeDailySlide
+
     // BR Scoreboard
     brRoundCounter, brTimerDisplay, brTurnDisplay,btnCreatePublicBr, btnCreatePrivateBr, btnJoinRandomBr,
     
@@ -1254,4 +1256,129 @@ export async function openLobbyInviteModal() {
         console.error(e);
         listContainer.innerHTML = '<p class="text-center text-red-400 py-4">Liste yüklenemedi.</p>';
     }
+}
+
+// js/ui.js -> EN ALTA EKLE
+
+// --- GÜNLÜK SONUÇ MODALI FONKSİYONLARI ---
+
+export function openDailyResultModal(stats, dailyRankData) {
+    const modal = document.getElementById('daily-result-modal');
+    if (!modal) return;
+
+    // 1. KİŞİSEL İSTATİSTİKLERİ DOLDUR
+    document.getElementById('d-stat-played').textContent = stats.played;
+    const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+    document.getElementById('d-stat-win').textContent = winRate;
+    document.getElementById('d-stat-streak').textContent = stats.currentStreak;
+    document.getElementById('d-stat-max').textContent = stats.maxStreak;
+
+    // Tahmin Dağılımı Grafiği
+    const distContainer = document.getElementById('d-guess-dist');
+    distContainer.innerHTML = '';
+    const maxVal = Math.max(...Object.values(stats.guessDistribution), 1); // 0 bölünme hatasını önle
+
+    for (let i = 1; i <= 6; i++) {
+        const count = stats.guessDistribution[i] || 0;
+        const widthPercent = Math.max((count / maxVal) * 100, 8); // En az %8 genişlik
+        const colorClass = (dailyRankData.userGuessCount === i) ? 'bg-green-500' : 'bg-gray-600';
+        
+        distContainer.innerHTML += `
+            <div class="flex items-center gap-2 text-xs font-bold text-white">
+                <span class="w-2">${i}</span>
+                <div class="flex-1 bg-gray-700 rounded-sm overflow-hidden h-5">
+                    <div class="${colorClass} h-full flex items-center justify-end pr-1.5 transition-all duration-1000 ease-out" style="width: 0%" data-width="${widthPercent}%">
+                        ${count}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Animasyon: Barların uzaması
+    setTimeout(() => {
+        distContainer.querySelectorAll('div[data-width]').forEach(el => {
+            el.style.width = el.dataset.width;
+        });
+    }, 100);
+
+    // 2. GÜNLÜK SIRALAMA VERİSİNİ DOLDUR
+    const rankEl = document.getElementById('rank-position');
+    const totalEl = document.getElementById('rank-total');
+    const percentEl = document.getElementById('rank-percent');
+    const circleEl = document.getElementById('rank-circle');
+
+    if (dailyRankData && dailyRankData.userPosition > 0) {
+        rankEl.textContent = dailyRankData.userPosition;
+        totalEl.textContent = dailyRankData.totalPlayers;
+        
+        // Başarı Yüzdesi Hesaplama (Ters mantık: 1. olmak %100 başarıdır)
+        // Formül: (Toplam - Sıralama + 1) / Toplam * 100
+        const successRate = Math.round(((dailyRankData.totalPlayers - dailyRankData.userPosition + 1) / dailyRankData.totalPlayers) * 100);
+        percentEl.textContent = `%${successRate}`;
+        
+        // Çember Animasyonu (440 = Tam Çevre)
+        const offset = 440 - (440 * successRate) / 100;
+        setTimeout(() => { circleEl.style.strokeDashoffset = offset; }, 300);
+    } else {
+        rankEl.textContent = "-";
+        totalEl.textContent = "-";
+        percentEl.textContent = "%--";
+        circleEl.style.strokeDashoffset = 440; // Boş
+    }
+
+    // Sayaç Başlat
+    startDailyCountdown();
+
+    // Modalı Göster
+    modal.classList.remove('hidden');
+    changeSlide(0); // İlk slaytı aç
+
+    // Kapatma Butonu
+    document.getElementById('close-daily-modal-btn').onclick = () => {
+        modal.classList.add('hidden');
+        import('./game.js').then(m => m.leaveGame()); // Ana menüye dön
+    };
+}
+
+let currentSlide = 0;
+window.changeSlide = function(index) { // Global erişim için window'a atadık (HTML onclick için)
+    const container = document.getElementById('daily-slides-container');
+    const dots = document.querySelectorAll('.slide-dot');
+    
+    if (!container) return;
+
+    currentSlide = index;
+    // Slayt genişliği %50 olduğu için (2 slayt var), translateX %0 veya %-50 olmalı
+    container.style.transform = `translateX(-${index * 50}%)`;
+
+    dots.forEach((dot, i) => {
+        if (i === index) {
+            dot.classList.remove('bg-gray-600');
+            dot.classList.add('bg-white', 'scale-125');
+        } else {
+            dot.classList.add('bg-gray-600');
+            dot.classList.remove('bg-white', 'scale-125');
+        }
+    });
+}
+
+function startDailyCountdown() {
+    const timerEl = document.getElementById('countdown-timer');
+    
+    const update = () => {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setHours(24, 0, 0, 0); // Gece yarısına ayarla
+        const diff = tomorrow - now;
+
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / (1000 * 60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+
+        timerEl.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+    
+    update();
+    setInterval(update, 1000);
 }

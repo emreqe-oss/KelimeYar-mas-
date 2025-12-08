@@ -529,7 +529,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
 
         const gameInfoBar = document.getElementById('game-info-bar');
         if (gameInfoBar) {
-            gameInfoBar.style.display = 'flex'; 
+            gameInfoBar.style.display = 'none'; 
             if (gameIdDisplay) gameIdDisplay.textContent = ''; 
             if (copyBtn) copyBtn.style.display = 'none';
             if (shareBtn) shareBtn.style.display = 'none';
@@ -1376,27 +1376,50 @@ function calculateDailyScore(guessesCount, didWin) {
     return scoreMap[guessesCount] || 0;
 }
 
+// js/game.js -> saveDailyResultToDatabase fonksiyonunu BUL ve GÜNCELLE:
+
 export async function saveDailyResultToDatabase(userId, username, secretWord, didWin, guessCount, score) {
     const dayIndex = getDaysSinceEpoch();
     const wordLength = secretWord.length;
     const docId = `${dayIndex}_${wordLength}_${userId}`; 
     const resultRef = doc(db, 'daily_leaderboard', docId);
-    const docSnap = await getDoc(resultRef);
-    if (docSnap.exists()) {
-        return { success: false, message: "Skor zaten kaydedilmiş." };
-    }
+    
+    // Önce kaydet (veya güncelle)
     try {
         await setDoc(resultRef, {
             dayIndex: dayIndex, wordLength: wordLength, userId: userId, username: username,
             secretWord: secretWord, didWin: didWin, guessCount: guessCount, score: score,
             completedAt: serverTimestamp()
         }, { merge: true });
-        showToast("Günlük skorunuz kaydedildi!");
-        return { success: true };
+        
+        // --- YENİ: SIRALAMA BİLGİSİNİ HESAPLA ---
+        // Basit bir "Senden daha iyi yapanlar" sorgusu
+        const leaderboardRef = collection(db, 'daily_leaderboard');
+        const q = query(leaderboardRef, 
+            where('dayIndex', '==', dayIndex),
+            where('wordLength', '==', wordLength)
+        );
+        
+        const snapshot = await getDocs(q);
+        const totalPlayers = snapshot.size; // Toplam oyuncu sayısı
+        
+        // Sıralamayı hesapla (Basit mantık: Puanı benden yüksek olanlar + 1)
+        // Not: Gerçek hayatta backend function daha iyidir ama bu iş görür.
+        let rank = 1;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.userId !== userId) {
+                if (data.score > score) rank++;
+                else if (data.score === score && data.guessCount < guessCount) rank++;
+            }
+        });
+
+        console.log(`Günlük Sıralama: ${rank} / ${totalPlayers}`);
+        return { success: true, userPosition: rank, totalPlayers: totalPlayers };
+
     } catch (error) {
-        console.error("Günlük skor kaydı başarısız:", error);
-        showToast("Günlük skorunuz kaydedilemedi.", true);
-        return { success: false, message: error.message };
+        console.error("Günlük skor hatası:", error);
+        return { success: false, message: error.message, userPosition: 0, totalPlayers: 0 };
     }
 }
 
@@ -1554,14 +1577,46 @@ async function submitGuess() {
                 localGameData.roundWinner = currentUserId;
                 await updateStats(true, guessCount);
                 const dailyScore = calculateDailyScore(guessCount, true);
-                await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, true, guessCount, dailyScore);
+                
+                // Kaydet ve Sıralamayı Al
+                const rankData = await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, true, guessCount, dailyScore);
                 saveDailyGameState(localGameData);
+                
+                // --- YENİ MODALI AÇ ---
+                setTimeout(() => {
+                    const profile = state.getCurrentUserProfile();
+                    const stats = getStatsFromProfile(profile); // Profildeki güncel istatistikleri al
+                    
+                    import('./ui.js').then(ui => {
+                        ui.openDailyResultModal(stats, {
+                            userPosition: rankData.userPosition,
+                            totalPlayers: rankData.totalPlayers,
+                            userGuessCount: guessCount
+                        });
+                    });
+                }, 1500);
+
             } else if (guessCount >= GUESS_COUNT) {
                 localGameData.status = 'finished';
                 localGameData.roundWinner = null;
                 await updateStats(false, guessCount);
-                await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, false, guessCount, 0);
+                
+                const rankData = await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, false, guessCount, 0);
                 saveDailyGameState(localGameData);
+
+                // --- YENİ MODALI AÇ (Kaybetti) ---
+                setTimeout(() => {
+                    const profile = state.getCurrentUserProfile();
+                    const stats = getStatsFromProfile(profile);
+                    
+                    import('./ui.js').then(ui => {
+                        ui.openDailyResultModal(stats, {
+                            userPosition: rankData.userPosition, // Sonuncu civarı olacaktır
+                            totalPlayers: rankData.totalPlayers,
+                            userGuessCount: -1 // Başarısız
+                        });
+                    });
+                }, 1500);
             }
         }
     }
