@@ -700,6 +700,61 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     } else {
         invitesTab.innerHTML = createPlaceholder('Yeni davetiniz yok.');
     }
+    // js/ui.js dosyasında renderMyGamesLists fonksiyonunun EN ALTINA (kapanmadan hemen önce) bunu yapıştır:
+
+    // --- YENİ: BR MENÜSÜ İÇİN DAVETLERİ AYRICA GÖSTER ---
+    const brInvitesSection = document.getElementById('br-setup-invites-section');
+    const brInvitesList = document.getElementById('br-setup-invites-list');
+
+    if (brInvitesSection && brInvitesList) {
+        // Sadece BR türündeki davetleri filtrele
+        const brInvites = invites.filter(g => g.gameType === 'multiplayer-br');
+
+        if (brInvites.length > 0) {
+            brInvitesSection.classList.remove('hidden'); // Başlığı göster
+            brInvitesList.innerHTML = ''; // Temizle
+
+            brInvites.forEach(invite => {
+                const creatorName = invite.players[invite.creatorId]?.username || 'Arkadaşın';
+                
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-2 rounded-lg flex justify-between items-center border border-gray-600';
+                div.innerHTML = `
+                    <div class="text-left">
+                        <span class="block text-white font-bold text-sm">${creatorName}</span>
+                        <span class="text-[10px] text-gray-400">Battle Royale</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="reject-br-btn bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white p-1.5 rounded transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                        <button class="join-br-btn bg-green-600 hover:bg-green-500 text-white font-bold py-1 px-3 rounded text-xs transition shadow-lg flex items-center gap-1">
+                            <span>KATIL</span>
+                        </button>
+                    </div>
+                `;
+
+                // Buton Olayları
+                const btnReject = div.querySelector('.reject-br-btn');
+                const btnJoin = div.querySelector('.join-br-btn');
+
+                btnReject.onclick = (e) => {
+                    e.stopPropagation();
+                    import('./game.js').then(m => m.rejectInvite(invite.id));
+                };
+
+                btnJoin.onclick = (e) => {
+                    e.stopPropagation();
+                    import('./game.js').then(m => m.joinBRGame(invite.id));
+                };
+
+                brInvitesList.appendChild(div);
+            });
+        } else {
+            brInvitesSection.classList.add('hidden'); // Davet yoksa gizle
+        }
+    }
+    // -----------------------------------------------------
 }
 
 export function updateJokerUI(unusedParam, isMyTurn, gameStatus) {
