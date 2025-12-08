@@ -11,8 +11,6 @@ export let
     guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, 
     startGameBtn, roundCounter, shareGameBtn, multiplayerScoreBoard,
     
-    openDailyResultModal,
-
     // BR Scoreboard
     brRoundCounter, brTimerDisplay, brTurnDisplay,btnCreatePublicBr, btnCreatePrivateBr, btnJoinRandomBr,
     
