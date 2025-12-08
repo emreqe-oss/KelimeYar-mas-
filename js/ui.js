@@ -1337,6 +1337,51 @@ export function openDailyResultModal(stats, dailyRankData) {
         modal.classList.add('hidden');
         import('./game.js').then(m => m.leaveGame()); // Ana menüye dön
     };
+
+    // js/ui.js -> openDailyResultModal fonksiyonunun EN ALTINA ekle:
+
+    // ... (önceki kodlar) ...
+
+    // --- YENİ BUTONLARIN İŞLEVLERİ ---
+    
+    // 1. Ana Menü Butonu
+    const menuBtn = document.getElementById('daily-menu-btn');
+    if (menuBtn) {
+        menuBtn.onclick = () => {
+            modal.classList.add('hidden');
+            import('./game.js').then(m => m.leaveGame());
+        };
+    }
+
+    // 2. Paylaş Butonu
+    const shareBtn = document.getElementById('daily-share-btn');
+    if (shareBtn) {
+        shareBtn.onclick = () => {
+            const gameData = state.getLocalGameData();
+            const myGuesses = gameData?.players[state.getUserId()]?.guesses || [];
+            const dayIndex = Math.floor((new Date() - new Date('2024-01-01')) / (1000 * 60 * 60 * 24));
+            
+            let shareText = `Kelime Yarışması Günlük #${dayIndex}\n`;
+            shareText += `${dailyRankData.userGuessCount > 0 ? dailyRankData.userGuessCount : 'X'}/6\n\n`;
+
+            myGuesses.forEach(g => {
+                g.colors.forEach(c => {
+                    if (c === 'correct') shareText += '🟩';
+                    else if (c === 'present') shareText += '🟨';
+                    else shareText += '⬛';
+                });
+                shareText += '\n';
+            });
+
+            shareText += '\nhttps://kelime-yar-mas.vercel.app/';
+
+            if (navigator.share) {
+                navigator.share({ title: 'Kelime Yarışması', text: shareText }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(shareText).then(() => alert("Sonuç kopyalandı!"));
+            }
+        };
+    }
 }
 
 let currentSlide = 0;

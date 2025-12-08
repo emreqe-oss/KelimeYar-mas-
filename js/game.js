@@ -1285,6 +1285,8 @@ function saveDailyGameState(gameState) {
     localStorage.setItem(`dailyGameState_${state.getUserId()}`, JSON.stringify(toSave));
 }
 
+// js/game.js içindeki restoreDailyGame fonksiyonunu GÜNCELLE:
+
 function restoreDailyGame(savedState) {
     console.log("Günün kelimesi hafızadan yükleniyor...");
     
@@ -1308,7 +1310,7 @@ function restoreDailyGame(savedState) {
         isHardMode: false, 
         currentRound: 1, 
         matchLength: 1, 
-        roundWinner: savedState.status === 'finished' && savedState.guesses.length < GUESS_COUNT ? state.getUserId() : null,
+        roundWinner: savedState.status === 'finished' && savedState.guesses.length < 6 ? state.getUserId() : null, // GUESS_COUNT yerine 6 yazdım import sorunu olmasın diye
         players: { 
             [state.getUserId()]: { 
                 username: getUsername(), 
@@ -1320,7 +1322,7 @@ function restoreDailyGame(savedState) {
         currentPlayerId: state.getUserId(), 
         status: savedState.status, 
         turnStartTime: new Date(), 
-        GUESS_COUNT: GUESS_COUNT,
+        GUESS_COUNT: 6,
         gameType: 'daily',
     };
 
@@ -1332,7 +1334,23 @@ function restoreDailyGame(savedState) {
     
     renderGameState(gameData, true).then(() => {
         if (gameData.status === 'finished') {
-            setTimeout(() => showScoreboard(gameData), 500);
+            // --- BURASI DEĞİŞTİ: Artık eski tablo yerine yeni modal açılıyor ---
+            setTimeout(async () => {
+                const profile = state.getCurrentUserProfile();
+                const stats = getStatsFromProfile(profile);
+                
+                // Sıralamayı çek
+                const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
+                
+                import('./ui.js').then(ui => {
+                    ui.openDailyResultModal(stats, {
+                        userPosition: rankData?.userPosition || 0,
+                        totalPlayers: rankData?.totalPlayers || 0,
+                        userGuessCount: savedState.guesses.length
+                    });
+                });
+            }, 500);
+            // ------------------------------------------------------------------
         }
     });
 }
