@@ -468,13 +468,14 @@
                     </div>
                 </div>
             </div>
-            
+            <h2 id="daily-game-title" class="hidden font-black text-3xl text-yellow-400 tracking-[0.2em] drop-shadow-md mb-2 mt-2 text-center uppercase">
+    GÜNÜN KELİMESİ
+</h2>
             <div class="w-full bg-gray-800 p-1 rounded-lg shadow flex items-center justify-between flex-shrink-0 mb-1 mt-1" id="sequential-game-info">
                 <div id="player1-score" class="text-left w-2/5 truncate pl-1"></div>
                 <div class="text-center w-1/5 flex flex-col items-center">
                     <div id="opponent-mini-grid" class="grid gap-0.5 mb-1 hidden"></div> 
                     <p id="timer-display" class="font-bold text-xl font-mono text-gray-300 leading-none"></p>
-                    <p id="turn-display" class="font-bold text-[10px] leading-tight mt-1"></p>
                     <p id="round-counter" class="text-[10px] text-gray-500 hidden"></p>
                 </div>
                 <div id="player2-score" class="text-right w-2/5 truncate pr-12"></div>
@@ -547,17 +548,17 @@
             </div>
         </div>
 
-        <div id="kelimelig-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-800">
-             <header class="flex items-center mb-4">
+        <div id="kelimelig-screen" class="hidden flex-1 flex flex-col p-4 bg-gray-800 h-screen max-h-screen">
+             <header class="flex items-center mb-4 flex-shrink-0">
                  <button id="back-to-main-from-league-btn" class="back-button-hitbox">
                      <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                  </button>
                  <h1 class="text-2xl font-bold text-center flex-grow -ml-10 text-yellow-400">🏆 KELİMELİG</h1>
              </header>
 
-             <div class="flex-1 flex flex-col items-center justify-center overflow-y-auto">
+             <div class="flex-1 flex flex-col items-center justify-center overflow-hidden min-h-0">
                 
-                <div id="league-intro-section" class="w-full max-w-md text-center">
+                <div id="league-intro-section" class="w-full max-w-md text-center overflow-y-auto custom-scrollbar">
                     <p class="text-gray-400 text-sm mb-6">Haftalık Puan Mücadelesi</p>
                     <div class="bg-gray-700 p-4 rounded-lg text-left text-sm text-gray-300 space-y-3 mb-6 shadow-lg border border-gray-600">
                         <p>📅 <strong>Başlangıç:</strong> Her Pazartesi 00:00</p>
@@ -581,9 +582,9 @@
                     </p>
                 </div>
 
-                <div id="league-dashboard-section" class="hidden w-full max-w-md flex flex-col h-full">
+                <div id="league-dashboard-section" class="hidden w-full max-w-md flex flex-col h-full overflow-hidden">
                     
-                    <div class="flex justify-between items-center mb-4 bg-gray-900 p-4 rounded-lg border border-yellow-500/30 shadow-lg">
+                    <div class="flex justify-between items-center mb-4 bg-gray-900 p-4 rounded-lg border border-yellow-500/30 shadow-lg flex-shrink-0">
                         <div class="text-left">
                             <p class="text-xs text-gray-400 uppercase">Senin Puanın</p>
                             <span id="league-total-score" class="text-3xl font-black text-yellow-400 drop-shadow-md">0</span>
@@ -594,7 +595,7 @@
                         </div>
                     </div>
                     
-                    <div class="flex border-b border-gray-600 mb-4">
+                    <div class="flex border-b border-gray-600 mb-4 flex-shrink-0">
                         <button id="btn-show-fixtures" class="flex-1 py-2 text-center text-white border-b-2 border-yellow-500 transition-colors font-bold">
                             📅 Fikstür
                         </button>
@@ -603,15 +604,15 @@
                         </button>
                     </div>
 
-                    <div id="tab-league-fixtures" class="flex-1 flex flex-col overflow-hidden">
-                        <div id="league-matches-list" class="space-y-3 overflow-y-auto flex-1 pr-1 pb-4 custom-scrollbar">
+                    <div id="tab-league-fixtures" class="flex-1 flex flex-col overflow-hidden min-h-0">
+                        <div id="league-matches-list" class="space-y-3 overflow-y-auto flex-1 pr-1 pb-4 custom-scrollbar" style="touch-action: pan-y;">
                             </div>
                     </div>
 
-                    <div id="tab-league-standings" class="hidden flex-1 flex flex-col overflow-hidden">
-                        <div class="overflow-y-auto custom-scrollbar pr-1 pb-4">
+                    <div id="tab-league-standings" class="hidden flex-1 flex flex-col overflow-hidden min-h-0">
+                        <div class="overflow-y-auto custom-scrollbar pr-1 pb-4 flex-1" style="touch-action: pan-y;">
                             <table class="w-full text-sm text-left text-gray-300">
-                                <thead class="text-xs text-gray-400 uppercase bg-gray-700 sticky top-0">
+                                <thead class="text-xs text-gray-400 uppercase bg-gray-700 sticky top-0 z-10 shadow-sm">
                                     <tr>
                                         <th scope="col" class="px-3 py-2 rounded-tl-lg">Oyuncu</th>
                                         <th scope="col" class="px-2 py-2 text-center">O</th>

@@ -8,12 +8,13 @@ import { getMyFriendsList } from './friends.js';
 // Değişkenler
 export let 
     // Game Screen
-    guessGrid, keyboardContainer, turnDisplay, timerDisplay, gameIdDisplay, 
+    guessGrid, keyboardContainer, timerDisplay, gameIdDisplay, 
     startGameBtn, roundCounter, shareGameBtn, multiplayerScoreBoard,
     
     // BR Scoreboard
     brRoundCounter, brTimerDisplay, brTurnDisplay,btnCreatePublicBr, btnCreatePrivateBr, btnJoinRandomBr,
     
+    dailyGameTitle,
     // Jokers
     jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn,
     
@@ -68,14 +69,13 @@ export function initUI() {
     // Game Screen
     guessGrid = document.getElementById('guess-grid');
     keyboardContainer = document.getElementById('keyboard');
-    turnDisplay = document.getElementById('turn-display');
     timerDisplay = document.getElementById('timer-display');
     gameIdDisplay = document.getElementById('game-id-display');
     startGameBtn = document.getElementById('start-game-btn');
     roundCounter = document.getElementById('round-counter');
     shareGameBtn = document.getElementById('share-game-btn');
     multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
-
+dailyGameTitle = document.getElementById('daily-game-title');
     // BR Scoreboard
     brRoundCounter = document.getElementById('br-round-counter');
     brTimerDisplay = document.getElementById('br-timer-display');

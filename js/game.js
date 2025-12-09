@@ -40,9 +40,9 @@ import {
     brTimerDisplay, brTurnDisplay, brRoundCounter,
     shareGameBtn, startGameBtn, keyboardContainer, updateMultiplayerScoreBoard,
     updateJokerUI,
-    turnDisplay, timerDisplay, gameIdDisplay, roundCounter,
+    timerDisplay, gameIdDisplay, roundCounter,
     updateStaticTile, 
-    clearStaticTiles, openKelimeligScreen 
+    clearStaticTiles, openKelimeligScreen, dailyGameTitle 
 } from './ui.js';
 
 import { default as allWordList } from '../functions/kelimeler.json'; 
@@ -274,10 +274,11 @@ export function initializeGameUI(gameData) {
     
     if (guessGrid) {
         guessGrid.innerHTML = ''; 
+        guessGrid.classList.remove('br-mode-grid');
         if (gameData.gameType === 'multiplayer-br') {
             guessGrid.classList.add('br-mode-grid');
         } else {
-            guessGrid.classList.remove('br-mode-grid');
+            
         }
         
         if (wordLength === 4) guessGrid.style.maxWidth = '220px';
@@ -312,6 +313,8 @@ export function initializeGameUI(gameData) {
     }
 }
 
+// js/game.js -> updateTurnDisplay (DÜZELTİLMİŞ)
+
 export function updateTurnDisplay(gameData) {
     if (!startGameBtn || !shareGameBtn) return;
 
@@ -319,21 +322,23 @@ export function updateTurnDisplay(gameData) {
     const currentUserId = state.getUserId();
     const isCreator = gameData.creatorId === currentUserId; 
     
+    // Lig modunda burası çalışmasın (Zaten ekranda yer yok)
     if (gameMode === 'league') return;
     
-    if (isBattleRoyale(gameMode)) {
+    // --- BATTLE ROYALE KISMI ---
+    if (gameMode === 'multiplayer-br') {
         if (!brTimerDisplay || !brTurnDisplay) return;
+        
         brTimerDisplay.textContent = gameData.timeLimit || 60;
         const brWaitingForPlayers = document.getElementById('br-waiting-for-players');
         const playerState = gameData.players[currentUserId] || {};
         const numPlayers = Object.keys(gameData.players).length;
 
         if (gameData.status === 'waiting') {
-            brTurnDisplay.textContent = `Oyuncu bekleniyor (${numPlayers}/${MAX_BR_PLAYERS || 4})...`;
+            brTurnDisplay.textContent = `Oyuncu bekleniyor (${numPlayers}/${gameData.maxPlayers || 4})...`;
             
             if (isCreator) {
                 startGameBtn.classList.remove('hidden');
-                
                 if (numPlayers >= 2) { 
                     startGameBtn.disabled = false;
                     startGameBtn.textContent = `Başlat (${numPlayers} Kişi)`;
@@ -344,19 +349,16 @@ export function updateTurnDisplay(gameData) {
                     startGameBtn.textContent = "Oyuncu Bekleniyor...";
                     startGameBtn.className = "w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-not-allowed";
                 }
-
                 const inviteBtn = document.getElementById('invite-to-lobby-btn');
                 if (inviteBtn) {
                     inviteBtn.classList.remove('hidden'); 
                     inviteBtn.onclick = () => import('./ui.js').then(ui => ui.openLobbyInviteModal());
                 }
-
             } else {
                 startGameBtn.classList.add('hidden');
                 const inviteBtn = document.getElementById('invite-to-lobby-btn');
                 if (inviteBtn) inviteBtn.classList.add('hidden');
             }
-
             shareGameBtn.classList.remove('hidden');
             if (brWaitingForPlayers) brWaitingForPlayers.classList.remove('hidden');
 
@@ -378,7 +380,6 @@ export function updateTurnDisplay(gameData) {
                 brTurnDisplay.textContent = "Tahmin Yap!";
                 brTurnDisplay.classList.add('pulsate');
             }
-            
             if (brWaitingForPlayers) brWaitingForPlayers.classList.add('hidden');
             
         } else if (gameData.status === 'finished') {
@@ -389,21 +390,13 @@ export function updateTurnDisplay(gameData) {
         return;
     }
     
-    if (!turnDisplay || !timerDisplay) return; 
+    // --- STANDART OYUN (Sadeleştirildi) ---
     if (gameMode === 'daily') return;
 
     if (gameData.status === 'waiting' || gameData.status === 'invited') {
         const numPlayers = Object.keys(gameData.players).length;
-        
-        if (gameData.status === 'invited') {
-             turnDisplay.textContent = `Arkadaşın bekleniyor...`;
-        } else {
-             turnDisplay.textContent = numPlayers > 1 ? "Başlatmak için bekleniyor..." : "Rakip bekleniyor...";
-        }
-
         if (isCreator) {
             startGameBtn.classList.remove('hidden');
-            
             if (numPlayers < 2 && gameMode !== 'vsCPU') {
                 startGameBtn.disabled = true; 
                 startGameBtn.textContent = "Oyuncu Bekleniyor...";
@@ -417,43 +410,9 @@ export function updateTurnDisplay(gameData) {
         } else {
             startGameBtn.classList.add('hidden');
         }
-        
         shareGameBtn.classList.remove('hidden');
-        
     } 
-    else if (gameData.status === 'playing') {
-        startGameBtn.classList.add('hidden');
-        shareGameBtn.classList.add('hidden');
-        
-        if (gameMode === 'multiplayer' || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
-            const myState = gameData.players[currentUserId];
-            
-            if (myState && myState.hasSolved) {
-                turnDisplay.textContent = "✅ Buldun! Bekleniyor...";
-                turnDisplay.className = "font-bold text-green-400 animate-pulse text-sm";
-            } else if (myState && myState.hasFailed) {
-                turnDisplay.textContent = "❌ Hakkın Bitti";
-                turnDisplay.className = "font-bold text-red-400 text-sm";
-            } else {
-                turnDisplay.textContent = "Tahmin Yap!";
-                turnDisplay.className = "font-bold text-white pulsate text-md";
-            }
-        } 
-        else if (gameMode === 'vsCPU') {
-            const myState = gameData.players[currentUserId];
-            if (myState && (myState.hasSolved || myState.hasFailed)) {
-                turnDisplay.textContent = "Bilgisayar Bekleniyor...";
-                turnDisplay.className = "font-bold text-yellow-400 animate-pulse text-sm";
-            } 
-            else {
-                turnDisplay.textContent = "Sıra Sende!";
-                turnDisplay.className = "font-bold text-white pulsate text-md";
-            }
-        }
-    } 
-    
-    else if (gameData.status === 'finished') {
-        turnDisplay.textContent = "Oyun Bitti";
+    else if (gameData.status === 'playing' || gameData.status === 'finished') {
         startGameBtn.classList.add('hidden');
         shareGameBtn.classList.add('hidden');
     }
@@ -473,7 +432,17 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!isBR && gameMode !== 'vsCPU' && oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
         import('./utils.js').then(u => u.playSound('turn'));
     }
+// js/game.js -> renderGameState fonksiyonunun başlarına ekle:
 
+    // --- YENİ BAŞLIK KONTROLÜ ---
+    if (dailyGameTitle) {
+        if (gameMode === 'daily') {
+            dailyGameTitle.classList.remove('hidden');
+        } else {
+            dailyGameTitle.classList.add('hidden');
+        }
+    }
+    // ----------------------------
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     const jokerContainer = document.getElementById('joker-container');
     const copyBtn = document.getElementById('copy-game-id-btn');
@@ -482,7 +451,6 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     const leaveBtn = document.getElementById('leave-game-button');
     const multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
     const timerDisplay = document.getElementById('timer-display');
-    const turnDisplay = document.getElementById('turn-display');
     const roundCounter = document.getElementById('round-counter');
     const keyboardContainer = document.getElementById('keyboard');
     
@@ -519,16 +487,8 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             }
             document.getElementById('player1-score').style.display = 'none';
             document.getElementById('player2-score').style.display = 'none';
-            if (turnDisplay) turnDisplay.style.display = 'none';
-            if (roundCounter) roundCounter.style.display = 'none';
-        } else {
-            if (timerDisplay && timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5";
-if (turnDisplay) { 
-    turnDisplay.style.display = 'block'; 
-    turnDisplay.textContent = 'Günün Kelimesi'; 
-    turnDisplay.className = "font-black text-2xl text-yellow-400 tracking-widest drop-shadow-md"; // <-- BÜYÜTÜLDÜ
-}            if (roundCounter) { roundCounter.style.display = 'block'; roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); }
-        }
+            
+         }
 
         const gameInfoBar = document.getElementById('game-info-bar');
         if (gameInfoBar) {
@@ -546,7 +506,6 @@ if (turnDisplay) {
             timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
         }
-        if (turnDisplay) turnDisplay.style.display = 'block';
         if (roundCounter) roundCounter.style.display = 'block';
         
         document.getElementById('player1-score').style.display = 'block';
@@ -566,6 +525,8 @@ if (turnDisplay) {
         if (jokerContainer) jokerContainer.style.display = 'flex'; 
         if (roundCounter) roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
     }
+
+    if (roundCounter) roundCounter.style.display = 'none'; // Ligde tur sayacı GİZLE
     
     else {
         if (timerDisplay) {
@@ -574,7 +535,6 @@ if (turnDisplay) {
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
         }
         
-        if (turnDisplay) turnDisplay.style.display = 'block';
         if (roundCounter) roundCounter.style.display = 'block';
         
         document.getElementById('player1-score').style.display = 'block';
@@ -1117,10 +1077,12 @@ export async function joinGame(gameId) {
                 throw new Error("Bu oyun dolu veya başlamış.");
             }
         });
-        if (!gameDataToJoin) {
-            const finalDoc = await getDoc(gameRef);
-            if(finalDoc.exists()) gameDataToJoin = finalDoc.data();
-            else throw new Error("Oyun verisi bulunamadı.");
+        if (gameDataToJoin.gameType === 'league') {
+            state.setGameMode('league');
+        } else if (gameDataToJoin.gameType === 'multiplayer-br') {
+            state.setGameMode('multiplayer-br');
+        } else {
+            state.setGameMode('multiplayer');
         }
         state.setGameMode('multiplayer');
         localStorage.setItem('activeGameId', gameId);
@@ -1599,13 +1561,18 @@ async function submitGuess() {
         }
     } 
     
+    // js/game.js -> submitGuess içinde "else if (gameMode === 'league')" bloğu:
+
     else if (gameMode === 'league') {
         const weekID = localGameData.leagueWeekID;
         const matchId = localGameData.leagueMatchId;
+        const tier = localGameData.leagueTier;       // <-- EKLENDİ
+        const groupId = localGameData.leagueGroupId; // <-- EKLENDİ
         const userId = state.getUserId();
         
-        if (weekID && matchId) {
-            const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+        if (weekID && matchId && tier && groupId) {
+            // YENİ DOĞRU YOL: tiers -> groups -> matches
+            const matchRef = doc(db, "leagues", weekID, "tiers", tier, "groups", groupId, "matches", matchId);
             
             try {
                 await runTransaction(db, async (transaction) => {
@@ -1640,9 +1607,12 @@ async function submitGuess() {
                 
             } catch (e) {
                 console.error("Lig güncelleme hatası:", e);
+                showToast("Bağlantı hatası: Puan kaydedilemedi.", true);
             }
+        } else {
+            console.error("Eksik lig bilgisi:", { weekID, matchId, tier, groupId });
         }
-    } 
+    }
     
     else {
         if (gameMode === 'vsCPU') {
@@ -2931,43 +2901,56 @@ function getCurrentWeekID() {
     return `${year}-W${week}`;
 }
 
+// js/game.js -> checkLeagueStatus (GÜNCELLENMİŞ)
+
 export async function checkLeagueStatus() {
     const userId = state.getUserId();
     if (!userId) return;
 
     const weekID = getCurrentWeekID();
-    const participantRef = doc(db, "leagues", weekID, "participants", userId);
+    
+    // 1. Kullanıcının profilinden lig bilgisini kontrol et
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) return;
+    const userData = userSnap.data();
 
-    try {
-        const participantDoc = await getDoc(participantRef);
+    // Eğer bu haftanın ligine zaten kayıtlıysa ve bir grubu varsa
+    if (userData.currentLeagueWeek === weekID && userData.currentTier && userData.currentGroupId) {
         
-        if (participantDoc.exists()) {
-            const isLeagueStarted = true; 
+        // Intro'yu gizle, Dashboard'u aç
+        const intro = document.getElementById('league-intro-section');
+        const dashboard = document.getElementById('league-dashboard-section');
+        
+        if (intro) intro.classList.add('hidden');
+        if (dashboard) dashboard.classList.remove('hidden');
 
-            document.getElementById('league-intro-section').classList.add('hidden');
-            document.getElementById('league-dashboard-section').classList.remove('hidden');
+        // Fikstürü o gruba göre yükle
+        await fetchAndDisplayLeagueMatches(weekID, userId);
+        
+    } else {
+        // Kayıtlı değilse, Intro ekranını (Katıl Butonunu) göster
+        const intro = document.getElementById('league-intro-section');
+        const dashboard = document.getElementById('league-dashboard-section');
+        
+        if (intro) intro.classList.remove('hidden');
+        if (dashboard) dashboard.classList.add('hidden');
 
-            if (isLeagueStarted) {
-                await fetchAndDisplayLeagueMatches(weekID, userId);
-            } else {
-                document.getElementById('league-matches-list').innerHTML = `
-                    <div class="text-center p-6">
-                        <p class="text-xl text-yellow-400 font-bold">⏳ Lig Başlamadı</p>
-                        <p class="text-gray-400 mt-2">Pazartesi 00:00'da maçlar açılacak.</p>
-                    </div>
-                `;
-            }
-        } else {
-            const joinBtn = document.getElementById('join-league-btn');
-            if(joinBtn) joinBtn.onclick = () => joinCurrentLeague(weekID);
+        const joinBtn = document.getElementById('join-league-btn');
+        if(joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.textContent = "LİGE KATIL ✍️";
+            joinBtn.onclick = () => import('./game.js').then(m => m.joinCurrentLeague(weekID));
         }
-    } catch (error) {
-        console.error("Lig durumu kontrol hatası:", error);
     }
 }
 
-// js/game.js -> joinCurrentLeague
+// ================================================================
+// === KELİMELİG 2.0: GRUP VE KÜME SİSTEMİ (game.js) ===
+// ================================================================
 
+// 1. Oyuncuyu Lige Kaydet (Akıllı Gruplama)
 export async function joinCurrentLeague(weekID) {
     const userId = state.getUserId();
     const username = getUsername();
@@ -2976,45 +2959,94 @@ export async function joinCurrentLeague(weekID) {
         const joinBtn = document.getElementById('join-league-btn');
         if(joinBtn) {
             joinBtn.disabled = true;
-            joinBtn.textContent = "Lige giriliyor...";
+            joinBtn.textContent = "Uygun grup aranıyor...";
         }
 
-        // 1. MEVCUT KALABALIĞI KONTROL ET
-        const participantsRef = collection(db, "leagues", weekID, "participants");
-        // İlk 15 kişiyi sorgula
-        const snapshot = await getDocs(query(participantsRef, limit(15)));
+        // --- ADIM 1: Uygun Grup Bul veya Yarat ---
+        // Varsayılan olarak herkes 'rookie' (Çaylak) liginden başlar.
+        // İleride burayı kullanıcının 'currentTier' verisine göre değiştireceğiz.
+        const targetTier = 'rookie'; 
+        
+        const groupInfo = await findOrCreateAvailableGroup(weekID, targetTier);
+        const groupId = groupInfo.id;
 
-        // Eğer 15 kişiden az oyuncu varsa, ligi doldur (Botları çağır)
-        if (snapshot.size < 15) {
-            await populateLeagueWithBots(weekID);
-        }
-
-        // 2. ŞİMDİ KULLANICIYI KAYDET (Botlardan sonra)
-        await setDoc(doc(db, "leagues", weekID, "participants", userId), {
+        // --- ADIM 2: Oyuncuyu Gruba Ekle ---
+        const userLeagueRef = doc(db, "leagues", weekID, "tiers", targetTier, "groups", groupId, "participants", userId);
+        
+        await setDoc(userLeagueRef, {
             username: username,
-            joinedAt: serverTimestamp(), // Biz şu an katılıyoruz
-            score: 0
+            joinedAt: serverTimestamp(),
+            score: 0,
+            tier: targetTier,
+            groupId: groupId,
+            isBot: false,
+            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 }
         });
 
-        // Ligi aktif olarak işaretle
-        await setDoc(doc(db, "leagues", weekID), { isActive: true }, { merge: true });
+        // Grubun oyuncu sayısını 1 artır (Counter)
+        const groupRef = doc(db, "leagues", weekID, "tiers", targetTier, "groups", groupId);
+        await updateDoc(groupRef, {
+            playerCount: (groupInfo.playerCount || 0) + 1
+        });
 
-        // Butonu gizle ve başarı mesajı göster
+        // --- ADIM 3: Kullanıcı Profiline Lig Bilgisini İşle ---
+        // Böylece her girdiğinde hangi grupta olduğunu biliriz
+        await updateDoc(doc(db, "users", userId), {
+            currentLeagueWeek: weekID,
+            currentTier: targetTier,
+            currentGroupId: groupId
+        });
+
+        // --- ADIM 4: Eğer Grup Yeni ve Boşsa Botlarla Destekle ---
+        // İlk giren oyuncu sıkılmasın diye yanına 5-6 tane "Hızlı Bot" atalım
+        if ((groupInfo.playerCount || 0) === 0) {
+            populateGroupWithStarterBots(weekID, targetTier, groupId, 5); 
+        }
+
+        // UI Güncelleme
         if(joinBtn) joinBtn.classList.add('hidden');
         const statusEl = document.getElementById('league-join-status');
-        if(statusEl) statusEl.classList.remove('hidden');
         
-        showToast("Lige katılım sağlandı! Rakiplerin hazır.", false);
+        // Türkçe Lig İsimleri Sözlüğü
+        const tierNames = {
+            'rookie': 'ÇAYLAK',
+            'bronze': 'BRONZ',
+            'silver': 'GÜMÜŞ',
+            'gold': 'ALTIN',
+            'platinum': 'PLATİN',
+            'diamond': 'ELMAS'
+        };
 
-        // 3. EKRANI YENİLE (Fikstürü göster)
-        // Biraz gecikme verelim ki veritabanı yazma işlemi tamamlansın
+        const tierNameTR = tierNames[targetTier] || targetTier.toUpperCase();
+        // Grup ismini temizle (grup_1234 -> 1234)
+        const groupNum = groupId.replace('grup_', '');
+const displayGroupName = `${groupNum}. GRUP`; 
+
+if(statusEl) {
+    statusEl.classList.remove('hidden');
+    // cleanGroupId yerine displayGroupName kullanıyoruz
+    statusEl.innerHTML = `✅ <strong>${tierNameTR}</strong> liginde, <br><strong>${displayGroupName}</strong>'a yerleştin!`;
+}
+        
+        showToast("Lige başarıyla katıldın!", false);
+        
+        // --- DÜZELTME: Ekrana Geçiş ---
+        // 1.5 saniye sonra ekranı değiştiriyoruz
         setTimeout(() => {
-            import('./game.js').then(m => m.checkLeagueStatus());
+            // Intro ekranını kapat, Dashboard'u aç
+            const intro = document.getElementById('league-intro-section');
+            const dashboard = document.getElementById('league-dashboard-section');
+            
+            if(intro) intro.classList.add('hidden');
+            if(dashboard) dashboard.classList.remove('hidden');
+
+            // DOĞRUSU: Fonksiyon zaten bu dosyada, direkt çağırıyoruz.
+            fetchAndDisplayLeagueMatches(weekID, userId); 
         }, 1500);
 
     } catch (error) {
         console.error("Lige katılma hatası:", error);
-        showToast("Hata oluştu.", true);
+        showToast("Hata oluştu: " + error.message, true);
         const joinBtn = document.getElementById('join-league-btn');
         if(joinBtn) {
             joinBtn.disabled = false;
@@ -3023,8 +3055,121 @@ export async function joinCurrentLeague(weekID) {
     }
 }
 
+// YARDIMCI: Boş Grup Bulma Mantığı
+// js/game.js -> findOrCreateAvailableGroup (SIRALI GRUP SİSTEMİ)
+
+async function findOrCreateAvailableGroup(weekID, tier) {
+    const groupsRef = collection(db, "leagues", weekID, "tiers", tier, "groups");
+    
+    // 1. Önce 20 kişiden az olan (müsait) bir grup var mı bak
+    // (Sıralamayı eskiden yeniye yapalım ki önce eski gruplar dolsun)
+    const q = query(groupsRef, where("playerCount", "<", 20), orderBy("createdAt", "asc"), limit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+        // Müsait grup bulundu
+        const doc = snapshot.docs[0];
+        console.log(`Mevcut gruba giriliyor: ${doc.id}`);
+        return { id: doc.id, playerCount: doc.data().playerCount };
+    } 
+    else {
+        // 2. Hiç müsait grup yok, YENİ GRUP OLUŞTUR (Sıralı İsimlendirme)
+        
+        const tierRef = doc(db, "leagues", weekID, "tiers", tier);
+        let newGroupNumber = 1;
+
+        try {
+            // Transaction kullanarak güvenli bir şekilde sayacı artırıyoruz
+            // Bu sayede iki kişi aynı anda grup kurmaya çalışırsa çakışma olmaz.
+            await runTransaction(db, async (transaction) => {
+                const tierDoc = await transaction.get(tierRef);
+                
+                if (!tierDoc.exists()) {
+                    // Eğer bu ligde hiç grup yoksa, sayacı 1 olarak başlat
+                    transaction.set(tierRef, { totalGroups: 1 });
+                    newGroupNumber = 1;
+                } else {
+                    // Varsa, mevcut sayıyı al ve 1 artır
+                    const currentCount = tierDoc.data().totalGroups || 0;
+                    newGroupNumber = currentCount + 1;
+                    transaction.update(tierRef, { totalGroups: newGroupNumber });
+                }
+            });
+        } catch (e) {
+            console.error("Grup sayacı hatası:", e);
+            // Hata olursa yine de rastgele bir numara ile devam etsin, sistem durmasın
+            newGroupNumber = Math.floor(1000 + Math.random() * 9000);
+        }
+
+        const newGroupId = `grup_${newGroupNumber}`;
+        console.log(`Yeni grup oluşturuluyor: ${newGroupId}`);
+        
+        await setDoc(doc(groupsRef, newGroupId), {
+            createdAt: serverTimestamp(),
+            playerCount: 0,
+            status: 'active',
+            groupNumber: newGroupNumber // Sıra numarasını da kaydedelim
+        });
+        
+        return { id: newGroupId, playerCount: 0 };
+    }
+}
+
+// YARDIMCI: Başlangıç Botları (Sadece grubu hareketlendirmek için)
+async function populateGroupWithStarterBots(weekID, tier, groupId, botCount) {
+    const participantsRef = collection(db, "leagues", weekID, "tiers", tier, "groups", groupId, "participants");
+    
+    // Rastgele bot isimleri seç
+    const shuffledNames = [...botNames].sort(() => 0.5 - Math.random()).slice(0, botCount);
+
+    const promises = shuffledNames.map((name, index) => {
+        const botId = `bot_${Date.now()}_${index}`;
+        return setDoc(doc(participantsRef, botId), {
+            username: name,
+            joinedAt: serverTimestamp(),
+            score: Math.floor(Math.random() * 20), // Ufak bir başlangıç puanı
+            isBot: true,
+            tier: tier,
+            groupId: groupId,
+            stats: { O: 0, G: 0, B: 0, M: 0, P: 0 }
+        });
+    });
+
+    // Bot sayısını ana grupta da güncelle
+    const groupRef = doc(db, "leagues", weekID, "tiers", tier, "groups", groupId);
+    // Not: Burası kritik, Transaction kullanmadık ama +1 +5 sorun olmaz şimdilik.
+    // Mevcut playerCount zaten 1 (biz girdik). Botları ekleyince güncellememiz lazım.
+    // Ancak basitlik adına, botları "playerCount"a dahil ETMEYELİM şimdilik. 
+    // Sadece gerçek oyuncular 20 limitini doldursun. Botlar "bonus" olsun.
+    
+    await Promise.all(promises);
+    console.log(`${botCount} adet başlangıç botu eklendi.`);
+}
+
+// js/game.js -> fetchAndDisplayLeagueMatches (YENİ GRUP SİSTEMİNE UYUMLU)
+
 async function fetchAndDisplayLeagueMatches(weekID, userId) {
-    const participantsRef = collection(db, "leagues", weekID, "participants");
+    // 1. Önce Kullanıcının Hangi Grupta Olduğunu Öğrenelim
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) return;
+    const userData = userSnap.data();
+    
+    // Kullanıcının grup bilgisi profilinde yazıyor olmalı
+    const tier = userData.currentTier;
+    const groupId = userData.currentGroupId;
+
+    if (!tier || !groupId) {
+        console.error("Kullanıcının lig grubu bulunamadı.");
+        return; 
+    }
+
+    // 2. O Grubun Katılımcılarını Çek (Doğru Adresten)
+    const groupPath = `leagues/${weekID}/tiers/${tier}/groups/${groupId}`;
+    const participantsRef = collection(db, groupPath, "participants");
+    const matchesRef = collection(db, groupPath, "matches");
+
     const pSnapshot = await getDocs(participantsRef);
     const participants = {}; 
     
@@ -3036,7 +3181,7 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
         };
     });
 
-    const matchesRef = collection(db, "leagues", weekID, "matches");
+    // 3. O Gruptaki Maçları Çek ve Puanları Hesapla
     const mSnapshot = await getDocs(matchesRef);
     
     const myMatchesList = [];
@@ -3050,39 +3195,41 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
         const p1Data = data.p1_data;
         const p2Data = data.p2_data;
         
+        // İstatistikleri Hesapla
         if (p1Data && p1Data.guesses && p2Data && p2Data.guesses) {
             if (participants[p1]) participants[p1].stats.O++;
             if (participants[p2]) participants[p2].stats.O++;
 
             let p1Points = 0, p2Points = 0;
 
+            // Puanlama Mantığı (3 Puan Galibiyet, 1 Puan Beraberlik)
             if (p1Data.failed && p2Data.failed) { 
-                p1Points = 1; p2Points = 1;
+                p1Points = 1; p2Points = 1; // İkisi de bilemedi (Berabere)
                 if(participants[p1]) participants[p1].stats.B++;
                 if(participants[p2]) participants[p2].stats.B++;
             }
             else if (p1Data.failed) { 
-                p1Points = 0; p2Points = 3;
+                p1Points = 0; p2Points = 3; // p1 bilemedi, p2 kazandı
                 if(participants[p1]) participants[p1].stats.M++;
                 if(participants[p2]) participants[p2].stats.G++;
             }
             else if (p2Data.failed) { 
-                p1Points = 3; p2Points = 0;
+                p1Points = 3; p2Points = 0; // p2 bilemedi, p1 kazandı
                 if(participants[p1]) participants[p1].stats.G++;
                 if(participants[p2]) participants[p2].stats.M++;
             }
             else if (p1Data.guesses.length < p2Data.guesses.length) { 
-                p1Points = 3; p2Points = 0;
+                p1Points = 3; p2Points = 0; // p1 daha az tahminde bildi
                 if(participants[p1]) participants[p1].stats.G++;
                 if(participants[p2]) participants[p2].stats.M++;
             }
             else if (p1Data.guesses.length > p2Data.guesses.length) { 
-                p1Points = 0; p2Points = 3;
+                p1Points = 0; p2Points = 3; // p2 daha az tahminde bildi
                 if(participants[p1]) participants[p1].stats.M++;
                 if(participants[p2]) participants[p2].stats.G++;
             }
             else { 
-                p1Points = 1; p2Points = 1;
+                p1Points = 1; p2Points = 1; // Eşit tahmin (Berabere)
                 if(participants[p1]) participants[p1].stats.B++;
                 if(participants[p2]) participants[p2].stats.B++;
             }
@@ -3094,6 +3241,7 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
             if (p2 === userId) myTotalScore += p2Points;
         }
 
+        // Fikstür Listesini Oluştur (Sadece benim maçlarım)
         if (p1 === userId || p2 === userId) {
             const opponentId = p1 === userId ? p2 : p1;
             const opponentData = participants[opponentId];
@@ -3104,10 +3252,11 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
             let sortCategory = 5; 
 
             if (!myData || !myData.guesses) {
-                sortCategory = 0;
+                sortCategory = 0; // Oynamadım
             } else if (!oppData || !oppData.guesses) {
-                sortCategory = 1;
+                sortCategory = 1; // Ben oynadım, rakip oynamadı
             } else {
+                // Maç bitmiş, sonucu belirle (Renklendirme için)
                 let myMatchPoints = 0;
                 if (myData.failed && oppData.failed) myMatchPoints = 1;
                 else if (myData.failed) myMatchPoints = 0;
@@ -3116,9 +3265,9 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
                 else if (myData.guesses.length === oppData.guesses.length) myMatchPoints = 1;
                 else myMatchPoints = 0;
 
-                if (myMatchPoints === 3) sortCategory = 2; 
-                else if (myMatchPoints === 1) sortCategory = 3; 
-                else sortCategory = 4; 
+                if (myMatchPoints === 3) sortCategory = 2; // Kazandım
+                else if (myMatchPoints === 1) sortCategory = 3; // Berabere
+                else sortCategory = 4; // Kaybettim
             }
 
             let matchObj = { 
@@ -3127,12 +3276,15 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
                 p2: p2, 
                 opponentName: opponentData ? opponentData.username : 'Bilinmiyor',
                 sortCategory: sortCategory, 
+                tier: tier,     // <-- Yeni: Maç başlatırken lazım olacak
+                groupId: groupId, // <-- Yeni: Maç başlatırken lazım olacak
                 ...data 
             };
             myMatchesList.push(matchObj);
         }
     });
 
+    // 4. Henüz Hiç Oynanmamış Maçları Ekle (Placeholder)
     Object.values(participants).forEach(opp => {
         if (opp.id === userId) return;
         const exists = myMatchesList.find(m => m.p1 === opp.id || m.p2 === opp.id);
@@ -3143,13 +3295,17 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
                 p1: userId < opp.id ? userId : opp.id,
                 p2: userId < opp.id ? opp.id : userId,
                 opponentName: opp.username,
-                sortCategory: 0 
+                sortCategory: 0,
+                tier: tier,       // <-- Önemli: UI'da butona basınca lazım
+                groupId: groupId  // <-- Önemli
             });
         }
     });
 
+    // Sıralamalar (Önce oynanmamışlar, sonra bekleyenler, sonra bitenler)
     myMatchesList.sort((a, b) => a.sortCategory - b.sortCategory);
 
+    // Puan Durumu Sıralaması (Puan > Averaj > İsim)
     const standingsList = Object.values(participants).map(p => ({
         id: p.id,
         username: p.username,
@@ -3157,25 +3313,51 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
     }));
 
     standingsList.sort((a, b) => {
-        if (b.P !== a.P) return b.P - a.P;
-        if (b.G !== a.G) return b.G - a.G; 
+        if (b.P !== a.P) return b.P - a.P; // Puan
+        if (b.G !== a.G) return b.G - a.G; // Galibiyet sayısı (Averaj niyetine)
         return (a.username || '').localeCompare(b.username || '');
     });
 
+    // UI'a Gönder
     const { renderLeagueMatches, renderLeagueStandings } = await import('./ui.js');
     
     const leagueScoreEl = document.getElementById('league-total-score');
     if(leagueScoreEl) leagueScoreEl.textContent = myTotalScore;
 
+    // Hafta bilgisini de güncelle
+    const weekDisplay = document.getElementById('league-week-display');
+    if(weekDisplay) {
+        const weekNum = weekID.split('-W')[1];
+        weekDisplay.textContent = weekNum || 1;
+    }
+
     renderLeagueMatches(myMatchesList, userId); 
     renderLeagueStandings(standingsList, userId); 
 }
+
+// js/game.js -> startLeagueMatch (GÜNCELLENMİŞ)
+
+// js/game.js -> startLeagueMatch (GÜNCELLENMİŞ)
 
 export async function startLeagueMatch(matchId, opponentId, opponentName) {
     const weekID = getCurrentWeekID();
     const userId = state.getUserId();
     
-    const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+    // Kullanıcının güncel grubunu bulmamız lazım
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
+    
+    const tier = userSnap.data().currentTier;
+    const groupId = userSnap.data().currentGroupId;
+    
+    if (!tier || !groupId) {
+        showToast("Lig bilgisi alınamadı.", true);
+        return;
+    }
+
+    // YENİ YOL: tier ve group içine bakıyoruz
+    const matchRef = doc(db, "leagues", weekID, "tiers", tier, "groups", groupId, "matches", matchId);
     const matchSnap = await getDoc(matchRef);
     
     let matchData;
@@ -3259,15 +3441,25 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
         return; 
     }
 
+    // js/game.js -> startLeagueMatch içinde:
+
     await startNewGame({
         mode: 'league',
         secretWord: secretWord,
-        initialGuesses: previousGuesses
+        initialGuesses: previousGuesses,
+        gameType: 'league' // <-- BU SATIRI EKLE (Garanti olsun)
     });
 
     const localData = state.getLocalGameData();
     localData.leagueMatchId = matchId;
     localData.leagueWeekID = weekID;
+    
+    // --- ÖNEMLİ: Lig Verilerini Local'e Kaydet ---
+    // submitGuess yaparken nereye yazacağını bilsin
+    localData.leagueTier = tier;       
+    localData.leagueGroupId = groupId;
+    // ---------------------------------------------
+    
     localData.turnStartTime = startTime; 
     localData.currentPlayerId = userId; 
     state.setLocalGameData(localData);
