@@ -753,83 +753,93 @@
     </div>
 
     <div id="daily-result-modal" class="hidden fixed inset-0 bg-gray-900/95 flex items-center justify-center z-[70] p-4 backdrop-blur-sm transition-opacity duration-300">
-    <div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col relative" style="height: 550px;">
+    <div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col relative" style="height: 600px;">
         
-        <div class="absolute top-3 right-3 z-20">
-            <button id="close-daily-modal-btn" class="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-1.5 transition">
+        <div class="absolute top-4 right-4 z-20">
+            <button id="close-daily-modal-btn" class="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
-        <div id="daily-slides-container" class="flex-1 flex transition-transform duration-500 ease-out" style="width: 200%; transform: translateX(0%);">
+        <div id="daily-slides-container" class="flex-1 flex transition-transform duration-300 ease-out h-full" style="width: 200%; transform: translateX(0%); touch-action: pan-y pinch-zoom;">
             
-            <div class="w-1/2 flex flex-col p-6 items-center overflow-y-auto">
-                <h2 class="text-2xl font-black text-white mb-6 tracking-wide">İSTATİSTİKLER</h2>
+            <div class="w-1/2 flex flex-col p-6 items-center overflow-y-auto h-full">
+                <h2 class="text-3xl font-black text-white mb-2 tracking-wide self-start">İSTATİSTİKLER</h2>
                 
-                <div class="grid grid-cols-4 gap-2 w-full mb-8">
-                    <div class="flex flex-col items-center">
-                        <span id="d-stat-played" class="text-3xl font-bold text-white">0</span>
-                        <span class="text-[10px] text-gray-400 uppercase text-center">Oyun</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span id="d-stat-win" class="text-3xl font-bold text-white">0</span>
-                        <span class="text-[10px] text-gray-400 uppercase text-center">Kazanma %</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span id="d-stat-streak" class="text-3xl font-bold text-white">0</span>
-                        <span class="text-[10px] text-gray-400 uppercase text-center">Seri</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span id="d-stat-max" class="text-3xl font-bold text-white">0</span>
-                        <span class="text-[10px] text-gray-400 uppercase text-center">En İyi</span>
-                    </div>
+                <div class="flex items-center gap-2 mb-6 self-start">
+                    <span class="text-xl font-bold text-white">Bugün</span>
+                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
                 </div>
 
-                <h3 class="text-sm font-bold text-gray-400 uppercase mb-3 self-start w-full text-left">Tahmin Dağılımı</h3>
-                <div id="d-guess-dist" class="w-full space-y-1.5 mb-4">
+                <div class="w-full grid grid-cols-2 gap-4 mb-2">
+                    <span class="font-bold text-gray-300">Sen</span>
+                    <span class="font-bold text-gray-300">Genel</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 w-full mb-6">
+                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-my-score" class="text-4xl font-black text-green-400">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Kazandığın<br>puan</span>
                     </div>
+                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-avg-score" class="text-4xl font-black text-white">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğerlerinin<br>ortalaması</span>
+                    </div>
+                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-my-guesses" class="text-4xl font-black text-red-400">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Deneme<br>sayısı</span>
+                    </div>
+                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-avg-guesses" class="text-4xl font-black text-white">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğerlerinin<br>ortalaması</span>
+                    </div>
+                </div>
+                
+                <p class="text-xs text-gray-500 mt-auto animate-pulse flex items-center gap-1">
+                    <span>Yana kaydır</span> 
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                </p>
             </div>
 
-            <div class="w-1/2 flex flex-col p-6 items-center justify-center bg-gray-800">
+            <div class="w-1/2 flex flex-col p-6 items-center justify-center bg-gray-800 h-full">
                 <h2 class="text-2xl font-black text-yellow-400 mb-2 tracking-wide">GÜNLÜK DURUM</h2>
-                <p class="text-gray-400 text-xs mb-8">Diğer oyunculara göre performansın</p>
-
-                <div class="relative w-40 h-40 flex items-center justify-center mb-6">
+                
+                <div class="relative w-48 h-48 flex items-center justify-center mb-8 mt-4">
                     <svg class="w-full h-full transform -rotate-90">
-                        <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="10" fill="transparent" class="text-gray-700" />
-                        <circle id="rank-circle" cx="80" cy="80" r="70" stroke="currentColor" stroke-width="10" fill="transparent" class="text-green-500" stroke-dasharray="440" stroke-dashoffset="440" style="transition: stroke-dashoffset 1.5s ease-in-out;" />
+                        <circle cx="96" cy="96" r="80" stroke="currentColor" stroke-width="12" fill="transparent" class="text-gray-700" />
+                        <circle id="rank-circle" cx="96" cy="96" r="80" stroke="currentColor" stroke-width="12" fill="transparent" class="text-green-500" stroke-dasharray="502" stroke-dashoffset="502" style="transition: stroke-dashoffset 1.5s ease-in-out;" />
                     </svg>
                     <div class="absolute flex flex-col items-center">
-                        <span class="text-4xl font-black text-white" id="rank-percent">--</span>
-                        <span class="text-xs text-gray-400">Üst Dilim</span>
+                        <span class="text-5xl font-black text-white" id="rank-percent">--</span>
+                        <span class="text-sm text-gray-400">Üst Dilim</span>
                     </div>
                 </div>
 
-                <div class="bg-gray-700/50 p-4 rounded-xl w-full text-center border border-gray-600">
+                <div class="bg-gray-700/50 p-4 rounded-xl w-full text-center border border-gray-600 mb-6">
                     <p class="text-gray-400 text-sm mb-1">Sıralaman</p>
                     <p class="text-3xl font-bold text-white mb-1"><span id="rank-position" class="text-yellow-400">---</span> <span class="text-lg text-gray-500">/ <span id="rank-total">---</span></span></p>
                 </div>
                 
-                <div id="daily-next-timer" class="mt-6 text-center">
+                <div id="daily-next-timer" class="text-center">
                     <p class="text-xs text-gray-500 uppercase">Sonraki Kelime</p>
-                    <p id="countdown-timer" class="text-xl font-mono font-bold text-white">00:00:00</p>
+                    <p id="countdown-timer" class="text-2xl font-mono font-bold text-white tracking-widest">00:00:00</p>
                 </div>
             </div>
 
         </div>
 
-        <div class="absolute bottom-4 left-0 w-full px-6 flex flex-col gap-3">
-            <div class="flex justify-center gap-2 mb-1">
-                <button class="slide-dot w-2 h-2 rounded-full bg-white transition-all" onclick="changeSlide(0)"></button>
-                <button class="slide-dot w-2 h-2 rounded-full bg-gray-600 transition-all" onclick="changeSlide(1)"></button>
+        <div class="absolute bottom-6 left-0 w-full px-6 flex flex-col gap-4 bg-gray-800 pt-2">
+            <div class="flex justify-center gap-2">
+                <button class="slide-dot w-2.5 h-2.5 rounded-full bg-white transition-all"></button>
+                <button class="slide-dot w-2.5 h-2.5 rounded-full bg-gray-600 transition-all"></button>
             </div>
             
-            <div class="flex gap-2">
-                 <button id="daily-share-btn" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition transform active:scale-95">
+            <div class="flex gap-3">
+                 <button id="daily-share-btn" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition transform active:scale-95">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
                     PAYLAŞ
                  </button>
-                 <button id="daily-menu-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg shadow-lg transition transform active:scale-95">
+                 <button id="daily-menu-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition transform active:scale-95">
                     ANA MENÜ
                  </button>
             </div>

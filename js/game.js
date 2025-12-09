@@ -523,8 +523,11 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             if (roundCounter) roundCounter.style.display = 'none';
         } else {
             if (timerDisplay && timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5";
-            if (turnDisplay) { turnDisplay.style.display = 'block'; turnDisplay.textContent = 'Günün Kelimesi'; }
-            if (roundCounter) { roundCounter.style.display = 'block'; roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); }
+if (turnDisplay) { 
+    turnDisplay.style.display = 'block'; 
+    turnDisplay.textContent = 'Günün Kelimesi'; 
+    turnDisplay.className = "font-black text-2xl text-yellow-400 tracking-widest drop-shadow-md"; // <-- BÜYÜTÜLDÜ
+}            if (roundCounter) { roundCounter.style.display = 'block'; roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); }
         }
 
         const gameInfoBar = document.getElementById('game-info-bar');
@@ -1333,24 +1336,29 @@ function restoreDailyGame(savedState) {
     initializeGameUI(gameData);
     
     renderGameState(gameData, true).then(() => {
+        // js/game.js -> restoreDailyGame içinde "gameData.status === 'finished'" bloğu:
+
         if (gameData.status === 'finished') {
-            // --- BURASI DEĞİŞTİ: Artık eski tablo yerine yeni modal açılıyor ---
+            // --- DÜZELTME: Veritabanından güncel veriyi çek ---
             setTimeout(async () => {
                 const profile = state.getCurrentUserProfile();
                 const stats = getStatsFromProfile(profile);
                 
-                // Sıralamayı çek
+                // Buradaki getDailyLeaderboardStats fonksiyonu veritabanına gidip ortalamaları alır
                 const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
                 
+                // Modalı, çekilen DOLU verilerle aç
                 import('./ui.js').then(ui => {
                     ui.openDailyResultModal(stats, {
                         userPosition: rankData?.userPosition || 0,
                         totalPlayers: rankData?.totalPlayers || 0,
-                        userGuessCount: savedState.guesses.length
+                        userGuessCount: savedState.guesses.length,
+                        userScore: rankData?.userScore || 0, // Puan eklendi
+                        avgScore: rankData?.avgScore || '-',     // Ortalama eklendi
+                        avgGuesses: rankData?.avgGuesses || '-'  // Ortalama eklendi
                     });
                 });
             }, 500);
-            // ------------------------------------------------------------------
         }
     });
 }

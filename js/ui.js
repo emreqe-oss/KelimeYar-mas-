@@ -1260,47 +1260,29 @@ export async function openLobbyInviteModal() {
 
 // --- GÜNLÜK SONUÇ MODALI FONKSİYONLARI ---
 
+// js/ui.js -> openDailyResultModal fonksiyonunu BUNUNLA DEĞİŞTİR:
+
 export function openDailyResultModal(stats, dailyRankData) {
     const modal = document.getElementById('daily-result-modal');
     if (!modal) return;
 
-    // 1. KİŞİSEL İSTATİSTİKLERİ DOLDUR
-    document.getElementById('d-stat-played').textContent = stats.played;
-    const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-    document.getElementById('d-stat-win').textContent = winRate;
-    document.getElementById('d-stat-streak').textContent = stats.currentStreak;
-    document.getElementById('d-stat-max').textContent = stats.maxStreak;
-
-    // Tahmin Dağılımı Grafiği
-    const distContainer = document.getElementById('d-guess-dist');
-    distContainer.innerHTML = '';
-    const maxVal = Math.max(...Object.values(stats.guessDistribution), 1); // 0 bölünme hatasını önle
-
-    for (let i = 1; i <= 6; i++) {
-        const count = stats.guessDistribution[i] || 0;
-        const widthPercent = Math.max((count / maxVal) * 100, 8); // En az %8 genişlik
-        const colorClass = (dailyRankData.userGuessCount === i) ? 'bg-green-500' : 'bg-gray-600';
-        
-        distContainer.innerHTML += `
-            <div class="flex items-center gap-2 text-xs font-bold text-white">
-                <span class="w-2">${i}</span>
-                <div class="flex-1 bg-gray-700 rounded-sm overflow-hidden h-5">
-                    <div class="${colorClass} h-full flex items-center justify-end pr-1.5 transition-all duration-1000 ease-out" style="width: 0%" data-width="${widthPercent}%">
-                        ${count}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+    // --- 1. VERİLERİ DOLDUR ---
     
-    // Animasyon: Barların uzaması
-    setTimeout(() => {
-        distContainer.querySelectorAll('div[data-width]').forEach(el => {
-            el.style.width = el.dataset.width;
-        });
-    }, 100);
+    // SEN KISMI
+    const myScoreEl = document.getElementById('d-my-score');
+    const myGuessesEl = document.getElementById('d-my-guesses');
+    
+    if (myScoreEl) myScoreEl.textContent = dailyRankData.userScore || 0;
+    if (myGuessesEl) myGuessesEl.textContent = (dailyRankData.userGuessCount > 0) ? dailyRankData.userGuessCount : 'X';
 
-    // 2. GÜNLÜK SIRALAMA VERİSİNİ DOLDUR
+    // GENEL KISMI (Ortalamalar)
+    const avgScoreEl = document.getElementById('d-avg-score');
+    const avgGuessesEl = document.getElementById('d-avg-guesses');
+    
+    if (avgScoreEl) avgScoreEl.textContent = dailyRankData.avgScore || '-';
+    if (avgGuessesEl) avgGuessesEl.textContent = dailyRankData.avgGuesses || '-';
+
+    // SIRALAMA KISMI
     const rankEl = document.getElementById('rank-position');
     const totalEl = document.getElementById('rank-total');
     const percentEl = document.getElementById('rank-percent');
@@ -1310,71 +1292,91 @@ export function openDailyResultModal(stats, dailyRankData) {
         rankEl.textContent = dailyRankData.userPosition;
         totalEl.textContent = dailyRankData.totalPlayers;
         
-        // Başarı Yüzdesi Hesaplama (Ters mantık: 1. olmak %100 başarıdır)
-        // Formül: (Toplam - Sıralama + 1) / Toplam * 100
+        // Yüzdelik Dilim Hesaplama
         const successRate = Math.round(((dailyRankData.totalPlayers - dailyRankData.userPosition + 1) / dailyRankData.totalPlayers) * 100);
         percentEl.textContent = `%${successRate}`;
         
-        // Çember Animasyonu (440 = Tam Çevre)
-        const offset = 440 - (440 * successRate) / 100;
-        setTimeout(() => { circleEl.style.strokeDashoffset = offset; }, 300);
+        // Çember Animasyonu (502 = Tam Çevre)
+        const offset = 502 - (502 * successRate) / 100;
+        setTimeout(() => { 
+            if(circleEl) circleEl.style.strokeDashoffset = offset; 
+        }, 300);
     } else {
         rankEl.textContent = "-";
         totalEl.textContent = "-";
         percentEl.textContent = "%--";
-        circleEl.style.strokeDashoffset = 440; // Boş
+        if(circleEl) circleEl.style.strokeDashoffset = 502; 
     }
 
-    // Sayaç Başlat
-    startDailyCountdown();
-
-    // Modalı Göster
+    // --- 2. MODALI AÇ VE SLAYT AYARLARI ---
     modal.classList.remove('hidden');
-    changeSlide(0); // İlk slaytı aç
+    
+    const container = document.getElementById('daily-slides-container');
+    const dots = document.querySelectorAll('.slide-dot');
+    let currentSlideIndex = 0;
 
-    // Kapatma Butonu
-    document.getElementById('close-daily-modal-btn').onclick = () => {
-        modal.classList.add('hidden');
-        import('./game.js').then(m => m.leaveGame()); // Ana menüye dön
+    // Slayt Değiştirme Fonksiyonu (İçerde tanımlı)
+    const updateSlide = (index) => {
+        currentSlideIndex = index;
+        if (container) container.style.transform = `translateX(-${index * 50}%)`;
+        
+        dots.forEach((dot, i) => {
+            if (i === index) {
+                dot.classList.remove('bg-gray-600');
+                dot.classList.add('bg-white', 'scale-125');
+            } else {
+                dot.classList.add('bg-gray-600');
+                dot.classList.remove('bg-white', 'scale-125');
+            }
+        });
     };
 
-    // js/ui.js -> openDailyResultModal fonksiyonunun EN ALTINA ekle:
+    updateSlide(0); // Başlangıçta 1. slayt
 
-    // ... (önceki kodlar) ...
+    // --- 3. SWIPE (KAYDIRMA) ÖZELLİĞİ ---
+    let touchStartX = 0;
+    let touchEndX = 0;
 
-    // --- YENİ BUTONLARIN İŞLEVLERİ ---
-    
-    // 1. Ana Menü Butonu
-    const menuBtn = document.getElementById('daily-menu-btn');
-    if (menuBtn) {
-        menuBtn.onclick = () => {
-            modal.classList.add('hidden');
-            import('./game.js').then(m => m.leaveGame());
+    if (container) {
+        container.ontouchstart = (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        };
+
+        container.ontouchend = (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
         };
     }
 
-    // 2. Paylaş Butonu
+    const handleSwipe = () => {
+        if (touchStartX - touchEndX > 50) {
+            // Sola kaydır (İleri git)
+            if (currentSlideIndex === 0) updateSlide(1);
+        }
+        if (touchEndX - touchStartX > 50) {
+            // Sağa kaydır (Geri gel)
+            if (currentSlideIndex === 1) updateSlide(0);
+        }
+    };
+
+    // --- 4. BUTONLAR ---
+    const closeBtn = document.getElementById('close-daily-modal-btn');
+    if (closeBtn) closeBtn.onclick = () => {
+        modal.classList.add('hidden');
+        import('./game.js').then(m => m.leaveGame());
+    };
+
+    const menuBtn = document.getElementById('daily-menu-btn');
+    if (menuBtn) menuBtn.onclick = () => {
+        modal.classList.add('hidden');
+        import('./game.js').then(m => m.leaveGame());
+    };
+
+    // Paylaş Butonu (GÜNCELLENDİ: Yeni verileri kullanır)
     const shareBtn = document.getElementById('daily-share-btn');
     if (shareBtn) {
         shareBtn.onclick = () => {
-            const gameData = state.getLocalGameData();
-            const myGuesses = gameData?.players[state.getUserId()]?.guesses || [];
-            const dayIndex = Math.floor((new Date() - new Date('2024-01-01')) / (1000 * 60 * 60 * 24));
-            
-            let shareText = `Kelime Yarışması Günlük #${dayIndex}\n`;
-            shareText += `${dailyRankData.userGuessCount > 0 ? dailyRankData.userGuessCount : 'X'}/6\n\n`;
-
-            myGuesses.forEach(g => {
-                g.colors.forEach(c => {
-                    if (c === 'correct') shareText += '🟩';
-                    else if (c === 'present') shareText += '🟨';
-                    else shareText += '⬛';
-                });
-                shareText += '\n';
-            });
-
-            shareText += '\nhttps://kelime-yar-mas.vercel.app/';
-
+            const shareText = `Kelime Yarışması Günlük\nPuanım: ${dailyRankData.userScore || 0}\nSıralamam: ${dailyRankData.userPosition || '-'}/${dailyRankData.totalPlayers || '-'}\n\nSen de oyna: https://kelime-yar-mas.vercel.app/`;
             if (navigator.share) {
                 navigator.share({ title: 'Kelime Yarışması', text: shareText }).catch(console.error);
             } else {
@@ -1382,6 +1384,9 @@ export function openDailyResultModal(stats, dailyRankData) {
             }
         };
     }
+
+    // Sayaç Başlat (Dışarıdaki fonksiyonu çağır)
+    // startDailyCountdown() fonksiyonunun ui.js içinde ayrıca tanımlı olması gerekir
 }
 
 let currentSlide = 0;
