@@ -1308,15 +1308,20 @@ function restoreDailyGame(savedState) {
         // Yükleniyor hissi için kısa bir bekleme (opsiyonel, kaldırılabilir)
         showToast("Sonuçlar yükleniyor...", false);
 
+        // js/game.js -> restoreDailyGame içindeki setTimeout bloğu:
+
         setTimeout(async () => {
             const profile = state.getCurrentUserProfile();
             const stats = getStatsFromProfile(profile);
             
-            // 1. Bugünkü Veriler
+            // 1. Senin Bugünün
             const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
             
-            // 2. Son 7 Günlük Veriler (Hesapla)
+            // 2. Senin Haftalık Ortalaman
             const weeklyData = await getLast7DaysStats(state.getUserId());
+
+            // 3. GENEL (GLOBAL) Haftalık Ortalama (YENİ EKLENDİ)
+            const globalWeeklyData = await getGlobalWeeklyStats(); 
 
             import('./ui.js').then(ui => {
                 ui.openDailyResultModal(stats, {
@@ -1325,11 +1330,14 @@ function restoreDailyGame(savedState) {
                     userGuessCount: savedState.guesses.length,
                     avgScore: rankData?.avgScore || '-',
                     avgGuesses: rankData?.avgGuesses || '-',
-                    // Genel / 7 Gün
+                    
+                    // Genel / 7 Gün (Sen)
                     weeklyUserScore: weeklyData.avgScore,
                     weeklyUserGuesses: weeklyData.avgGuesses,
-                    weeklyGlobalScore: "436", // Global ortalama (Statik veya hesaplanabilir)
-                    weeklyGlobalGuesses: "4.2"
+                    
+                    // Genel / 7 Gün (Herkes - ARTIK GERÇEK VERİ)
+                    weeklyGlobalScore: globalWeeklyData.avgScore,
+                    weeklyGlobalGuesses: globalWeeklyData.avgGuesses
                 });
             });
         }, 500);
@@ -1669,28 +1677,31 @@ async function submitGuess() {
                 const rankData = await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, true, guessCount, dailyScore);
                 saveDailyGameState(localGameData);
                 
-                // 2. Haftalık Verileri Çek (EKSİK OLAN KISIM BU)
-                const weeklyData = await getLast7DaysStats(currentUserId); 
+                // ... (rankData ve weeklyData alındıktan sonra) ...
+
+                // Global Veriyi Çek (YENİ)
+                const globalWeeklyData = await getGlobalWeeklyStats();
 
                 // --- YENİ MODALI AÇ ---
                 setTimeout(() => {
                     const profile = state.getCurrentUserProfile();
-                    const stats = getStatsFromProfile(profile); 
+                    const stats = getStatsFromProfile(profile);
                     
                     import('./ui.js').then(ui => {
                         ui.openDailyResultModal(stats, {
-                            // Bugün
                             userPosition: rankData.userPosition,
                             totalPlayers: rankData.totalPlayers,
                             userGuessCount: guessCount,
                             userScore: dailyScore,
                             avgScore: rankData.avgScore || '-',
                             avgGuesses: rankData.avgGuesses || '-',
-                            // Haftalık (Artık geliyor)
+                            
                             weeklyUserScore: weeklyData.avgScore,
                             weeklyUserGuesses: weeklyData.avgGuesses,
-                            weeklyGlobalScore: "436",
-                            weeklyGlobalGuesses: "4.2"
+                            
+                            // Genel (Herkes - ARTIK GERÇEK VERİ)
+                            weeklyGlobalScore: globalWeeklyData.avgScore,
+                            weeklyGlobalGuesses: globalWeeklyData.avgGuesses
                         });
                     });
                 }, 1500);
@@ -3664,5 +3675,45 @@ export async function joinRandomBRGame() {
     } catch (error) {
         console.error("Rastgele oyun arama hatası:", error);
         showToast("Hata oluştu.", true);
+    }
+}
+
+// js/game.js EN ALTINA EKLE:
+
+async function getGlobalWeeklyStats() {
+    const todayIndex = getDaysSinceEpoch();
+    const startDay = todayIndex - 7;
+    
+    try {
+        const leaderboardRef = collection(db, 'daily_leaderboard');
+        // Sadece tarih filtresi (Herkesin verisi)
+        const q = query(leaderboardRef, where('dayIndex', '>', startDay));
+        
+        const snapshot = await getDocs(q);
+        let totalScore = 0;
+        let totalGuesses = 0;
+        let count = 0;
+
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            if (d.didWin) { // Sadece kazananları ortalamaya katıyoruz
+                totalScore += d.score;
+                totalGuesses += d.guessCount;
+                count++;
+            }
+        });
+
+        console.log(`Global İstatistik: ${count} oyun incelendi.`);
+
+        if (count === 0) return { avgScore: 0, avgGuesses: 0 };
+
+        return {
+            avgScore: Math.round(totalScore / count),
+            avgGuesses: (totalGuesses / count).toFixed(1)
+        };
+
+    } catch (e) {
+        console.error("Global veri hatası:", e);
+        return { avgScore: 0, avgGuesses: 0 };
     }
 }
