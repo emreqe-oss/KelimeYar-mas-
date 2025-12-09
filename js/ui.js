@@ -1262,64 +1262,44 @@ export async function openLobbyInviteModal() {
 
 // js/ui.js -> openDailyResultModal fonksiyonunu BUNUNLA DEĞİŞTİR:
 
-export function openDailyResultModal(stats, dailyRankData) {
+export function openDailyResultModal(stats, data) {
     const modal = document.getElementById('daily-result-modal');
     if (!modal) return;
 
-    // --- 1. VERİLERİ DOLDUR ---
-    
-    // SEN KISMI
+    // --- 1. SAYFA: BUGÜN ---
     const myScoreEl = document.getElementById('d-my-score');
     const myGuessesEl = document.getElementById('d-my-guesses');
-    
-    if (myScoreEl) myScoreEl.textContent = dailyRankData.userScore || 0;
-    if (myGuessesEl) myGuessesEl.textContent = (dailyRankData.userGuessCount > 0) ? dailyRankData.userGuessCount : 'X';
-
-    // GENEL KISMI (Ortalamalar)
     const avgScoreEl = document.getElementById('d-avg-score');
     const avgGuessesEl = document.getElementById('d-avg-guesses');
     
-    if (avgScoreEl) avgScoreEl.textContent = dailyRankData.avgScore || '-';
-    if (avgGuessesEl) avgGuessesEl.textContent = dailyRankData.avgGuesses || '-';
+    if (myScoreEl) myScoreEl.textContent = data.userScore || 0;
+    if (myGuessesEl) myGuessesEl.textContent = (data.userGuessCount > 0) ? data.userGuessCount : 'X';
+    if (avgScoreEl) avgScoreEl.textContent = data.avgScore || '-';
+    if (avgGuessesEl) avgGuessesEl.textContent = data.avgGuesses || '-';
 
-    // SIRALAMA KISMI
-    const rankEl = document.getElementById('rank-position');
-    const totalEl = document.getElementById('rank-total');
-    const percentEl = document.getElementById('rank-percent');
-    const circleEl = document.getElementById('rank-circle');
+    // --- 2. SAYFA: GENEL / SON 7 GÜN ---
+    const gMyScore = document.getElementById('g-my-avg-score');
+    const gMyGuesses = document.getElementById('g-my-avg-guesses');
+    const gGlobalScore = document.getElementById('g-global-avg-score');
+    const gGlobalGuesses = document.getElementById('g-global-avg-guesses');
 
-    if (dailyRankData && dailyRankData.userPosition > 0) {
-        rankEl.textContent = dailyRankData.userPosition;
-        totalEl.textContent = dailyRankData.totalPlayers;
-        
-        // Yüzdelik Dilim Hesaplama
-        const successRate = Math.round(((dailyRankData.totalPlayers - dailyRankData.userPosition + 1) / dailyRankData.totalPlayers) * 100);
-        percentEl.textContent = `%${successRate}`;
-        
-        // Çember Animasyonu (502 = Tam Çevre)
-        const offset = 502 - (502 * successRate) / 100;
-        setTimeout(() => { 
-            if(circleEl) circleEl.style.strokeDashoffset = offset; 
-        }, 300);
-    } else {
-        rankEl.textContent = "-";
-        totalEl.textContent = "-";
-        percentEl.textContent = "%--";
-        if(circleEl) circleEl.style.strokeDashoffset = 502; 
-    }
+    if (gMyScore) gMyScore.textContent = data.weeklyUserScore || 0;
+    if (gMyGuesses) gMyGuesses.textContent = data.weeklyUserGuesses || '-';
+    if (gGlobalScore) gGlobalScore.textContent = data.weeklyGlobalScore || '436';
+    if (gGlobalGuesses) gGlobalGuesses.textContent = data.weeklyGlobalGuesses || '4.2';
 
-    // --- 2. MODALI AÇ VE SLAYT AYARLARI ---
+    // --- MODALI AÇ ---
     modal.classList.remove('hidden');
-    
+    startDailyCountdown(); // Sayacı başlat
+
+    // --- Slayt ve Swipe Ayarları ---
     const container = document.getElementById('daily-slides-container');
     const dots = document.querySelectorAll('.slide-dot');
     let currentSlideIndex = 0;
 
-    // Slayt Değiştirme Fonksiyonu (İçerde tanımlı)
     const updateSlide = (index) => {
         currentSlideIndex = index;
         if (container) container.style.transform = `translateX(-${index * 50}%)`;
-        
         dots.forEach((dot, i) => {
             if (i === index) {
                 dot.classList.remove('bg-gray-600');
@@ -1330,63 +1310,43 @@ export function openDailyResultModal(stats, dailyRankData) {
             }
         });
     };
+    updateSlide(0); // Her açılışta 1. sayfaya dön
 
-    updateSlide(0); // Başlangıçta 1. slayt
-
-    // --- 3. SWIPE (KAYDIRMA) ÖZELLİĞİ ---
+    // Swipe Olayları
     let touchStartX = 0;
     let touchEndX = 0;
-
     if (container) {
-        container.ontouchstart = (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        };
-
+        container.ontouchstart = (e) => { touchStartX = e.changedTouches[0].screenX; };
         container.ontouchend = (e) => {
             touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
+            if (touchStartX - touchEndX > 50) updateSlide(1); // Sola kaydır
+            if (touchEndX - touchStartX > 50) updateSlide(0); // Sağa kaydır
         };
     }
 
-    const handleSwipe = () => {
-        if (touchStartX - touchEndX > 50) {
-            // Sola kaydır (İleri git)
-            if (currentSlideIndex === 0) updateSlide(1);
-        }
-        if (touchEndX - touchStartX > 50) {
-            // Sağa kaydır (Geri gel)
-            if (currentSlideIndex === 1) updateSlide(0);
-        }
-    };
-
-    // --- 4. BUTONLAR ---
+    // Butonlar (Kapat, Menü, Paylaş)
     const closeBtn = document.getElementById('close-daily-modal-btn');
-    if (closeBtn) closeBtn.onclick = () => {
-        modal.classList.add('hidden');
-        import('./game.js').then(m => m.leaveGame());
-    };
-
     const menuBtn = document.getElementById('daily-menu-btn');
-    if (menuBtn) menuBtn.onclick = () => {
+    
+    const exitAction = () => {
         modal.classList.add('hidden');
         import('./game.js').then(m => m.leaveGame());
     };
 
-    // Paylaş Butonu (GÜNCELLENDİ: Yeni verileri kullanır)
+    if (closeBtn) closeBtn.onclick = exitAction;
+    if (menuBtn) menuBtn.onclick = exitAction;
+
     const shareBtn = document.getElementById('daily-share-btn');
     if (shareBtn) {
         shareBtn.onclick = () => {
-            const shareText = `Kelime Yarışması Günlük\nPuanım: ${dailyRankData.userScore || 0}\nSıralamam: ${dailyRankData.userPosition || '-'}/${dailyRankData.totalPlayers || '-'}\n\nSen de oyna: https://kelime-yar-mas.vercel.app/`;
+            const shareText = `Kelime Yarışması Günlük\nPuanım: ${data.userScore || 0}\nSen de oyna: https://kelime-yar-mas.vercel.app/`;
             if (navigator.share) {
                 navigator.share({ title: 'Kelime Yarışması', text: shareText }).catch(console.error);
             } else {
-                navigator.clipboard.writeText(shareText).then(() => alert("Sonuç kopyalandı!"));
+                navigator.clipboard.writeText(shareText).then(() => import('./utils.js').then(u => u.showToast("Sonuç kopyalandı!")));
             }
         };
     }
-
-    // Sayaç Başlat (Dışarıdaki fonksiyonu çağır)
-    // startDailyCountdown() fonksiyonunun ui.js içinde ayrıca tanımlı olması gerekir
 }
 
 let currentSlide = 0;
@@ -1411,22 +1371,26 @@ window.changeSlide = function(index) { // Global erişim için window'a atadık 
     });
 }
 
+// Sayacı Class ile yönetiyoruz (Çünkü 2 tane var)
 function startDailyCountdown() {
-    const timerEl = document.getElementById('countdown-timer');
+    const timerEls = document.querySelectorAll('.countdown-timer-text');
     
     const update = () => {
         const now = new Date();
         const tomorrow = new Date(now);
-        tomorrow.setHours(24, 0, 0, 0); // Gece yarısına ayarla
+        tomorrow.setHours(24, 0, 0, 0);
         const diff = tomorrow - now;
 
         const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
         const m = Math.floor((diff / (1000 * 60)) % 60);
         const s = Math.floor((diff / 1000) % 60);
+        const text = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
-        timerEl.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        timerEls.forEach(el => el.textContent = text);
     };
     
     update();
-    setInterval(update, 1000);
+    // Varsa eski interval'i temizle (State'de tutulabilir ama basitçe yeniden atıyoruz)
+    if (window.dailyTimerInterval) clearInterval(window.dailyTimerInterval);
+    window.dailyTimerInterval = setInterval(update, 1000);
 }

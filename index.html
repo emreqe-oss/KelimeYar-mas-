@@ -764,12 +764,11 @@
         <div id="daily-slides-container" class="flex-1 flex transition-transform duration-300 ease-out h-full" style="width: 200%; transform: translateX(0%); touch-action: pan-y pinch-zoom;">
             
             <div class="w-1/2 flex flex-col p-6 items-center overflow-y-auto h-full">
-                <h2 class="text-3xl font-black text-white mb-2 tracking-wide self-start">İSTATİSTİKLER</h2>
+                <h2 class="text-3xl font-black text-white mb-2 tracking-wide self-start">TÜMÜ 📈</h2>
                 
-                <div class="flex items-center gap-2 mb-6 self-start">
-                    <span class="text-xl font-bold text-white">Bugün</span>
-                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
-                </div>
+                <p class="text-xs text-gray-400 mb-6 text-left w-full">
+                    Diğer oyunculara göre son 1 haftadaki başarı durumunu incele:
+                </p>
 
                 <div class="w-full grid grid-cols-2 gap-4 mb-2">
                     <span class="font-bold text-gray-300">Sen</span>
@@ -778,51 +777,26 @@
 
                 <div class="grid grid-cols-2 gap-4 w-full mb-6">
                     <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="d-my-score" class="text-4xl font-black text-green-400">0</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Kazandığın<br>puan</span>
+                        <span id="g-my-avg-score" class="text-4xl font-black text-green-400">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Kazanılan<br>ortalama puan</span>
                     </div>
                     <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="d-avg-score" class="text-4xl font-black text-white">0</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğerlerinin<br>ortalaması</span>
+                        <span id="g-global-avg-score" class="text-4xl font-black text-white">436</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğer oyuncuların<br>puan ortalaması</span>
                     </div>
                     <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="d-my-guesses" class="text-4xl font-black text-red-400">0</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Deneme<br>sayısı</span>
+                        <span id="g-my-avg-guesses" class="text-4xl font-black text-red-400">-</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Ortalama<br>deneme sayısı</span>
                     </div>
                     <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="d-avg-guesses" class="text-4xl font-black text-white">0</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğerlerinin<br>ortalaması</span>
+                        <span id="g-global-avg-guesses" class="text-4xl font-black text-white">4.2</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğer oyuncuların<br>deneme ortalaması</span>
                     </div>
                 </div>
                 
-                <p class="text-xs text-gray-500 mt-auto animate-pulse flex items-center gap-1">
-                    <span>Yana kaydır</span> 
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-                </p>
-            </div>
-
-            <div class="w-1/2 flex flex-col p-6 items-center justify-center bg-gray-800 h-full">
-                <h2 class="text-2xl font-black text-yellow-400 mb-2 tracking-wide">GÜNLÜK DURUM</h2>
-                
-                <div class="relative w-48 h-48 flex items-center justify-center mb-8 mt-4">
-                    <svg class="w-full h-full transform -rotate-90">
-                        <circle cx="96" cy="96" r="80" stroke="currentColor" stroke-width="12" fill="transparent" class="text-gray-700" />
-                        <circle id="rank-circle" cx="96" cy="96" r="80" stroke="currentColor" stroke-width="12" fill="transparent" class="text-green-500" stroke-dasharray="502" stroke-dashoffset="502" style="transition: stroke-dashoffset 1.5s ease-in-out;" />
-                    </svg>
-                    <div class="absolute flex flex-col items-center">
-                        <span class="text-5xl font-black text-white" id="rank-percent">--</span>
-                        <span class="text-sm text-gray-400">Üst Dilim</span>
-                    </div>
-                </div>
-
-                <div class="bg-gray-700/50 p-4 rounded-xl w-full text-center border border-gray-600 mb-6">
-                    <p class="text-gray-400 text-sm mb-1">Sıralaman</p>
-                    <p class="text-3xl font-bold text-white mb-1"><span id="rank-position" class="text-yellow-400">---</span> <span class="text-lg text-gray-500">/ <span id="rank-total">---</span></span></p>
-                </div>
-                
-                <div id="daily-next-timer" class="text-center">
+                <div id="daily-next-timer-2" class="mt-auto text-center w-full pt-4 border-t border-gray-700">
                     <p class="text-xs text-gray-500 uppercase">Sonraki Kelime</p>
-                    <p id="countdown-timer" class="text-2xl font-mono font-bold text-white tracking-widest">00:00:00</p>
+                    <p class="countdown-timer-text text-xl font-mono font-bold text-white tracking-widest">00:00:00</p>
                 </div>
             </div>
 

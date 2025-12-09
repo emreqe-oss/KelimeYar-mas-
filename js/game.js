@@ -1290,8 +1290,53 @@ function saveDailyGameState(gameState) {
 
 // js/game.js içindeki restoreDailyGame fonksiyonunu GÜNCELLE:
 
+// js/game.js -> restoreDailyGame fonksiyonunu BU HALİYLE DEĞİŞTİR:
+
 function restoreDailyGame(savedState) {
-    console.log("Günün kelimesi hafızadan yükleniyor...");
+    console.log("Günün kelimesi durumu kontrol ediliyor...");
+    
+    // Eğer oyun zaten bitmişse, oyun ekranını HİÇ açma. Direkt modalı hazırla.
+    if (savedState.status === 'finished') {
+        // Arka planda state'i güncelle ama ekran değiştirme
+        state.setGameMode('daily');
+        state.setLocalGameData({
+            ...savedState,
+            gameType: 'daily',
+            players: { [state.getUserId()]: { guesses: savedState.guesses } }
+        });
+
+        // Yükleniyor hissi için kısa bir bekleme (opsiyonel, kaldırılabilir)
+        showToast("Sonuçlar yükleniyor...", false);
+
+        setTimeout(async () => {
+            const profile = state.getCurrentUserProfile();
+            const stats = getStatsFromProfile(profile);
+            
+            // 1. Bugünkü Veriler
+            const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
+            
+            // 2. Son 7 Günlük Veriler (Hesapla)
+            const weeklyData = await getLast7DaysStats(state.getUserId());
+
+            import('./ui.js').then(ui => {
+                ui.openDailyResultModal(stats, {
+                    // Bugün
+                    userScore: rankData?.userScore || 0,
+                    userGuessCount: savedState.guesses.length,
+                    avgScore: rankData?.avgScore || '-',
+                    avgGuesses: rankData?.avgGuesses || '-',
+                    // Genel / 7 Gün
+                    weeklyUserScore: weeklyData.avgScore,
+                    weeklyUserGuesses: weeklyData.avgGuesses,
+                    weeklyGlobalScore: "436", // Global ortalama (Statik veya hesaplanabilir)
+                    weeklyGlobalGuesses: "4.2"
+                });
+            });
+        }, 500);
+        return; // Fonksiyonu burada kes, aşağıya inip oyun ekranını açmasın.
+    }
+
+    // --- EĞER OYUN BİTMEMİŞSE BURADAN DEVAM EDER ---
     
     state.resetKnownCorrectPositions(); 
     state.resetHasUserStartedTyping();
@@ -1313,7 +1358,7 @@ function restoreDailyGame(savedState) {
         isHardMode: false, 
         currentRound: 1, 
         matchLength: 1, 
-        roundWinner: savedState.status === 'finished' && savedState.guesses.length < 6 ? state.getUserId() : null, // GUESS_COUNT yerine 6 yazdım import sorunu olmasın diye
+        roundWinner: null,
         players: { 
             [state.getUserId()]: { 
                 username: getUsername(), 
@@ -1332,35 +1377,47 @@ function restoreDailyGame(savedState) {
     state.setGameMode('daily');
     state.setLocalGameData(gameData);
     
-    showScreen('game-screen');
+    showScreen('game-screen'); // Oyun bitmemişse ekranı aç
     initializeGameUI(gameData);
-    
-    renderGameState(gameData, true).then(() => {
-        // js/game.js -> restoreDailyGame içinde "gameData.status === 'finished'" bloğu:
+    renderGameState(gameData, true);
+}
 
-        if (gameData.status === 'finished') {
-            // --- DÜZELTME: Veritabanından güncel veriyi çek ---
-            setTimeout(async () => {
-                const profile = state.getCurrentUserProfile();
-                const stats = getStatsFromProfile(profile);
-                
-                // Buradaki getDailyLeaderboardStats fonksiyonu veritabanına gidip ortalamaları alır
-                const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
-                
-                // Modalı, çekilen DOLU verilerle aç
-                import('./ui.js').then(ui => {
-                    ui.openDailyResultModal(stats, {
-                        userPosition: rankData?.userPosition || 0,
-                        totalPlayers: rankData?.totalPlayers || 0,
-                        userGuessCount: savedState.guesses.length,
-                        userScore: rankData?.userScore || 0, // Puan eklendi
-                        avgScore: rankData?.avgScore || '-',     // Ortalama eklendi
-                        avgGuesses: rankData?.avgGuesses || '-'  // Ortalama eklendi
-                    });
-                });
-            }, 500);
-        }
-    });
+// BU YENİ FONKSİYONU DA game.js'in EN ALTINA EKLE:
+async function getLast7DaysStats(userId) {
+    // Son 7 günün skorlarını çekip ortalamasını alır
+    const todayIndex = getDaysSinceEpoch();
+    const startDay = todayIndex - 7;
+    
+    try {
+        const leaderboardRef = collection(db, 'daily_leaderboard');
+        const q = query(leaderboardRef, 
+            where('userId', '==', userId),
+            where('dayIndex', '>', startDay)
+        );
+        
+        const snapshot = await getDocs(q);
+        let totalScore = 0;
+        let totalGuesses = 0;
+        let count = 0;
+
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            if (d.didWin) {
+                totalScore += d.score;
+                totalGuesses += d.guessCount;
+                count++;
+            }
+        });
+
+        return {
+            avgScore: count > 0 ? Math.round(totalScore / count) : 0,
+            avgGuesses: count > 0 ? (totalGuesses / count).toFixed(1) : '-'
+        };
+
+    } catch (e) {
+        console.error(e);
+        return { avgScore: 0, avgGuesses: '-' };
+    }
 }
 
 function checkHardMode(guessWord, playerGuesses) {
