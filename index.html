@@ -752,8 +752,8 @@
         </div>
     </div>
 
-    <div id="daily-result-modal" class="hidden fixed inset-0 bg-gray-900/95 flex items-center justify-center z-[70] p-4 backdrop-blur-sm transition-opacity duration-300">
-    <div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col relative" style="height: 600px;">
+<div id="daily-result-modal" class="hidden fixed inset-0 bg-gray-900/95 flex items-center justify-center z-[70] p-4 backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col relative" style="height: 600px; max-height: 90vh;">
         
         <div class="absolute top-4 right-4 z-20">
             <button id="close-daily-modal-btn" class="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 transition">
@@ -763,38 +763,76 @@
 
         <div id="daily-slides-container" class="flex-1 flex transition-transform duration-300 ease-out h-full" style="width: 200%; transform: translateX(0%); touch-action: pan-y pinch-zoom;">
             
-            <div class="w-1/2 flex flex-col p-6 items-center overflow-y-auto h-full">
-                <h2 class="text-3xl font-black text-white mb-2 tracking-wide self-start">TÜMÜ 📈</h2>
+            <div class="w-1/2 flex flex-col p-6 items-center overflow-y-auto h-full relative">
+                <h2 class="text-3xl font-black text-white mb-2 tracking-wide self-start">İSTATİSTİKLER</h2>
                 
-                <p class="text-xs text-gray-400 mb-6 text-left w-full">
-                    Diğer oyunculara göre son 1 haftadaki başarı durumunu incele:
-                </p>
+                <div class="flex items-center gap-2 mb-6 self-start">
+                    <span class="text-xl font-bold text-white">Bugün</span>
+                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                </div>
 
                 <div class="w-full grid grid-cols-2 gap-4 mb-2">
-                    <span class="font-bold text-gray-300">Sen</span>
-                    <span class="font-bold text-gray-300">Genel</span>
+                    <span class="font-bold text-gray-300 text-center">Sen</span>
+                    <span class="font-bold text-gray-300 text-center">Genel</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 w-full mb-6">
-                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="g-my-avg-score" class="text-4xl font-black text-green-400">0</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Kazanılan<br>ortalama puan</span>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-my-score" class="text-4xl font-black text-green-400">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Kazandığın<br>puan</span>
                     </div>
-                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="g-global-avg-score" class="text-4xl font-black text-white">436</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğer oyuncuların<br>puan ortalaması</span>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-avg-score" class="text-4xl font-black text-white">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Diğerlerinin<br>ortalaması</span>
                     </div>
-                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="g-my-avg-guesses" class="text-4xl font-black text-red-400">-</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Ortalama<br>deneme sayısı</span>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-my-guesses" class="text-4xl font-black text-red-400">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Deneme<br>sayısı</span>
                     </div>
-                    <div class="bg-gray-700/50 p-4 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
-                        <span id="g-global-avg-guesses" class="text-4xl font-black text-white">4.2</span>
-                        <span class="text-[10px] text-gray-400 text-center mt-2 leading-tight">Diğer oyuncuların<br>deneme ortalaması</span>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="d-avg-guesses" class="text-4xl font-black text-white">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Diğerlerinin<br>ortalaması</span>
                     </div>
                 </div>
                 
-                <div id="daily-next-timer-2" class="mt-auto text-center w-full pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-500 mt-auto animate-pulse flex items-center justify-center gap-1 w-full pb-16">
+                    <span>Diğer Sayfa</span> 
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                </p>
+            </div>
+
+            <div class="w-1/2 flex flex-col p-6 items-center overflow-y-auto h-full relative">
+                <h2 class="text-3xl font-black text-white mb-2 tracking-wide self-start">TÜMÜ 📈</h2>
+                
+                <p class="text-xs text-gray-400 mb-6 text-left w-full">
+                    Son 7 gündeki başarı durumun:
+                </p>
+
+                <div class="w-full grid grid-cols-2 gap-4 mb-2">
+                    <span class="font-bold text-gray-300 text-center">Sen</span>
+                    <span class="font-bold text-gray-300 text-center">Genel</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 w-full mb-6">
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="g-my-avg-score" class="text-4xl font-black text-green-400">0</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Ortalama<br>Puanın</span>
+                    </div>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="g-global-avg-score" class="text-4xl font-black text-white">436</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Genel<br>Ortalama</span>
+                    </div>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="g-my-avg-guesses" class="text-4xl font-black text-red-400">-</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Ortalama<br>Denemen</span>
+                    </div>
+                    <div class="bg-gray-700/50 p-3 rounded-2xl flex flex-col items-center justify-center aspect-square border border-gray-600">
+                        <span id="g-global-avg-guesses" class="text-4xl font-black text-white">4.2</span>
+                        <span class="text-[10px] text-gray-400 text-center mt-1 leading-tight">Genel<br>Ortalama</span>
+                    </div>
+                </div>
+                
+                <div id="daily-next-timer-2" class="mt-auto text-center w-full pt-4 border-t border-gray-700 pb-16">
                     <p class="text-xs text-gray-500 uppercase">Sonraki Kelime</p>
                     <p class="countdown-timer-text text-xl font-mono font-bold text-white tracking-widest">00:00:00</p>
                 </div>
@@ -802,10 +840,10 @@
 
         </div>
 
-        <div class="absolute bottom-6 left-0 w-full px-6 flex flex-col gap-4 bg-gray-800 pt-2">
+        <div class="absolute bottom-6 left-0 w-full px-6 flex flex-col gap-4 bg-gray-800 pt-2 z-10">
             <div class="flex justify-center gap-2">
-                <button class="slide-dot w-2.5 h-2.5 rounded-full bg-white transition-all"></button>
-                <button class="slide-dot w-2.5 h-2.5 rounded-full bg-gray-600 transition-all"></button>
+                <button class="slide-dot w-2.5 h-2.5 rounded-full bg-white transition-all" onclick="changeSlide(0)"></button>
+                <button class="slide-dot w-2.5 h-2.5 rounded-full bg-gray-600 transition-all" onclick="changeSlide(1)"></button>
             </div>
             
             <div class="flex gap-3">
