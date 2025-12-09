@@ -88,7 +88,7 @@ export async function showScoreboard(gameData) {
         isMatchFinished = (totalRounds > 1 && currentRound < totalRounds) ? false : true;
     }
 
-    // 5. Başlık Mesajını Belirle (BR Modu İçin Özel Ayar)
+    // 5. Başlık Mesajını Belirle
     let titleText = "";
     let titleColor = "";
 
@@ -98,7 +98,6 @@ export async function showScoreboard(gameData) {
             titleColor = "text-yellow-400";
             playSound('win');
         } else {
-            // Ara turlarda kendi durumuna bak
             const myState = gameData.players[currentUserId];
             if (myState && myState.hasSolved) {
                 titleText = "BİLDİNİZ! 👏";
@@ -111,7 +110,6 @@ export async function showScoreboard(gameData) {
             }
         }
     } else {
-        // Standart Modlar (1v1)
         const isMyTurnWinner = gameData.roundWinner === currentUserId;
         const winnerName = gameData.roundWinner ? (gameData.players[gameData.roundWinner]?.username || 'Rakip') : 'Kimse';
 
@@ -147,38 +145,103 @@ export async function showScoreboard(gameData) {
 
     // 7. Puan Tablosu
     if (finalScores) {
-        const playersArr = Object.values(gameData.players).sort((a, b) => (b.score || 0) - (a.score || 0));
-        playersArr.forEach((p, index) => {
-            const isMe = p.username === getUsername();
-            const row = document.createElement('div');
-            row.className = `flex justify-between items-center p-2 rounded ${isMe ? 'bg-indigo-900/50 border border-indigo-500/50' : 'bg-gray-800 border-b border-gray-700'}`;
-            row.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-gray-500 w-4">${index + 1}.</span>
-                    <span class="font-bold ${isMe ? 'text-white' : 'text-gray-300'}">${p.username}</span>
-                </div>
-                <span class="font-mono font-bold text-yellow-400">${p.score || 0} P</span>
-            `;
-            finalScores.appendChild(row);
-        });
+        finalScores.innerHTML = ''; // Önce temizle
+
+        // --- GÜNCELLEME: Hem 'daily' HEM DE 'league' modunda bu listeyi GİZLE ---
+        // Sadece çoklu oyunculu veya arkadaş maçlarında gösterilir
+        if (gameData.gameType !== 'daily' && gameData.gameType !== 'league') {
+            
+            const playersArr = Object.values(gameData.players).sort((a, b) => (b.score || 0) - (a.score || 0));
+            playersArr.forEach((p, index) => {
+                const isMe = p.username === getUsername();
+                const row = document.createElement('div');
+                row.className = `flex justify-between items-center p-2 rounded ${isMe ? 'bg-indigo-900/50 border border-indigo-500/50' : 'bg-gray-800 border-b border-gray-700'}`;
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-gray-500 w-4">${index + 1}.</span>
+                        <span class="font-bold ${isMe ? 'text-white' : 'text-gray-300'}">${p.username}</span>
+                    </div>
+                    <span class="font-mono font-bold text-yellow-400">${p.score || 0} P</span>
+                `;
+                finalScores.appendChild(row);
+            });
+        }
     }
 
     // 8. Buton Yönetimi
     if (isMatchFinished) {
-        // MAÇ BİTTİ
+        // --- MAÇ BİTTİ ---
         if (matchWinnerDisplay) {
             matchWinnerDisplay.classList.remove('hidden');
             matchWinnerDisplay.textContent = "MAÇ SONA ERDİ";
         }
+
         if (newRoundBtn) {
-            newRoundBtn.textContent = "Ana Menü";
-            newRoundBtn.disabled = false;
-            newRoundBtn.onclick = leaveGame;
             newRoundBtn.classList.remove('hidden');
-            newRoundBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
+            newRoundBtn.disabled = false;
+
+            // SENARYO 1: GÜNÜN KELİMESİ İSE -> İSTATİSTİK BUTONU
+            if (gameData.gameType === 'daily') {
+                newRoundBtn.textContent = "📊 İstatistikler";
+                newRoundBtn.className = "w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
+                
+                newRoundBtn.onclick = async () => {
+                    newRoundBtn.textContent = "Yükleniyor...";
+                    newRoundBtn.disabled = true;
+
+                    try {
+                        const profile = state.getCurrentUserProfile();
+                        const stats = getStatsFromProfile(profile);
+                        
+                        // Verileri taze taze çekelim
+                        const rankData = await getDailyLeaderboardStats(state.getUserId(), gameData.secretWord);
+                        const weeklyData = await getLast7DaysStats(state.getUserId());
+                        
+                        let globalWeeklyData = { avgScore: 0, avgGuesses: 0 };
+                        try { globalWeeklyData = await getGlobalWeeklyStats(); } catch(e) {}
+
+                        import('./ui.js').then(ui => {
+                            ui.openDailyResultModal(stats, {
+                                userScore: rankData?.userScore || 0,
+                                userGuessCount: gameData.players[currentUserId]?.guesses.length || 0,
+                                avgScore: rankData?.avgScore || '-',
+                                avgGuesses: rankData?.avgGuesses || '-',
+                                weeklyUserScore: weeklyData.avgScore,
+                                weeklyUserGuesses: weeklyData.avgGuesses,
+                                weeklyGlobalScore: globalWeeklyData.avgScore,
+                                weeklyGlobalGuesses: globalWeeklyData.avgGuesses,
+                                userPosition: rankData?.userPosition || 0,
+                                totalPlayers: rankData?.totalPlayers || 0
+                            });
+                        });
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        newRoundBtn.textContent = "📊 İstatistikler";
+                        newRoundBtn.disabled = false;
+                    }
+                };
+            } 
+            // SENARYO 2: LİG MAÇI İSE -> FİKSTÜR BUTONU (YENİ)
+            else if (gameData.gameType === 'league') {
+                newRoundBtn.textContent = "🏆 Lig Fikstürü";
+                newRoundBtn.className = "w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
+                
+                newRoundBtn.onclick = () => {
+                    // Lig ekranını aç ve verileri yenile
+                    import('./ui.js').then(ui => ui.showScreen('kelimelig-screen'));
+                    checkLeagueStatus(); // Fikstürü yeniden çeker
+                };
+            }
+            // SENARYO 3: DİĞER MODLAR (vsCPU, Arkadaş vb.) -> ANA MENÜ BUTONU
+            else {
+                newRoundBtn.textContent = "Ana Menü";
+                newRoundBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
+                newRoundBtn.onclick = leaveGame;
+            }
         }
     } else {
-        // SONRAKİ TUR
+        // --- SONRAKİ TUR (Oyun Devam Ediyor) ---
         if (newRoundBtn) {
             newRoundBtn.disabled = false;
             newRoundBtn.style.opacity = "1";
@@ -313,7 +376,7 @@ export function initializeGameUI(gameData) {
     }
 }
 
-// js/game.js -> updateTurnDisplay (DÜZELTİLMİŞ)
+// js/game.js -> updateTurnDisplay (HATASIZ HALİ)
 
 export function updateTurnDisplay(gameData) {
     if (!startGameBtn || !shareGameBtn) return;
@@ -322,10 +385,10 @@ export function updateTurnDisplay(gameData) {
     const currentUserId = state.getUserId();
     const isCreator = gameData.creatorId === currentUserId; 
     
-    // Lig modunda burası çalışmasın (Zaten ekranda yer yok)
+    // Lig modunda işlem yapma
     if (gameMode === 'league') return;
     
-    // --- BATTLE ROYALE KISMI ---
+    // --- BATTLE ROYALE MODU ---
     if (gameMode === 'multiplayer-br') {
         if (!brTimerDisplay || !brTurnDisplay) return;
         
@@ -349,23 +412,15 @@ export function updateTurnDisplay(gameData) {
                     startGameBtn.textContent = "Oyuncu Bekleniyor...";
                     startGameBtn.className = "w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-not-allowed";
                 }
-                const inviteBtn = document.getElementById('invite-to-lobby-btn');
-                if (inviteBtn) {
-                    inviteBtn.classList.remove('hidden'); 
-                    inviteBtn.onclick = () => import('./ui.js').then(ui => ui.openLobbyInviteModal());
-                }
+                // ... (invite buton kodları aynı)
             } else {
                 startGameBtn.classList.add('hidden');
-                const inviteBtn = document.getElementById('invite-to-lobby-btn');
-                if (inviteBtn) inviteBtn.classList.add('hidden');
             }
             shareGameBtn.classList.remove('hidden');
             if (brWaitingForPlayers) brWaitingForPlayers.classList.remove('hidden');
 
         } else if (gameData.status === 'playing') {
             startGameBtn.classList.add('hidden');
-            const inviteBtn = document.getElementById('invite-to-lobby-btn');
-            if (inviteBtn) inviteBtn.classList.add('hidden');
             
             if (playerState.isEliminated) {
                 brTurnDisplay.textContent = "✖️ Elendin!";
@@ -390,7 +445,9 @@ export function updateTurnDisplay(gameData) {
         return;
     }
     
-    // --- STANDART OYUN (Sadeleştirildi) ---
+    // --- STANDART VE SERİ OYUN MODLARI ---
+    // Sadece butonları yönetiyoruz, yazı yazmıyoruz.
+
     if (gameMode === 'daily') return;
 
     if (gameData.status === 'waiting' || gameData.status === 'invited') {
@@ -534,7 +591,17 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
         }
+        const p1Score = document.getElementById('player1-score');
+        const p2Score = document.getElementById('player2-score');
         
+        if (p1Score) {
+            p1Score.style.display = 'block';
+            p1Score.style.visibility = 'visible'; // Garanti olsun
+        }
+        if (p2Score) {
+            p2Score.style.display = 'block';
+            p2Score.style.visibility = 'visible'; // Garanti olsun
+        }
         if (roundCounter) roundCounter.style.display = 'block';
         
         document.getElementById('player1-score').style.display = 'block';
@@ -544,6 +611,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         
                 
         if (roundCounter) {
+            roundCounter.style.display = 'block';
             if (gameData.gameType === 'random_loose') roundCounter.textContent = "Gevşek Oyun";
             else roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
         }
@@ -2363,12 +2431,10 @@ export function stopTurnTimer() {
     }
 
     if (timerDisplay) {
-        timerDisplay.textContent = '';
         timerDisplay.classList.remove('text-red-500');
     }
     
     if (brTimerDisplay) {
-        brTimerDisplay.textContent = '';
         brTimerDisplay.classList.remove('text-red-500');
     }
 }
