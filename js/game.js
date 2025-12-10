@@ -475,6 +475,10 @@ export function updateTurnDisplay(gameData) {
     }
 }
 
+// js/game.js -> renderGameState (TUR SAYACI DÜZELTİLMİŞ HALİ)
+
+// js/game.js -> renderGameState (KESİN ÇÖZÜM)
+
 export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!gameData) return;
 
@@ -489,17 +493,14 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!isBR && gameMode !== 'vsCPU' && oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
         import('./utils.js').then(u => u.playSound('turn'));
     }
-// js/game.js -> renderGameState fonksiyonunun başlarına ekle:
 
-    // --- YENİ BAŞLIK KONTROLÜ ---
+    // --- BAŞLIK KONTROLÜ (GÜNÜN KELİMESİ) ---
     if (dailyGameTitle) {
-        if (gameMode === 'daily') {
-            dailyGameTitle.classList.remove('hidden');
-        } else {
-            dailyGameTitle.classList.add('hidden');
-        }
+        if (gameMode === 'daily') dailyGameTitle.classList.remove('hidden');
+        else dailyGameTitle.classList.add('hidden');
     }
-    // ----------------------------
+
+    // ELEMENTLERİ SEÇ
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     const jokerContainer = document.getElementById('joker-container');
     const copyBtn = document.getElementById('copy-game-id-btn');
@@ -511,112 +512,128 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     const roundCounter = document.getElementById('round-counter');
     const keyboardContainer = document.getElementById('keyboard');
     
+    // --- SKOR ELEMENTLERİ ---
+    const p1Score = document.getElementById('player1-score');
+    const p2Score = document.getElementById('player2-score');
+    const gameInfoBar = document.getElementById('game-info-bar');
+
+    // 1. OYUN TÜRÜNE GÖRE GÖRÜNÜM AYARLARI
+    
+    // A) BATTLE ROYALE MODU
     if (isBR) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.remove('hidden');
         if (sequentialGameInfo) sequentialGameInfo.classList.add('hidden');
+        if (jokerContainer) jokerContainer.style.display = 'flex';
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
     } 
+    
+    // B) LİG MODU (SADE VE TEMİZ)
+    else if (gameMode === 'league') {
+        if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
+        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
+        
+        // Puanları ve Tur Sayacını GİZLE
+        if (p1Score) p1Score.style.display = 'none';
+        if (p2Score) p2Score.style.display = 'none';
+        if (roundCounter) roundCounter.style.display = 'none';
+        
+        if (jokerContainer) jokerContainer.style.display = 'flex'; 
+
+        // Timer'ı büyüt
+        if (timerDisplay) {
+            timerDisplay.style.display = 'block';
+            if(timerDisplay.parentElement) timerDisplay.parentElement.className = "w-full flex justify-center items-center";
+            timerDisplay.className = 'font-mono font-black text-6xl text-yellow-400 tracking-widest drop-shadow-lg';
+        }
+        
+        if (gameInfoBar) gameInfoBar.style.display = 'none';
+    }
+
+    // C) GÜNÜN KELİMESİ
+    else if (gameMode === 'daily') {
+        if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
+        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
+        
+        // İsimleri Gizle, Tarihi Göster
+        if (p1Score) p1Score.style.display = 'none';
+        if (p2Score) p2Score.style.display = 'none';
+
+        if (roundCounter) { 
+            roundCounter.style.display = 'block'; 
+            roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
+        }
+        if (timerDisplay && timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5";
+        
+        if (gameInfoBar) gameInfoBar.style.display = 'none';
+        if (jokerContainer) jokerContainer.style.display = 'none'; 
+    }
+
+    // D) STANDART MODLAR (SERİ OYUN, ARKADAŞ, vsCPU)
     else {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
         if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
+
+        // --- İŞTE BURASI: İSİM VE PUANLARI ZORLA AÇIYORUZ ---
+        if (p1Score) p1Score.style.display = 'block';
+        if (p2Score) p2Score.style.display = 'block';
+        // ----------------------------------------------------
+        
+        // Puanları Güncelle (UI'dan çağırarak)
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
-    }
 
-    if (leaveBtn) {
-        leaveBtn.classList.remove('hidden');
-        leaveBtn.className = "bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded text-sm";
-        leaveBtn.textContent = "Menü";
-        
-        leaveBtn.onclick = (e) => {
-            e.stopPropagation(); 
-            import('./game.js').then(m => m.leaveGame());
-        };
-    }
-
-    if (gameMode === 'daily' || gameMode === 'league') {
-        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
-        
-        if (gameMode === 'league') {
-            if (timerDisplay) {
-                timerDisplay.style.display = 'block';
-                if(timerDisplay.parentElement) timerDisplay.parentElement.className = "w-full flex justify-center items-center";
-                timerDisplay.className = 'font-mono font-black text-6xl text-yellow-400 tracking-widest drop-shadow-lg';
+        // Tur Sayacını Göster
+        if (roundCounter) {
+            roundCounter.style.display = 'block';
+            if (gameData.gameType === 'random_loose') {
+                roundCounter.textContent = "Gevşek Oyun";
+            } else {
+                const current = gameData.currentRound || 1;
+                const total = gameData.matchLength || 1;
+                roundCounter.textContent = `Tur ${current}/${total}`;
             }
-            document.getElementById('player1-score').style.display = 'none';
-            document.getElementById('player2-score').style.display = 'none';
-            
-         }
-
-        const gameInfoBar = document.getElementById('game-info-bar');
-        if (gameInfoBar) {
-            gameInfoBar.style.display = 'none'; 
-            if (gameIdDisplay) gameIdDisplay.textContent = ''; 
-            if (copyBtn) copyBtn.style.display = 'none';
-            if (shareBtn) shareBtn.style.display = 'none';
         }
-        if (jokerContainer) jokerContainer.style.display = (gameMode === 'league') ? 'flex' : 'none';
-    } 
-    
-    else if (gameMode === 'vsCPU') {
+
+        if (jokerContainer) jokerContainer.style.display = 'flex';
+
         if (timerDisplay) {
             timerDisplay.style.display = 'block';
             timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
         }
-        if (roundCounter) roundCounter.style.display = 'block';
         
-        document.getElementById('player1-score').style.display = 'block';
-        
-        const p2ScoreBox = document.getElementById('player2-score');
-        if (p2ScoreBox) {
-            p2ScoreBox.style.display = 'flex';
-            p2ScoreBox.style.flexDirection = 'column'; 
-            p2ScoreBox.style.alignItems = 'flex-end'; 
-            p2ScoreBox.style.gap = '4px';
-            if (leaveBtn && !p2ScoreBox.contains(leaveBtn)) {
-                p2ScoreBox.appendChild(leaveBtn);
-                leaveBtn.className = "bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-sm";
-                leaveBtn.textContent = "Çıkış";
+        // vsCPU Çıkış butonu ayarı
+        if (gameMode === 'vsCPU') {
+            const p2ScoreBox = document.getElementById('player2-score');
+            if (p2ScoreBox) {
+                p2ScoreBox.style.display = 'flex';
+                p2ScoreBox.style.flexDirection = 'column';
+                p2ScoreBox.style.alignItems = 'flex-end';
+                p2ScoreBox.style.gap = '4px';
+                if (leaveBtn && !p2ScoreBox.contains(leaveBtn)) {
+                    p2ScoreBox.appendChild(leaveBtn);
+                    leaveBtn.className = "bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-sm";
+                    leaveBtn.textContent = "Çıkış";
+                }
             }
         }
-        if (jokerContainer) jokerContainer.style.display = 'flex'; 
-        if (roundCounter) roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
     }
 
-    if (roundCounter) roundCounter.style.display = 'none'; // Ligde tur sayacı GİZLE
-    
-    else {
-        if (timerDisplay) {
-            timerDisplay.style.display = 'block'; 
-            timerDisplay.className = 'font-bold text-xl font-mono text-gray-300';
-            if(timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5 flex flex-col items-center";
-        }
-        const p1Score = document.getElementById('player1-score');
-        const p2Score = document.getElementById('player2-score');
-        
-        if (p1Score) {
-            p1Score.style.display = 'block';
-            p1Score.style.visibility = 'visible'; // Garanti olsun
-        }
-        if (p2Score) {
-            p2Score.style.display = 'block';
-            p2Score.style.visibility = 'visible'; // Garanti olsun
-        }
-        if (roundCounter) roundCounter.style.display = 'block';
-        
-        document.getElementById('player1-score').style.display = 'block';
-        document.getElementById('player2-score').style.display = 'block';
-
-        if (jokerContainer) jokerContainer.style.display = 'flex'; 
-        
-                
-        if (roundCounter) {
-            roundCounter.style.display = 'block';
-            if (gameData.gameType === 'random_loose') roundCounter.textContent = "Gevşek Oyun";
-            else roundCounter.textContent = `Tur ${gameData.currentRound}/${gameData.matchLength}`;
+    // MENÜ BUTONU (Genel)
+    if (leaveBtn) {
+        if (gameMode !== 'vsCPU') { 
+            leaveBtn.classList.remove('hidden');
+            leaveBtn.className = "bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded text-sm absolute top-3 right-3 z-50";
+            leaveBtn.textContent = "Menü";
+            leaveBtn.onclick = (e) => {
+                e.stopPropagation();
+                import('./game.js').then(m => m.leaveGame());
+            };
+        } else {
+             leaveBtn.classList.remove('hidden'); 
         }
     }
-    
+
+    // KLAVYE KİLİDİ KONTROLÜ
     const playerState = gameData.players[currentUserId] || {};
     let shouldLockKeyboard = false;
 
@@ -634,12 +651,15 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         keyboardContainer.style.pointerEvents = shouldLockKeyboard ? 'none' : 'auto';
     }
 
+    // BUTONLARI GÜNCELLE
     updateTurnDisplay(gameData); 
     
+    // KLAVYEYİ GÜNCELLE
     import('./ui.js').then(ui => {
         if(ui.updateKeyboard) ui.updateKeyboard(gameData);
     });
 
+    // TAHTAYI GÜNCELLE
     const firstTile = document.getElementById(`tile-0-0`);
     const firstTileFront = firstTile ? firstTile.querySelector('.front') : null;
     const isGridPristine = !firstTileFront || (firstTileFront.textContent === '' && !firstTile.classList.contains('flip'));
@@ -660,12 +680,13 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
                 const oldIcon = back.querySelector('.meaning-icon');
                 if (oldIcon) oldIcon.remove(); 
                 
-                tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
-                
-                if (i !== currentRow) {
-                    front.textContent = '';
-                    back.textContent = '';
-                    back.className = 'tile-inner back'; 
+                if (i !== currentRow) { 
+                     tile.classList.remove('flip', 'correct', 'present', 'absent', 'failed', 'shake', 'static');
+                     if(!playerGuesses[i]) {
+                        front.textContent = '';
+                        back.textContent = '';
+                        back.className = 'tile-inner back';
+                     }
                 }
 
                 if (playerGuesses[i]) {
@@ -722,6 +743,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         } 
     }
     
+    // RAKİP KÜÇÜK IZGARASI
     const isVersusMode = (gameMode === 'multiplayer' || gameMode === 'vsCPU' || gameMode === 'friend' || gameMode === 'random_series') && !isBR;
     
     if (isVersusMode && sequentialGameInfo && !sequentialGameInfo.classList.contains('hidden')) {
@@ -733,19 +755,18 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             import('./ui.js').then(ui => {
                 if(ui.updateOpponentMiniGrid) ui.updateOpponentMiniGrid(oppGuesses, gameData.wordLength, 6);
             });
+            const miniGrid = document.getElementById('opponent-mini-grid');
+            if(miniGrid) miniGrid.classList.remove('hidden');
         }
     } else {
         const miniGrid = document.getElementById('opponent-mini-grid');
         if (miniGrid) miniGrid.classList.add('hidden');
     }
     
-    const isMyTurn = isBR ? 
-        (!playerState.isEliminated && !playerState.hasSolved && !playerState.hasFailed) : 
-        (gameMode === 'vsCPU' ? (!playerState.hasSolved && !playerState.hasFailed) : true);
-    
+    // Joker UI Güncelle
     const playerJokers = gameData.players[currentUserId]?.jokersUsed || {};
     import('./ui.js').then(ui => {
-        if (ui.updateJokerUI) ui.updateJokerUI(playerJokers, isMyTurn, gameData.status);
+        if (ui.updateJokerUI) ui.updateJokerUI(playerJokers, !shouldLockKeyboard, gameData.status);
     });
 }
 
@@ -1049,7 +1070,7 @@ export async function createGame(options = {}) {
         playerIdsList.push(invitedFriendId);
     }
     const gameData = {
-        gameId, wordLength: selectedLength, secretWord, timeLimit,
+        gameId, wordLength: secretWord.length, secretWord, timeLimit,
         creatorId: currentUserId, isHardMode: false, matchLength,
         currentRound: 1, 
         players: { 
