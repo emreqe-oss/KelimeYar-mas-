@@ -1,4 +1,4 @@
-#Mon Dec 08 18:53:29 TRT 2025
+#Wed Dec 10 19:25:10 TRT 2025
 base.0=C\:\\klig\\KelimeYar-mas-\\app\\build\\intermediates\\dex\\release\\minifyReleaseWithR8\\classes.dex
 renamed.0=classes.dex
 path.0=classes.dex
