@@ -851,6 +851,53 @@ export function listenToGameUpdates(gameId) {
 
         state.setLocalGameData(gameData); 
         
+        // Sadece oyun oynanıyorken kontrol et
+        if (gameData.status === 'playing') {
+            const timeLimit = (gameData.gameType === 'league' ? 120 : (gameData.timeLimit || 60));
+            const now = new Date();
+            
+            // Başlangıç zamanını güvenli çevir
+            let startTime = gameData.turnStartTime;
+            if (startTime && startTime.toDate) startTime = startTime.toDate();
+            else if (!(startTime instanceof Date)) startTime = new Date(); // Hatalıysa şu anı al
+
+            // Geçen saniyeyi hesapla
+            const elapsedSeconds = (now - startTime) / 1000;
+
+            // Eğer süre sınırını 5 saniye geçtiyse ve oyun hala bitmediyse
+            // (5 saniye tolerans payı bırakıyoruz ki internet yavaşlığı yüzünden çakışma olmasın)
+            if (elapsedSeconds > (timeLimit + 5)) {
+                console.warn("⚠️ ZAMAN AŞIMI ALGILANDI! Tur zorla bitiriliyor...");
+                
+                // Bunu sadece Creator veya alfabetik olarak ID'si önde olan yapsın (Çakışmayı önlemek için)
+                // Ama basitlik adına: Herkes deneyebilir, Firestore transaction korur veya son yazan kazanır.
+                // Biz sadece kendi client'ımızda tetikleyelim, zaten failTurn sunucuya yazar.
+                
+                const myPlayer = gameData.players[currentUserId];
+                // Eğer ben hala çözmediysem ve hakkım bitmediyse -> failTurn çağır
+                if (myPlayer && !myPlayer.hasSolved && !myPlayer.hasFailed) {
+                    failTurn(); 
+                } 
+                
+                // Eğer ben işimi bitirdiysem ama rakip yüzünden bekliyorsam
+                // Rakibi 'failed' olarak işaretlemek için yetki kullan
+                // NOT: Bu kısım güvenlik kurallarına takılabilir ama basit oyunlarda çalışır.
+                else if (gameData.creatorId === currentUserId) {
+                    // Kurucu yetkisiyle donmuş oyuncuları yak
+                    Object.keys(gameData.players).forEach(pid => {
+                        const p = gameData.players[pid];
+                        if (!p.hasSolved && !p.hasFailed) {
+                            // Bu oyuncu zaman aşımına uğramış, sunucuyu güncelle
+                            updateDoc(gameRef, {
+                                [`players.${pid}.hasFailed`]: true
+                            }).catch(e => console.log("Zaman aşımı force update hatası", e));
+                        }
+                    });
+                }
+            }
+        }
+        // --- ZAMAN AŞIMI KONTROLÜ BİTİŞ ---
+
         if (gameData.players && gameData.players[currentUserId]) {
             updateKnownPositions(gameData.players[currentUserId].guesses);
         }
@@ -1107,6 +1154,7 @@ export async function createGame(options = {}) {
             console.log("LOG: Oyun kuruldu, rakip bekleniyor. Radar ekranında kalınıyor.");
         }
         listenToGameUpdates(gameId);
+        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
     } catch (error) {
         console.error("Error creating game:", error);
         showToast("Oyun oluşturulamadı!", true);
@@ -1190,6 +1238,7 @@ export async function joinGame(gameId) {
         }
 
         listenToGameUpdates(gameId);
+        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
     } catch (error) {
         console.error("Error joining game:", error);
         showToast(error.message, true);
@@ -2554,6 +2603,7 @@ export async function createBRGame(visibility = 'public') { // Varsayılan publi
         import('./ui.js').then(ui => ui.showScreen('game-screen'));
         initializeGameUI(gameData); 
         listenToGameUpdates(gameId);
+        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
         
         if (visibility === 'private') {
             showToast("Gizli oda kuruldu. Arkadaşlarını davet et!", false);
@@ -2632,6 +2682,7 @@ export async function joinBRGame(gameId) {
         showScreen('game-screen');
         initializeGameUI(gameDataToJoin); 
         listenToGameUpdates(gameId);
+        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
         showToast(`Oyuna katıldınız! Toplam ${Object.keys(gameDataToJoin.players).length} oyuncu.`, false);
     } catch (error) {
         console.error("Error joining BR game:", error);
@@ -3995,4 +4046,25 @@ async function getGlobalWeeklyStats() {
         console.error("Global veri hatası:", e);
         return { avgScore: 0, avgGuesses: 0 };
     }
+}
+
+// ===================================================
+// === BAĞLANTI VE DURUM YÖNETİMİ (YENİ EKLENECEK) ===
+// ===================================================
+
+export function setupVisibilityHandler(gameId) {
+    // Tarayıcı sekmesi gizlendiğinde/açıldığında çalışır
+    document.addEventListener("visibilitychange", () => {
+        const userId = state.getUserId();
+        if (!userId || !gameId) return;
+
+        const status = document.hidden ? 'away' : 'online';
+        const gameRef = doc(db, "games", gameId);
+
+        // Durumu güncelle (Hata olsa bile devam et, kritik değil)
+        updateDoc(gameRef, {
+            [`players.${userId}.status`]: status,
+            [`players.${userId}.lastActive`]: serverTimestamp()
+        }).catch(err => console.log("Durum güncellenemedi:", err));
+    });
 }
