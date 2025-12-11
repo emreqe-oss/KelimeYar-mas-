@@ -626,3 +626,25 @@ body.theme-light .dictionary-meaning {
 
 /* BR modunda harfleri biraz daha ince yapabiliriz (Opsiyonel) */
 /* .br-mode-grid .tile { font-weight: 800; } */
+/* Samsung ve Zorunlu Renk Modları İçin Ekstra Koruma */
+@media (forced-colors: active) {
+  .tile.correct {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+    color: white !important;
+  }
+  .tile.present {
+    background-color: #f59e0b !important; /* Sarı */
+    border-color: #f59e0b !important;
+    color: white !important;
+  }
+  .tile.absent {
+    background-color: #374151 !important;
+    border-color: #374151 !important;
+    color: white !important;
+  }
+  /* Zorunlu renkleri devre dışı bırakmayı tekrar dene */
+  .tile {
+    forced-color-adjust: none !important;
+  }
+}
