@@ -1,21 +1,24 @@
-/* --- SAMSUNG / ANDROID RENK DÜZELTMESİ (EN TEPEYE EKLE) --- */
+/* style.css - NİHAİ DÜZENLEME (SAMSUNG & ANDROID FIX DAHİL TAM SÜRÜM) */
+
+/* ========================================================================== */
+/* 1. SAMSUNG / ANDROID İÇİN ZORUNLU DÜZELTMELER (EN TEPEYE EKLENDİ)          */
+/* ========================================================================== */
 :root {
     color-scheme: light dark; /* Tarayıcıya her iki modu da bildiğimizi söyler */
 }
 
 /* Oyun kutucuklarının renklerinin zorla değiştirilmesini engeller */
-.tile.correct, .tile.present, .tile.absent, .tile.failed {
+.tile.correct, .tile.present, .tile.absent, .tile.failed,
+.tile.static.correct, .tile.static.present, .tile.static.absent,
+.keyboard-key.correct, .keyboard-key.present, .keyboard-key.absent {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    forced-color-adjust: none !important; /* KRİTİK KOMUT */
+    forced-color-adjust: none !important;
 }
-/* --------------------------------------------------------- */
 
-/* Mevcut kodların buradan aşağıda devam etsin... */
-html {
-    height: 100dvh;
-    /* ... */
-}/* style.css - NİHAİ DÜZENLEME (MANUEL HESAPLAMA) */
+/* ========================================================================== */
+/* 2. MEVCUT KODLAR (SENİN ORİJİNAL KODLARIN)                                 */
+/* ========================================================================== */
 
 /* *** DÜZELTME 1: "Ekrana Sığdır" çözümü *** */
 html {
@@ -53,7 +56,6 @@ body {
     align-items: center;
     
     /* Yazı Boyutu: %20 oranında küçültüldü */
-    /* Eski: clamp(0.9rem, 3.2vw, 1.25rem) */
     font-size: clamp(1.5rem, 5vw, 2.2rem) !important; 
     
     /* Satır yüksekliği sıkı tutuldu */
@@ -105,15 +107,56 @@ body {
     40%, 60% { transform: translateX(4px); }
 }
 
-.tile.correct, .tile.static.correct { background-color: #10b981; border-color: #10b981; color: white; }
-.tile.present, .tile.static.present { background-color: #f59e0b; border-color: #f59e0b; color: white; }
-.tile.absent, .tile.static.absent { background-color: #374151; border-color: #374151; color: white; }
-.tile.failed { background-color: #ef4444; border-color: #ef4444; color: white; }
+/* --- RENK TANIMLARI (SAMSUNG GRADIENT HİLESİ İLE GÜNCELLENDİ) --- */
 
+/* YEŞİL */
+.tile.correct, .tile.static.correct { 
+    background-color: #10b981 !important; 
+    background-image: linear-gradient(#10b981, #10b981) !important; /* Samsung Fix */
+    border-color: #10b981 !important; 
+    color: white !important; 
+}
+/* SARI */
+.tile.present, .tile.static.present { 
+    background-color: #f59e0b !important; 
+    background-image: linear-gradient(#f59e0b, #f59e0b) !important; /* Samsung Fix */
+    border-color: #f59e0b !important; 
+    color: white !important; 
+}
+/* GRİ */
+.tile.absent, .tile.static.absent { 
+    background-color: #374151 !important; 
+    background-image: linear-gradient(#374151, #374151) !important; /* Samsung Fix */
+    border-color: #374151 !important; 
+    color: white !important; 
+}
+/* KIRMIZI */
+.tile.failed { 
+    background-color: #ef4444 !important; 
+    background-image: linear-gradient(#ef4444, #ef4444) !important; /* Samsung Fix */
+    border-color: #ef4444 !important; 
+    color: white !important; 
+}
+
+/* --- KLAVYE TUŞLARI (SAMSUNG FIX DAHİL) --- */
 .keyboard-key { transition: background-color 0.2s; height: 40px; font-size: 1rem; padding: 0; display: flex; align-items: center; justify-content: center; }
-.keyboard-key.correct { background-color: #10b981 !important; color: white; }
-.keyboard-key.present { background-color: #f59e0b !important; color: white; }
-.keyboard-key.absent { background-color: #374151 !important; color: white; }
+
+.keyboard-key.correct { 
+    background-color: #10b981 !important; 
+    background-image: linear-gradient(#10b981, #10b981) !important;
+    color: white !important; 
+}
+.keyboard-key.present { 
+    background-color: #f59e0b !important; 
+    background-image: linear-gradient(#f59e0b, #f59e0b) !important;
+    color: white !important; 
+}
+.keyboard-key.absent { 
+    background-color: #374151 !important; 
+    background-image: linear-gradient(#374151, #374151) !important;
+    color: white !important; 
+}
+
 .toast { visibility: hidden; opacity: 0; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; transform: translateX(-50%); bottom: 50px; transition: opacity 0.5s, visibility 0.5s, bottom 0.5s; }
 .toast.show { visibility: visible; opacity: 1; bottom: 70px; }
 .pulsate { animation: pulsate-bck 1s ease-in-out infinite both; }
@@ -626,7 +669,10 @@ body.theme-light .dictionary-meaning {
 
 /* BR modunda harfleri biraz daha ince yapabiliriz (Opsiyonel) */
 /* .br-mode-grid .tile { font-weight: 800; } */
-/* Samsung ve Zorunlu Renk Modları İçin Ekstra Koruma */
+
+/* ========================================================================== */
+/* 4. EKSTRA GÜVENLİK (Zorunlu Renk Modları İçin Ekstra Koruma)               */
+/* ========================================================================== */
 @media (forced-colors: active) {
   .tile.correct {
     background-color: #10b981 !important;
