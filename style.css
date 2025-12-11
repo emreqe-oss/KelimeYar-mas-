@@ -1,4 +1,21 @@
-/* style.css - NİHAİ DÜZENLEME (MANUEL HESAPLAMA) */
+/* --- SAMSUNG / ANDROID RENK DÜZELTMESİ (EN TEPEYE EKLE) --- */
+:root {
+    color-scheme: light dark; /* Tarayıcıya her iki modu da bildiğimizi söyler */
+}
+
+/* Oyun kutucuklarının renklerinin zorla değiştirilmesini engeller */
+.tile.correct, .tile.present, .tile.absent, .tile.failed {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    forced-color-adjust: none !important; /* KRİTİK KOMUT */
+}
+/* --------------------------------------------------------- */
+
+/* Mevcut kodların buradan aşağıda devam etsin... */
+html {
+    height: 100dvh;
+    /* ... */
+}/* style.css - NİHAİ DÜZENLEME (MANUEL HESAPLAMA) */
 
 /* *** DÜZELTME 1: "Ekrana Sığdır" çözümü *** */
 html {
