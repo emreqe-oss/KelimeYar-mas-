@@ -8,7 +8,9 @@ import {
     submitMultiplayerGuess, 
     failMultiplayerTurn, 
     getWordMeaning, 
-    startNextBRRound
+    startNextBRRound,
+    auth,                   // <--- BUNU EKLE (Eğer yoksa)
+    sendPasswordResetEmail  // <--- BUNU EKLE (Şifre sıfırlama için şart)
 } from './firebase.js';
 
 // Firestore modüllerini içe aktar
@@ -4068,3 +4070,99 @@ export function setupVisibilityHandler(gameId) {
         }).catch(err => console.log("Durum güncellenemedi:", err));
     });
 }
+
+// ==========================================
+// === ŞİFRE SIFIRLAMA SİSTEMİ (YENİ) ===
+// ==========================================
+
+function setupForgotPasswordSystem() {
+    // index.html'e eklediğimiz ID'leri kullanarak elementleri seçiyoruz
+    const forgotLink = document.getElementById('forgot-password-link');
+    const modal = document.getElementById('reset-password-modal');
+    const closeBtn = document.getElementById('close-reset-modal');
+    const sendBtn = document.getElementById('send-reset-btn');
+    const emailInput = document.getElementById('reset-email-input');
+    const statusMsg = document.getElementById('reset-status-msg');
+
+    // Eğer bu elementler sayfada yoksa (örn: oyun ekranındaysak) hata vermesin diye durduruyoruz.
+    if (!forgotLink || !modal) return;
+
+    console.log("Şifre sıfırlama sistemi aktif.");
+
+    // 1. "Şifremi Unuttum" linkine tıklayınca Modalı Aç
+    forgotLink.onclick = (e) => {
+        e.preventDefault(); // Sayfanın yukarı kaymasını engelle
+        modal.classList.remove('hidden');
+        if(emailInput) {
+            emailInput.value = ''; // Eski yazılanı temizle
+            emailInput.focus();
+        }
+        if(statusMsg) statusMsg.classList.add('hidden');
+    };
+
+    // 2. Modalı Kapatma Fonksiyonu
+    const closeModal = () => modal.classList.add('hidden');
+    
+    if(closeBtn) closeBtn.onclick = closeModal;
+    
+    // Siyah boşluğa tıklayınca kapat
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+
+    // 3. "Gönder" Butonuna Tıklanınca
+    if(sendBtn) {
+        sendBtn.onclick = async () => {
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                showResetStatus("Lütfen bir e-posta adresi gir.", "text-red-400");
+                return;
+            }
+
+            // Butonu kilitle
+            sendBtn.disabled = true;
+            sendBtn.textContent = "Gönderiliyor...";
+
+            try {
+                // Firebase'e sinyal gönder
+                await sendPasswordResetEmail(auth, email);
+                
+                showResetStatus("✅ Bağlantı gönderildi! E-postanı (Spam kutusu dahil) kontrol et.", "text-green-400");
+                
+                // 3 saniye sonra modalı kapat ve butonu düzelt
+                setTimeout(() => {
+                    closeModal();
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = "Sıfırlama Linki Gönder";
+                }, 3000);
+
+            } catch (error) {
+                console.error("Şifre sıfırlama hatası:", error);
+                let msg = "Bir hata oluştu.";
+                
+                if (error.code === 'auth/user-not-found') msg = "Bu e-posta ile kayıtlı kullanıcı bulunamadı.";
+                if (error.code === 'auth/invalid-email') msg = "Geçersiz e-posta formatı.";
+                if (error.code === 'auth/too-many-requests') msg = "Çok fazla deneme yaptınız. Biraz bekleyin.";
+                
+                showResetStatus("❌ " + msg, "text-red-400");
+                
+                // Butonu tekrar aç
+                sendBtn.disabled = false;
+                sendBtn.textContent = "Sıfırlama Linki Gönder";
+            }
+        };
+    }
+
+    // Yardımcı: Mesaj Gösterme
+    function showResetStatus(text, colorClass) {
+        if(!statusMsg) return;
+        statusMsg.textContent = text;
+        statusMsg.className = `mt-3 text-center text-sm font-medium ${colorClass}`;
+        statusMsg.classList.remove('hidden');
+    }
+}
+
+// Sistemi sayfa yüklendiğinde otomatik başlat
+// (DOM elementlerinin hazır olduğundan emin olmak için setTimeout kullanıyoruz)
+setTimeout(setupForgotPasswordSystem, 500);

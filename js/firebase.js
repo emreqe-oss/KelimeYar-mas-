@@ -1,8 +1,9 @@
-// js/firebase.js - GÜNCEL GEN 2 URL'LERİ İLE
+// js/firebase.js - GÜNCEL GEN 2 URL'LERİ + ŞİFRE SIFIRLAMA EKLENDİ
 
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+// Şifre sıfırlama fonksiyonunu (sendPasswordResetEmail) buraya ekledik
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { showToast } from './utils.js';
 
 // Vite environment değişkenleri
@@ -22,7 +23,9 @@ const app = initializeApp(firebaseConfig);
 // Servisleri dışarı aktar
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export { app }; // Bildirim izni için app'i de export ediyoruz
+
+// App ve Şifre Sıfırlama fonksiyonunu dışarı aktarıyoruz (Game.js'de kullanmak için)
+export { app, sendPasswordResetEmail }; 
 
 // ========================================================================
 // CLOUD FUNCTIONS ÇAĞRILARI (GEN 2 URL'LERİ GİRİLDİ)

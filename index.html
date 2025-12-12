@@ -128,6 +128,11 @@
                 <input type="email" id="email-input" placeholder="E-posta Adresiniz" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 text-center text-white text-lg">
                 <input type="password" id="password-input" placeholder="Şifreniz" class="w-full p-3 border rounded-md bg-gray-700 border-gray-600 text-center text-white text-lg">
                 <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg">Giriş Yap</button>
+                <div class="text-right mb-4">
+    <button id="forgot-password-link" type="button" class="text-sm text-indigo-400 hover:text-indigo-300 transition cursor-pointer bg-transparent border-none">
+        Şifremi Unuttum?
+    </button>
+</div>
                 <button id="go-to-register-btn" class="text-sm text-gray-400 hover:text-white mt-2">Hesabın yok mu? Kayıt Ol</button>
             </div>
             <p id="auth-loading" class="text-gray-400 mt-4 hidden">İşlem yapılıyor...</p>
@@ -858,6 +863,24 @@
                  </button>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="reset-password-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl shadow-2xl max-w-sm w-full relative">
+        <button id="close-reset-modal" class="absolute top-3 right-3 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+        
+        <h3 class="text-xl font-bold text-white mb-2 text-center">Şifre Sıfırlama</h3>
+        <p class="text-gray-400 text-sm mb-4 text-center">Hesabına kayıtlı e-posta adresini gir. Sana bir sıfırlama bağlantısı göndereceğiz.</p>
+        
+        <input type="email" id="reset-email-input" placeholder="E-posta adresin" 
+               class="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg text-white mb-4 focus:border-indigo-500 focus:outline-none">
+        
+        <button id="send-reset-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
+            Sıfırlama Linki Gönder
+        </button>
+        
+        <div id="reset-status-msg" class="mt-3 text-center text-sm font-medium hidden"></div>
     </div>
 </div>
 
