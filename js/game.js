@@ -1092,7 +1092,7 @@ export async function findOrCreateRandomGame(config, attempt = 1) {
                 if (currentGameData && currentGameData.gameId === createdGameId && currentGameData.status === 'waiting') {
                     assignBotToGame(createdGameId);
                 }
-            }, 45000); 
+            }, 20000); 
         }
     } catch (error) {
         if (isCancelled) return;
