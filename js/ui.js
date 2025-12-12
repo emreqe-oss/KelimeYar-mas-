@@ -1256,75 +1256,54 @@ export async function openLobbyInviteModal() {
     }
 }
 
-// js/ui.js -> EN ALTA EKLE
-
-// --- GÜNLÜK SONUÇ MODALI FONKSİYONLARI ---
-
-// js/ui.js -> openDailyResultModal fonksiyonunu BUNUNLA DEĞİŞTİR:
+// js/ui.js -> openDailyResultModal (TAM VERSİYON)
 
 export function openDailyResultModal(stats, data) {
     const modal = document.getElementById('daily-result-modal');
     if (!modal) return;
 
-    // --- 1. SAYFA: BUGÜN ---
-    const myScoreEl = document.getElementById('d-my-score');
-    const myGuessesEl = document.getElementById('d-my-guesses');
-    const avgScoreEl = document.getElementById('d-avg-score');
-    const avgGuessesEl = document.getElementById('d-avg-guesses');
+    // --- BUGÜN VERİLERİ ---
+    const dMyScore = document.getElementById('d-my-score');
+    const dMyGuesses = document.getElementById('d-my-guesses');
+    const dGlobalScore = document.getElementById('d-global-score');
+    const dGlobalGuesses = document.getElementById('d-global-guesses');
+    const dRankPos = document.getElementById('d-rank-pos');
+    const dTotalPlayers = document.getElementById('d-total-players');
     
-    if (myScoreEl) myScoreEl.textContent = data.userScore || 0;
-    if (myGuessesEl) myGuessesEl.textContent = (data.userGuessCount > 0) ? data.userGuessCount : 'X';
-    if (avgScoreEl) avgScoreEl.textContent = data.avgScore || '-';
-    if (avgGuessesEl) avgGuessesEl.textContent = data.avgGuesses || '-';
+    if (dMyScore) dMyScore.textContent = data.userScore || 0;
+    if (dMyGuesses) dMyGuesses.textContent = (data.userGuessCount > 0) ? data.userGuessCount : 'X';
+    
+    if (dGlobalScore) dGlobalScore.textContent = data.dailyGlobalScore || '-';
+    if (dGlobalGuesses) dGlobalGuesses.textContent = data.dailyGlobalGuesses || '-';
 
-    // --- 2. SAYFA: GENEL / SON 7 GÜN ---
-    const gMyScore = document.getElementById('g-my-avg-score');
-    const gMyGuesses = document.getElementById('g-my-avg-guesses');
-    const gGlobalScore = document.getElementById('g-global-avg-score');
-    const gGlobalGuesses = document.getElementById('g-global-avg-guesses');
+    if (dRankPos) dRankPos.textContent = data.userDailyRank || '-';
+    if (dTotalPlayers) dTotalPlayers.textContent = data.totalDailyPlayers || '-';
 
-    if (gMyScore) gMyScore.textContent = data.weeklyUserScore || 0;
-    if (gMyGuesses) gMyGuesses.textContent = data.weeklyUserGuesses || '-';
-    if (gGlobalScore) gGlobalScore.textContent = data.weeklyGlobalScore || '436';
-    if (gGlobalGuesses) gGlobalGuesses.textContent = data.weeklyGlobalGuesses || '4.2';
+    // --- HAFTALIK VERİLER ---
+    const wMyScore = document.getElementById('w-my-score');
+    const wMyGuesses = document.getElementById('w-my-guesses');
+    const wGlobalScore = document.getElementById('w-global-score');
+    const wGlobalGuesses = document.getElementById('w-global-guesses');
+    const wRankPos = document.getElementById('w-rank-pos');
+    const wTotalPlayers = document.getElementById('w-total-players');
 
-    // --- MODALI AÇ ---
+    if (wMyScore) wMyScore.textContent = data.weeklyUserScore || '-';
+    if (wMyGuesses) wMyGuesses.textContent = data.weeklyUserGuesses || '-';
+    
+    if (wGlobalScore) wGlobalScore.textContent = data.weeklyGlobalScore || '-';
+    if (wGlobalGuesses) wGlobalGuesses.textContent = data.weeklyGlobalGuesses || '-';
+
+    if (wRankPos) wRankPos.textContent = data.weeklyRank || '-';
+    if (wTotalPlayers) wTotalPlayers.textContent = data.weeklyTotalPlayers || '-';
+
+    // Tarih
+    const dateEl = document.getElementById('daily-date-display');
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('tr-TR');
+
+    // Modalı Aç
     modal.classList.remove('hidden');
-    startDailyCountdown(); // Sayacı başlat
 
-    // --- Slayt ve Swipe Ayarları ---
-    const container = document.getElementById('daily-slides-container');
-    const dots = document.querySelectorAll('.slide-dot');
-    let currentSlideIndex = 0;
-
-    const updateSlide = (index) => {
-        currentSlideIndex = index;
-        if (container) container.style.transform = `translateX(-${index * 50}%)`;
-        dots.forEach((dot, i) => {
-            if (i === index) {
-                dot.classList.remove('bg-gray-600');
-                dot.classList.add('bg-white', 'scale-125');
-            } else {
-                dot.classList.add('bg-gray-600');
-                dot.classList.remove('bg-white', 'scale-125');
-            }
-        });
-    };
-    updateSlide(0); // Her açılışta 1. sayfaya dön
-
-    // Swipe Olayları
-    let touchStartX = 0;
-    let touchEndX = 0;
-    if (container) {
-        container.ontouchstart = (e) => { touchStartX = e.changedTouches[0].screenX; };
-        container.ontouchend = (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX - touchEndX > 50) updateSlide(1); // Sola kaydır
-            if (touchEndX - touchStartX > 50) updateSlide(0); // Sağa kaydır
-        };
-    }
-
-    // Butonlar (Kapat, Menü, Paylaş)
+    // Buton İşlemleri
     const closeBtn = document.getElementById('close-daily-modal-btn');
     const menuBtn = document.getElementById('daily-menu-btn');
     
@@ -1339,7 +1318,9 @@ export function openDailyResultModal(stats, data) {
     const shareBtn = document.getElementById('daily-share-btn');
     if (shareBtn) {
         shareBtn.onclick = () => {
-            const shareText = `Kelime Yarışması Günlük\nPuanım: ${data.userScore || 0}\nSen de oyna: https://kelime-yar-mas.vercel.app/`;
+            const rankText = data.userDailyRank ? `Bugün ${data.userDailyRank}. sıradayım!` : '';
+            const shareText = `Kelime Yarışması Günlük\n📅 Puan: ${data.userScore || 0}\n🏆 Sıra: ${data.userDailyRank}/${data.totalDailyPlayers}\nSen de oyna: https://kelime-yar-mas.vercel.app/`;
+            
             if (navigator.share) {
                 navigator.share({ title: 'Kelime Yarışması', text: shareText }).catch(console.error);
             } else {

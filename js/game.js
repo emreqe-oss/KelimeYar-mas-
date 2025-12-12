@@ -1412,38 +1412,47 @@ function restoreDailyGame(savedState) {
 
         // js/game.js -> restoreDailyGame içindeki setTimeout bloğu:
 
+        // ... restoreDailyGame içindeki setTimeout bloğu ...
+        // js/game.js -> restoreDailyGame içinde:
+
         setTimeout(async () => {
             const profile = state.getCurrentUserProfile();
             const stats = getStatsFromProfile(profile);
             
-            // 1. Senin Bugünün
+            // 1. BUGÜNÜN VERİLERİ (Sen, Sıralama, Genel Ort.)
+            // Bu fonksiyon zaten hem senin puanını, hem sıranı, hem de genel ortalamayı döndürüyor.
             const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
             
-            // 2. Senin Haftalık Ortalaman
+            // 2. HAFTALIK SENİN ORTALAMAN
             const weeklyData = await getLast7DaysStats(state.getUserId());
 
-            // 3. GENEL (GLOBAL) Haftalık Ortalama (YENİ EKLENDİ)
-            const globalWeeklyData = await getGlobalWeeklyStats(); 
+            // 3. HAFTALIK GENEL ORTALAMA
+            const globalWeeklyData = await getGlobalWeeklyStats();
+
+            // 4. HAFTALIK SIRALAMA (YENİ EKLENEN)
+            const weeklyRankData = await calculateWeeklyLeaderboard(state.getUserId());
 
             import('./ui.js').then(ui => {
                 ui.openDailyResultModal(stats, {
-                    // Bugün
+                    // BUGÜN
                     userScore: rankData?.userScore || 0,
                     userGuessCount: savedState.guesses.length,
-                    avgScore: rankData?.avgScore || '-',
-                    avgGuesses: rankData?.avgGuesses || '-',
+                    userDailyRank: rankData?.userPosition || '-',
+                    totalDailyPlayers: rankData?.totalPlayers || '-',
+                    dailyGlobalScore: rankData?.avgScore || '-',
+                    dailyGlobalGuesses: rankData?.avgGuesses || '-',
                     
-                    // Genel / 7 Gün (Sen)
+                    // HAFTALIK
                     weeklyUserScore: weeklyData.avgScore,
                     weeklyUserGuesses: weeklyData.avgGuesses,
-                    
-                    // Genel / 7 Gün (Herkes - ARTIK GERÇEK VERİ)
                     weeklyGlobalScore: globalWeeklyData.avgScore,
-                    weeklyGlobalGuesses: globalWeeklyData.avgGuesses
+                    weeklyGlobalGuesses: globalWeeklyData.avgGuesses,
+                    weeklyRank: weeklyRankData.myRank,
+                    weeklyTotalPlayers: weeklyRankData.totalPlayers
                 });
             });
         }, 500);
-        return; // Fonksiyonu burada kes, aşağıya inip oyun ekranını açmasın.
+        return;
     }
 
     // --- EĞER OYUN BİTMEMİŞSE BURADAN DEVAM EDER ---
@@ -4166,3 +4175,55 @@ function setupForgotPasswordSystem() {
 // Sistemi sayfa yüklendiğinde otomatik başlat
 // (DOM elementlerinin hazır olduğundan emin olmak için setTimeout kullanıyoruz)
 setTimeout(setupForgotPasswordSystem, 500);
+
+
+// js/game.js - EN ALTA EKLE
+
+// HAFTALIK GENEL SIRALAMA VE TOPLAM OYUNCU SAYISI
+async function calculateWeeklyLeaderboard(currentUserId) {
+    const todayIndex = getDaysSinceEpoch();
+    const startDay = todayIndex - 7;
+
+    try {
+        const leaderboardRef = collection(db, 'daily_leaderboard');
+        // Son 7 günün tüm kayıtlarını çekiyoruz
+        const q = query(leaderboardRef, where('dayIndex', '>', startDay));
+        const snapshot = await getDocs(q);
+
+        const playerStats = {};
+
+        // Her oyuncunun toplam puanını ve maç sayısını topla
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (!data.didWin) return; // Sadece kazanılanlar
+
+            if (!playerStats[data.userId]) {
+                playerStats[data.userId] = { totalScore: 0, games: 0, userId: data.userId };
+            }
+            playerStats[data.userId].totalScore += data.score;
+            playerStats[data.userId].games += 1;
+        });
+
+        // Ortalamaları hesapla
+        const leaderboard = Object.values(playerStats).map(p => ({
+            userId: p.userId,
+            avgScore: Math.round(p.totalScore / p.games)
+        }));
+
+        // Puana göre sırala (Yüksekten düşüğe)
+        leaderboard.sort((a, b) => b.avgScore - a.avgScore);
+
+        // Kullanıcının sırasını bul
+        const myRankIndex = leaderboard.findIndex(p => p.userId === currentUserId);
+        const myRank = myRankIndex !== -1 ? myRankIndex + 1 : '-';
+        
+        return {
+            myRank: myRank,
+            totalPlayers: leaderboard.length
+        };
+
+    } catch (error) {
+        console.error("Haftalık sıralama hatası:", error);
+        return { myRank: '-', totalPlayers: '-' };
+    }
+}
