@@ -1,17 +1,18 @@
 /**
- * functions/index.js - TAM DOSYA
- *
- * Bu dosya:
- * 1. Oyun mantığını (kelime kontrolü, sıra değişimi) yönetir.
- * 2. Bildirimleri (Sıra sende, Yeni davet) yönetir.
+ * functions/index.js - FINAL SÜRÜM
+ * * İçerik:
+ * 1. Oyun Mantığı (HTTP)
+ * 2. Bildirimler (Triggers)
+ * 3. Günün Kelimesi Otomasyonu (Scheduler) - YENİ EKLENDİ
  */
 
 const { onRequest } = require("firebase-functions/v2/https");
 const { onDocumentUpdated, onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler"); // Scheduler eklendi
 const { setGlobalOptions } = require("firebase-functions/v2");
 
 const admin = require("firebase-admin");
-const cors = require("cors");
+const cors = require("cors")({ origin: true });
 
 // Gen 2 Global Ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -74,7 +75,7 @@ async function getNewSecretWordFromLocal(wordLength) {
 }
 
 // ==================================================================
-// HTTP FONKSİYONLARI (OYUN MANTIĞI)
+// 1. HTTP FONKSİYONLARI (OYUN MANTIĞI)
 // ==================================================================
 
 exports.getNewSecretWord = onRequest({ cors: true }, async (request, response) => {
@@ -101,7 +102,7 @@ exports.checkWordValidity = onRequest({ cors: true }, async (request, response) 
 });
 
 exports.getWordMeaning = onRequest({ cors: true }, (request, response) => {
-    // Şimdilik pasif, ileride TDK API eklenebilir.
+    // Şimdilik pasif
     return response.status(200).send({ success: false, meaning: "Bakımda." });
 });
 
@@ -124,7 +125,6 @@ exports.submitMultiplayerGuess = onRequest({ cors: true }, async (request, respo
             const secretWord = gameData.secretWord;
             const wordLength = gameData.wordLength;
             
-            // BR modunda herkes aynı anda oynar, normal modda sıra beklenir
             if (!isBR && gameData.currentPlayerId !== userId) throw new Error("Sıra sizde değil!");
             
             const colors = calculateColors(word, secretWord, wordLength);
@@ -143,14 +143,13 @@ exports.submitMultiplayerGuess = onRequest({ cors: true }, async (request, respo
                     updates[`players.${userId}.hasFailed`] = true;
                 }
             } else {
-                // Normal Multiplayer (Sıralı)
+                // Normal Multiplayer
                 if (isWinner) {
                     updates.status = 'finished';
                     updates.roundWinner = userId;
                     const roundScore = SCORE_POINTS[playerGuesses.length - 1] || 0;
                     updates[`players.${userId}.score`] = (playerState.score || 0) + roundScore;
                 } else {
-                    // Sırayı diğer oyuncuya geçir
                     const playerIds = Object.keys(gameData.players);
                     const nextIndex = (playerIds.indexOf(userId) + 1) % playerIds.length;
                     updates.currentPlayerId = playerIds[nextIndex];
@@ -181,8 +180,6 @@ exports.failMultiplayerTurn = onRequest({ cors: true }, async (request, response
             const gameDoc = await transaction.get(gameRef);
             if (!gameDoc.exists) throw new Error("Oyun bulunamadı.");
 
-            // Oyuncunun durumunu "hasFailed: true" olarak güncelle
-            // Bu sayede oyun mantığı bu kişinin elendiğini veya turu kaybettiğini anlar.
             transaction.update(gameRef, {
                 [`players.${userId}.hasFailed`]: true,
                 [`players.${userId}.lastActionTime`]: admin.firestore.FieldValue.serverTimestamp()
@@ -201,20 +198,14 @@ exports.startNextBRRound = onRequest({ cors: true }, (request, response) => {
 });
 
 // ==================================================================
-// BİLDİRİM TETİKLEYİCİLERİ (TRIGGERS)
+// 2. BİLDİRİM TETİKLEYİCİLERİ (TRIGGERS)
 // ==================================================================
 
-/**
- * 1. OYUN SIRASI DEĞİŞTİĞİNDE (Hamle Yapıldı)
- * - Rakibe "Sıra Sende" bildirimi gönderir.
- * - Tıklayınca ilgili oyuna yönlendirir.
- */
 exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event) => {
     const newData = event.data.after.data();
     const previousData = event.data.before.data();
     const gameId = event.params.gameId;
 
-    // Sadece 'playing' durumunda ve sıra değiştiyse çalış
     if (newData.status === 'playing' && newData.currentPlayerId && newData.currentPlayerId !== previousData.currentPlayerId) {
         const nextPlayerId = newData.currentPlayerId;
         
@@ -227,17 +218,13 @@ exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event)
             
             if (!tokens || tokens.length === 0) return null;
 
-            // Bildirim Payload'ı
             const message = {
                 tokens: tokens,
                 notification: {
                     title: 'Sıra Sende! 🎲',
                     body: 'Rakibin hamlesini yaptı, cevap verme sırası sende.',
                 },
-                data: {
-                    // Service Worker bu URL'i kullanacak
-                    url: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` 
-                },
+                data: { url: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` },
                 webpush: {
                     fcm_options: { link: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` },
                     notification: { icon: '/icon-192x192.png' }
@@ -246,7 +233,6 @@ exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event)
             
             const response = await admin.messaging().sendMulticast(message);
             
-            // Geçersiz Token Temizliği
             if (response.failureCount > 0) {
                 const failedTokens = [];
                 response.responses.forEach((r, i) => { if (!r.success) failedTokens.push(tokens[i]); });
@@ -263,24 +249,15 @@ exports.sendGameNotification = onDocumentUpdated("games/{gameId}", async (event)
     return null;
 });
 
-/**
- * 2. YENİ OYUN OLUŞTURULDUĞUNDA (Davet)
- * - Oyunu kuran HARİÇ diğer oyunculara bildirim gönderir.
- * - Tıklayınca davet edilen oyuna yönlendirir.
- */
 exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (event) => {
     const gameData = event.data.data();
     const gameId = event.params.gameId;
 
-    // Sadece Multiplayer oyunlar için
     if (gameData.gameType === 'multiplayer' || gameData.gameType === 'multiplayer-br') {
-        
-        // Oyunu kuranı bul (Eğer createdBy yoksa currentPlayerId varsayılır)
         const creatorId = gameData.createdBy || gameData.currentPlayerId;
         const playerIds = Object.keys(gameData.players);
 
         for (const playerId of playerIds) {
-            // Kendine bildirim atma
             if (playerId === creatorId) continue;
 
             try {
@@ -298,9 +275,7 @@ exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (even
                         title: 'Yeni Oyun İsteği! ⚔️',
                         body: 'Bir arkadaşın seni kelime düellosuna davet etti!',
                     },
-                    data: {
-                        url: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}`
-                    },
+                    data: { url: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` },
                     webpush: {
                         fcm_options: { link: `https://kelime-yar-mas.vercel.app/?gameId=${gameId}` },
                         notification: { icon: '/icon-192x192.png' }
@@ -309,7 +284,6 @@ exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (even
 
                 const response = await admin.messaging().sendMulticast(message);
 
-                // Geçersiz Token Temizliği
                 if (response.failureCount > 0) {
                     const failedTokens = [];
                     response.responses.forEach((r, i) => { if (!r.success) failedTokens.push(tokens[i]); });
@@ -326,4 +300,162 @@ exports.sendInviteNotification = onDocumentCreated("games/{gameId}", async (even
         }
     }
     return null;
+});
+
+// ==================================================================
+// 3. GÜNÜN KELİMESİ OTOMASYONU (SCHEDULER) - YENİ
+// ==================================================================
+
+/**
+ * Her gece 00:00'da (İstanbul Saati) çalışır.
+ * cevaplar.json dosyasından rastgele bir kelime seçer ve
+ * Firestore'da 'system_data/daily' dokümanına yazar.
+ */
+exports.updateDailyWord = onSchedule({
+    schedule: "0 0 * * *", // Her gece 00:00
+    timeZone: "Europe/Istanbul",
+    retryCount: 3,
+}, async (event) => {
+    
+    // 1. Rastgele uzunluk seç (4, 5 veya 6)
+    const lengths = ["4", "5", "6"];
+    const randomLength = lengths[Math.floor(Math.random() * lengths.length)];
+    
+    // 2. O uzunluktaki kelime listesini al
+    const wordList = cevaplar[randomLength];
+    
+    if (!wordList || wordList.length === 0) {
+        console.error("Kelime listesi boş veya okunamadı!");
+        return;
+    }
+
+    // 3. Listeden rastgele bir kelime seç
+    const selectedWord = wordList[Math.floor(Math.random() * wordList.length)];
+    
+    console.log(`Yeni Günün Kelimesi Seçildi: ${selectedWord} (${randomLength} harf)`);
+
+    // 4. Veritabanına Yaz
+    try {
+        await admin.firestore().collection("system_data").doc("daily").set({
+            word: selectedWord,
+            length: selectedWord.length,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            dateStr: new Date().toLocaleDateString("tr-TR") // Kontrol amaçlı
+        });
+        console.log("Veritabanı güncellendi.");
+    } catch (error) {
+        console.error("Günün kelimesi yazılırken hata oluştu:", error);
+    }
+});
+
+// ==================================================================
+// 4. KELİMELİG OTOMASYONU (HAFTALIK SIFIRLAMA & ÖDÜL) - YENİ
+// ==================================================================
+
+/**
+ * Bu fonksiyon her Pazartesi sabahı 00:00'da çalışır.
+ * Bir önceki haftanın ligini kapatır ve kazananlara ödül dağıtır.
+ */
+exports.finishWeeklyLeague = onSchedule({
+    schedule: "0 0 * * 1", // Her Pazartesi 00:00
+    timeZone: "Europe/Istanbul",
+    timeoutSeconds: 540, // 9 Dakika (Uzun işlem izni)
+    memory: "512MiB",    // Biraz daha güçlü işlemci
+}, async (event) => {
+    
+    // 1. Biten Haftanın ID'sini Bul
+    // (Bugün Pazartesi ise, biten hafta geçen haftadır)
+    const date = new Date();
+    date.setDate(date.getDate() - 7); // 7 gün geri git
+    const year = date.getFullYear();
+    const firstJan = new Date(year, 0, 1);
+    const numberOfDays = Math.floor((date - firstJan) / (24 * 60 * 60 * 1000));
+    const week = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+    const previousWeekID = `${year}-W${week}`;
+
+    console.log(`Lig Kapanışı Başlatılıyor: ${previousWeekID}`);
+
+    const db = admin.firestore();
+    const tiers = ['rookie', 'bronze', 'silver', 'gold', 'platinum', 'diamond'];
+    
+    let totalDistributedGold = 0;
+    let totalWinners = 0;
+
+    // Tüm Kümeleri (Tier) Gez
+    for (const tier of tiers) {
+        const groupsRef = db.collection(`leagues/${previousWeekID}/tiers/${tier}/groups`);
+        const groupsSnapshot = await groupsRef.get();
+
+        if (groupsSnapshot.empty) continue;
+
+        // O kümedeki tüm grupları gez
+        for (const groupDoc of groupsSnapshot.docs) {
+            const groupId = groupDoc.id;
+            const participantsRef = groupDoc.ref.collection('participants');
+            
+            // Puan durumuna göre sırala (Puan > Galibiyet > Alfabetik)
+            const leaderboardQuery = participantsRef
+                .orderBy('stats.P', 'desc')
+                .orderBy('stats.G', 'desc')
+                .limit(3); // Sadece ilk 3'ü çek (Ödül alacaklar)
+
+            const leaderboardSnap = await leaderboardQuery.get();
+
+            if (leaderboardSnap.empty) continue;
+
+            const winners = leaderboardSnap.docs;
+            const batch = db.batch(); // Toplu işlem başlat
+
+            // 🥇 1. Olan Oyuncu
+            if (winners[0]) {
+                const p1 = winners[0].data();
+                if (!p1.isBot) { // Botlara ödül verme :)
+                    const userRef = db.collection('users').doc(winners[0].id);
+                    batch.update(userRef, { 
+                        gold: admin.firestore.FieldValue.increment(3000),
+                        // Bildirim için bir alan ekleyebilirsin (Opsiyonel)
+                        lastLeagueReward: { week: previousWeekID, rank: 1, gold: 3000, seen: false }
+                    });
+                    totalDistributedGold += 3000;
+                    totalWinners++;
+                }
+            }
+
+            // 🥈 2. Olan Oyuncu
+            if (winners[1]) {
+                const p2 = winners[1].data();
+                if (!p2.isBot) {
+                    const userRef = db.collection('users').doc(winners[1].id);
+                    batch.update(userRef, { 
+                        gold: admin.firestore.FieldValue.increment(1500),
+                        lastLeagueReward: { week: previousWeekID, rank: 2, gold: 1500, seen: false }
+                    });
+                    totalDistributedGold += 1500;
+                    totalWinners++;
+                }
+            }
+
+            // 🥉 3. Olan Oyuncu
+            if (winners[2]) {
+                const p3 = winners[2].data();
+                if (!p3.isBot) {
+                    const userRef = db.collection('users').doc(winners[2].id);
+                    batch.update(userRef, { 
+                        gold: admin.firestore.FieldValue.increment(750),
+                        lastLeagueReward: { week: previousWeekID, rank: 3, gold: 750, seen: false }
+                    });
+                    totalDistributedGold += 750;
+                    totalWinners++;
+                }
+            }
+
+            // Grubu "Tamamlandı" olarak işaretle
+            batch.update(groupDoc.ref, { status: 'closed' });
+
+            // İşlemi kaydet
+            await batch.commit();
+        }
+    }
+
+    console.log(`Lig tamamlandı. ${totalWinners} oyuncuya toplam ${totalDistributedGold} altın dağıtıldı.`);
 });

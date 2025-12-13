@@ -26,13 +26,13 @@ def twaManifest = [
     launchUrl: '/index.html', // The start path for the TWA. Must be relative to the domain.
     name: 'KELİME LİG', // The application name.
     launcherName: 'K LİG', // The name shown on the Android Launcher.
-    themeColor: '#111827', // The color used for the status bar.
-    themeColorDark: '#000000', // The color used for the dark status bar.
-    navigationColor: '#000000', // The color used for the navigation bar.
-    navigationColorDark: '#000000', // The color used for the dark navbar.
-    navigationDividerColor: '#000000', // The navbar divider color.
-    navigationDividerColorDark: '#000000', // The dark navbar divider color.
-    backgroundColor: '#111827', // The color used for the splash screen background.
+    themeColor: '#FAEDCD', // The color used for the status bar.
+    themeColorDark: '#111827', // The color used for the dark status bar.
+    navigationColor: '#FAEDCD', // The color used for the navigation bar.
+    navigationColorDark: '#111827', // The color used for the dark navbar.
+    navigationDividerColor: '#FAEDCD', // The navbar divider color.
+    navigationDividerColorDark: '#111827', // The dark navbar divider color.
+    backgroundColor: '#FAEDCD', // The color used for the splash screen background.
     enableNotifications: true, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
     // - name: String that will show up in the shortcut.
@@ -57,8 +57,8 @@ android {
         applicationId "com.klig.oyun"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 7
-        versionName "7"
+        versionCode 9
+        versionName "9"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

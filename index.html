@@ -863,20 +863,17 @@
                 
                 <div>
                     <h3 class="text-white font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider">
-                        <span class="text-lg">💎</span> ALTIN KASASI
+                        <span class="text-lg">🎁</span> ALTIN KAZAN
                     </h3>
                     
-                    <div class="grid grid-cols-2 gap-3 pb-8"> 
+                    <div class="grid grid-cols-2 gap-3 mb-6">
                         
                         <button class="buy-gold-btn group bg-gray-800 p-2 rounded-xl border border-gray-700 flex flex-col items-center justify-between shadow-md transition hover:scale-[1.02] hover:border-indigo-500/50 relative overflow-hidden h-48"
                                 data-amount="500">
-                            
                             <div class="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors z-0"></div>
-                            
                             <div class="relative w-full flex-grow flex items-center justify-center z-10 overflow-hidden">
                                 <img src="/images/tv.png" alt="Reklam İzle" class="w-full h-full object-contain drop-shadow-2xl transform transition group-hover:scale-110">
                             </div>
-                            
                             <div class="w-full flex flex-col items-center z-20 mt-2">
                                 <div class="text-2xl font-black text-white flex items-center gap-2">
                                     <span>500</span>
@@ -886,21 +883,54 @@
                             </div>
                         </button>
 
+                        <button id="btn-market-invite" class="group bg-gray-800 p-2 rounded-xl border border-gray-700 flex flex-col items-center justify-between shadow-md transition hover:scale-[1.02] hover:border-blue-500/50 relative overflow-hidden h-48">
+                            <div class="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors z-0"></div>
+                            <div class="relative w-full flex-grow flex items-center justify-center z-10 overflow-hidden">
+                                <img src="/images/arkadaslar.png" alt="Davet Et" class="w-full h-full object-contain drop-shadow-2xl transform transition group-hover:scale-110">
+                            </div>
+                            <div class="w-full flex flex-col items-center z-20 mt-2">
+                                <div class="text-2xl font-black text-white flex items-center gap-2">
+                                    <span>5.000</span>
+                                    <img src="/images/sikke.png" alt="Altın" class="w-5 h-5 animate-bounce-slow">
+                                </div>
+                                <span class="text-[10px] text-blue-300 font-bold uppercase tracking-wide">ARKADAŞINI ÇAĞIR</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <h3 class="text-white font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider">
+                        <span class="text-lg">💎</span> ALTIN SATIN AL
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 pb-8"> 
+                        
                         <button class="buy-gold-btn group bg-gray-800 p-2 rounded-xl border border-gray-700 flex flex-col items-center justify-between shadow-md transition hover:scale-[1.02] hover:border-green-500/50 relative overflow-hidden h-48"
                                 data-amount="2000">
-                            
                             <div class="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors z-0"></div>
-                            
                             <div class="relative w-full flex-grow flex items-center justify-center z-10 overflow-hidden">
                                 <img src="/images/kasa2.png" alt="Kasa" class="w-full h-full object-contain drop-shadow-2xl transform transition group-hover:scale-110">
                             </div>
-                            
                             <div class="w-full flex flex-col items-center z-20 mt-2">
                                 <div class="text-2xl font-black text-white flex items-center gap-2">
                                     <span>2.000</span>
                                     <img src="/images/sikke.png" alt="Altın" class="w-5 h-5">
                                 </div>
                                 <span class="text-[10px] text-green-300 font-bold uppercase tracking-wide">20 TL</span>
+                            </div>
+                        </button>
+
+                        <button class="buy-gold-btn group bg-gray-800 p-2 rounded-xl border border-gray-700 flex flex-col items-center justify-between shadow-md transition hover:scale-[1.02] hover:border-yellow-500/50 relative overflow-hidden h-48"
+                                data-amount="10000">
+                            <div class="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition-colors z-0"></div>
+                            <div class="relative w-full flex-grow flex items-center justify-center z-10 overflow-hidden">
+                                <img src="/images/kasa2.png" alt="Büyük Kasa" class="w-full h-full object-contain drop-shadow-2xl transform transition group-hover:scale-110 filter brightness-125">
+                            </div>
+                            <div class="w-full flex flex-col items-center z-20 mt-2">
+                                <div class="text-2xl font-black text-white flex items-center gap-2">
+                                    <span>10.000</span>
+                                    <img src="/images/sikke.png" alt="Altın" class="w-5 h-5">
+                                </div>
+                                <span class="text-[10px] text-yellow-300 font-bold uppercase tracking-wide">50 TL</span>
                             </div>
                         </button>
                     </div>
@@ -1071,13 +1101,13 @@
     <div id="toast" class="toast"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     
     <script type="module" src="js/main.js?v=3.1.1"></script> 
-
+    
 </body>
 </html>

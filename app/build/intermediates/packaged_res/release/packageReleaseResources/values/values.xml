@@ -2,13 +2,13 @@
 <resources>
     <bool name="enableNotification">true</bool>
     <bool name="enableSiteSettingsShortcut">true</bool>
-    <color name="backgroundColor">#111827</color>
-    <color name="colorPrimary">#111827</color>
-    <color name="colorPrimaryDark">#000000</color>
-    <color name="navigationColor">#000000</color>
-    <color name="navigationColorDark">#000000</color>
-    <color name="navigationDividerColor">#000000</color>
-    <color name="navigationDividerColorDark">#000000</color>
+    <color name="backgroundColor">#FAEDCD</color>
+    <color name="colorPrimary">#FAEDCD</color>
+    <color name="colorPrimaryDark">#111827</color>
+    <color name="navigationColor">#FAEDCD</color>
+    <color name="navigationColorDark">#111827</color>
+    <color name="navigationDividerColor">#FAEDCD</color>
+    <color name="navigationDividerColorDark">#111827</color>
     <color name="shortcut_background">#F5F5F5</color>
     <integer name="splashScreenFadeOutDuration">300</integer>
     <string name="appName" translatable="false">KELİME LİG</string>

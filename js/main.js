@@ -91,8 +91,21 @@ if ('serviceWorker' in navigator) {
 // 2. DEĞİŞKENLER
 let globalGamesUnsubscribe = null;
 
+// --- REFERANS KONTROLÜ (YENİ) ---
+function checkReferral() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refId = urlParams.get('ref');
+    
+    if (refId) {
+        // Davet eden kişinin ID'sini tarayıcı kapanana kadar sakla
+        sessionStorage.setItem('invitedBy', refId);
+        console.log("Referans tespit edildi:", refId);
+    }
+}
+// --------------------------------
 // 3. ANA FONKSİYONLAR
 function initApp() {
+    checkReferral();
     initUI();
     addEventListeners();
     initAuthListener();
@@ -464,6 +477,35 @@ function addEventListeners() {
         history.back();
         stopTutorialAnimation(); 
     });
+
+    // --- YENİ EKLENECEK KOD BAŞLANGICI ---
+    
+    // js/main.js -> addEventListeners içinde:
+
+    // Market: Arkadaş Davet Et Butonu (5000 Altın)
+    const btnMarketInvite = document.getElementById('btn-market-invite');
+    if (btnMarketInvite) {
+        btnMarketInvite.addEventListener('click', () => {
+            const myId = getUserId(); // Senin ID'ni alıyoruz
+            // Linke "?ref=SENIN_ID" ekliyoruz
+            const inviteLink = `https://kelime-yar-mas.vercel.app/?ref=${myId}`;
+            const text = `Kelime Yarışması'na katıl, birlikte oynayalım! 🎁\n${inviteLink}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Kelime Yarışması',
+                    text: text,
+                    url: inviteLink
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(text);
+                import('./utils.js').then(u => u.showToast("Link kopyalandı! Arkadaşına gönder.", false));
+            }
+            
+            // DİKKAT: Buradaki "addGold" kodunu SİLDİK. 
+            // Artık sadece linki gönderiyoruz, ödül kayıt olunca gelecek.
+        });
+    }
 
     // Kapatma Butonları
     closeProfileBtn.addEventListener('click', () => history.back());

@@ -35,7 +35,7 @@ import {
 
 let cpuLoopTimeout = null; 
 
-import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement } from './utils.js';
+import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement, triggerConfetti } from './utils.js';
 
 import { 
     showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, 
@@ -129,7 +129,9 @@ export async function showScoreboard(gameData) {
             playSound('lose');
         }
     }
-
+    if (titleColor === "text-green-400" || titleColor === "text-yellow-400") {
+        triggerConfetti();
+    }
     if (roundWinnerDisplay) {
         roundWinnerDisplay.textContent = titleText;
         roundWinnerDisplay.className = `text-3xl font-black mb-2 tracking-wide uppercase drop-shadow-md ${titleColor}`;
@@ -274,6 +276,15 @@ export async function showScoreboard(gameData) {
 
     if (mainMenuBtn) {
         mainMenuBtn.onclick = leaveGame;
+    }
+    // Eğer oyunu ben kazandıysam veya "BİLDİNİZ" durumu varsa
+    const myId = state.getUserId();
+    const amIWinner = (gameData.roundWinner === myId) || (gameData.matchWinnerId === myId);
+    
+    // Battle Royale'de kazanan veya Teklide kazanan veya Günün Kelimesini bilen
+    if (amIWinner || titleText === "BİLDİNİZ! 👏" || titleText === "TEBRİKLER! 🎉") {
+        console.log("Konfeti tetikleniyor! 🎉"); // Konsoldan takip et
+        triggerConfetti();
     }
 }
 
@@ -1249,14 +1260,25 @@ export async function joinGame(gameId) {
     }
 }
 
-function getDailySecretWord() {
-    const dayIndex = getDaysSinceEpoch();
-    const selectedLength = DAILY_WORD_LENGTHS[dayIndex % DAILY_WORD_LENGTHS.length];
-    const dailyWordList = allWordList[String(selectedLength)];
-    if (!dailyWordList || dailyWordList.length === 0) {
-        return allWordList["5"][dayIndex % allWordList["5"].length]; 
+// YENİ: Günün kelimesini Firestore'dan çeken fonksiyon
+async function getDailySecretWord() {
+    try {
+        const docRef = doc(db, "system_data", "daily");
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            console.log("Günün kelimesi sunucudan alındı.");
+            return data.word.toLocaleUpperCase('tr-TR');
+        } else {
+            console.warn("Günün kelimesi veritabanında yok! Yerele dönülüyor.");
+            // Acil durum yedeği (Veritabanı boşsa oyun çökmesin)
+            return "KALEM"; 
+        }
+    } catch (error) {
+        console.error("Günün kelimesi alınamadı:", error);
+        return "KALEM"; // Hata olursa yedek kelime
     }
-    return dailyWordList[dayIndex % dailyWordList.length];
 }
 
 export async function startNewGame(config) {
@@ -1284,9 +1306,10 @@ export async function startNewGame(config) {
             gameSettings.matchLength = 1;
             break;
         case 'daily':
-            secretWord = getDailySecretWord();
+            secretWord = await getDailySecretWord();
+            
             if (!secretWord) {
-                showToast("Günün kelimesi bulunamadı.", true);
+                showToast("Günün kelimesi sunucudan alınamadı.", true);
                 return;
             }
             const dailyState = getDailyGameState(); 

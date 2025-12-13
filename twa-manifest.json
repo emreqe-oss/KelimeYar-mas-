@@ -4,13 +4,13 @@
   "name": "KELİME LİG",
   "launcherName": "K LİG",
   "display": "standalone",
-  "themeColor": "#faedcd",
+  "themeColor": "#FAEDCD",
   "themeColorDark": "#111827",
-  "navigationColor": "#faedcd",
+  "navigationColor": "#FAEDCD",
   "navigationColorDark": "#111827",
-  "navigationDividerColor": "#faedcd",
+  "navigationDividerColor": "#FAEDCD",
   "navigationDividerColorDark": "#111827",
-  "backgroundColor": "#faedcd",
+  "backgroundColor": "#FAEDCD",
   "enableNotifications": true,
   "startUrl": "/index.html",
   "iconUrl": "https://kelime-yar-mas.vercel.app/icon.png",
@@ -19,8 +19,8 @@
     "path": "C:\\klig\\KelimeYar-mas-\\android.keystore",
     "alias": "key0"
   },
-  "appVersionName": "8",
-  "appVersionCode": 8,
+  "appVersionName": "9",
+  "appVersionCode": 9,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://kelime-yar-mas.vercel.app/manifest.json",
@@ -42,5 +42,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "8"
+  "appVersion": "9"
 }
