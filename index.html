@@ -69,13 +69,16 @@
             
             <div class="flex-grow flex flex-col justify-center gap-4 w-full">
                 <div class="grid grid-cols-2 gap-4">
-                    <button id="new-game-btn" class="bg-green-600 hover:bg-green-500 rounded-xl py-6 text-xl font-black text-white shadow-lg shadow-green-900/50 border-b-4 border-green-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 group h-32">
-                        <span class="text-3xl group-hover:scale-110 transition">🎮</span>
-                        <span>YENİ OYUN</span>
+                    <button id="new-game-btn" class="bg-green-600 hover:bg-green-500 rounded-xl py-4 text-xl font-black text-white shadow-lg shadow-green-900/50 border-b-4 border-green-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 group h-32 overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-t from-green-900/30 to-transparent"></div>
+                        <img src="/images/yeni-oyun.png" alt="Yeni Oyun" class="w-16 h-16 object-contain drop-shadow-md z-10 group-hover:scale-110 transition duration-300">
+                        <span class="z-10 drop-shadow-sm">YENİ OYUN</span>
                     </button>
-                    <button id="my-games-btn" class="bg-amber-600 hover:bg-amber-500 rounded-xl py-6 text-xl font-black text-white shadow-lg shadow-amber-900/50 border-b-4 border-amber-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 group h-32 relative">
-                        <span class="text-3xl group-hover:scale-110 transition">🎲</span>
-                        <span>OYUNLARIM</span>
+
+                    <button id="my-games-btn" class="bg-amber-600 hover:bg-amber-500 rounded-xl py-4 text-xl font-black text-white shadow-lg shadow-amber-900/50 border-b-4 border-amber-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 group h-32 overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-t from-amber-900/30 to-transparent"></div>
+                        <img src="/images/oyunlarim.png" alt="Oyunlarım" class="w-16 h-16 object-contain drop-shadow-md z-10 group-hover:rotate-12 transition duration-300">
+                        <span class="z-10 drop-shadow-sm">OYUNLARIM</span>
                     </button>
                 </div>
                 
@@ -88,25 +91,34 @@
 
                     <button id="daily-word-btn" class="bg-teal-600 hover:bg-teal-500 rounded-xl p-2 text-white shadow-lg shadow-teal-900/50 border-b-4 border-teal-800 active:scale-95 transition flex flex-col items-center justify-center h-32 overflow-hidden relative group">
                         <div class="absolute inset-0 bg-gradient-to-t from-teal-900/50 to-transparent"></div>
-                        <img src="/images/günün kelimesi.png" alt="Günlük" class="w-14 h-14 object-contain drop-shadow-md z-10 group-hover:rotate-12 transition duration-300">
+                        <img src="/images/gunun-kelimesi.png" alt="Günlük" class="w-14 h-14 object-contain drop-shadow-md z-10 group-hover:rotate-12 transition duration-300">
                         <span class="font-black text-lg z-10 leading-tight mt-1 drop-shadow-sm">Günün<br>Kelimesi</span>
                     </button>
                 </div>
 
-                <button id="market-btn" class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 rounded-xl py-4 px-6 text-white shadow-lg shadow-red-900/50 border-b-4 border-red-800 active:scale-95 transition flex items-center justify-center gap-4 group">
-                    <img src="/images/kirtasiye.png" alt="Kırtasiye" class="w-12 h-12 object-contain drop-shadow-lg group-hover:-rotate-12 transition duration-300">
-                    <div class="text-left">
-                        <span class="block font-black text-2xl tracking-wide">KIRTASİYE</span>
-                        <span class="block text-xs text-red-100 font-medium">Güçlendirici & Altın Al</span>
+                <button id="market-btn" class="w-full h-32 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 rounded-xl py-4 px-6 text-white shadow-lg shadow-red-900/50 border-b-4 border-red-800 active:scale-95 transition flex items-center justify-between overflow-hidden relative group">
+                    
+                    <div class="text-left z-10">
+                        <span class="block font-black text-3xl tracking-wide drop-shadow-md">KIRTASİYE</span>
+                        <span class="block text-sm text-red-100 font-medium">Güçlendirici & Altın Al</span>
                     </div>
+
+                    <img src="/images/kirtasiye.png" 
+                         alt="Kırtasiye" 
+                         class="w-32 h-32 object-contain drop-shadow-xl transform transition duration-300 group-hover:scale-110 group-hover:-rotate-12 -mr-6">
                 </button>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <button id="friends-btn" class="bg-blue-600 hover:bg-blue-500 rounded-xl py-4 text-white font-bold shadow-md border-b-4 border-blue-800 active:scale-95 transition">
-                        👥 Arkadaşla Oyna
+                    <button id="friends-btn" class="bg-blue-600 hover:bg-blue-500 rounded-xl py-4 text-white font-bold shadow-md border-b-4 border-blue-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 h-28 group overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/30 to-transparent"></div>
+                        <img src="/images/arkadaslar.png" alt="Arkadaşlar" class="w-12 h-12 object-contain drop-shadow-md z-10 group-hover:scale-110 transition duration-300">
+                        <span class="text-lg z-10">ARKADAŞLARIM</span>
                     </button>
-                    <button id="stats-btn-main" class="bg-gray-600 hover:bg-gray-500 rounded-xl py-4 text-white font-bold shadow-md border-b-4 border-gray-800 active:scale-95 transition">
-                        📊 İstatistikler
+
+                    <button id="stats-btn-main" class="bg-gray-600 hover:bg-gray-500 rounded-xl py-4 text-white font-bold shadow-md border-b-4 border-gray-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 h-28 group overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900/30 to-transparent"></div>
+                        <img src="/images/istatistik.png" alt="İstatistikler" class="w-12 h-12 object-contain drop-shadow-md z-10 group-hover:scale-110 transition duration-300">
+                        <span class="text-lg z-10">İSTATİSTİKLER</span>
                     </button>
                 </div>
             </div>
@@ -131,64 +143,73 @@
         </div>
 
         <div id="new-game-screen" class="hidden flex-1 flex flex-col p-4 space-y-4 h-full bg-gray-900">
-            <header class="flex items-center mb-2">
+            <header class="flex items-center mb-2 flex-shrink-0">
                 <button id="back-to-main-menu-btn" class="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 </button>
                 <h1 class="text-2xl font-black text-center flex-grow -ml-10 text-white tracking-wider">OYUN MODU SEÇ</h1>
             </header>
             
-            <div class="grid grid-cols-1 gap-4 flex-grow overflow-y-auto custom-scrollbar content-start">
+            <div class="flex-grow overflow-y-auto custom-scrollbar content-start">
                 
-                <button id="random-game-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-4 flex items-center gap-4 transition group active:scale-[0.98]">
-                    <div class="w-12 h-12 rounded-full bg-green-900/30 flex items-center justify-center group-hover:bg-green-900/50 transition">
-                        <span class="text-2xl">🐢</span>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    
+                    <button id="random-game-btn" class="bg-green-600 hover:bg-green-500 border-b-4 border-green-800 rounded-xl p-2 flex flex-col items-center justify-center gap-2 transition group active:scale-95 h-32 relative overflow-hidden shadow-lg shadow-green-900/50">
+                        <div class="absolute inset-0 bg-gradient-to-t from-green-900/30 to-transparent"></div>
+                        <div class="w-12 h-12 rounded-full bg-black/20 flex items-center justify-center z-10 group-hover:scale-110 transition">
+                            <span class="text-3xl">🐢</span>
+                        </div>
+                        <div class="text-center z-10">
+                            <span class="block text-lg font-black text-white leading-tight">GEVŞEK<br>MOD</span>
+                            <span class="block text-[10px] text-green-100 opacity-80">12 Saat Süre</span>
+                        </div>
+                    </button>
+
+                    <button id="series-game-btn" class="bg-red-600 hover:bg-red-500 border-b-4 border-red-800 rounded-xl p-2 flex flex-col items-center justify-center gap-2 transition group active:scale-95 h-32 relative overflow-hidden shadow-lg shadow-red-900/50">
+                        <div class="absolute inset-0 bg-gradient-to-t from-red-900/30 to-transparent"></div>
+                        <div class="w-12 h-12 rounded-full bg-black/20 flex items-center justify-center z-10 group-hover:scale-110 transition">
+                            <span class="text-3xl">🔥</span>
+                        </div>
+                        <div class="text-center z-10">
+                            <span class="block text-lg font-black text-white leading-tight">SERİ<br>OYUN</span>
+                            <span class="block text-[10px] text-red-100 opacity-80">Hızlı (2 Dk)</span>
+                        </div>
+                    </button>
+
+                    <button id="with-friends-btn" class="bg-blue-600 hover:bg-blue-500 border-b-4 border-blue-800 rounded-xl p-2 flex flex-col items-center justify-center gap-2 transition group active:scale-95 h-32 relative overflow-hidden shadow-lg shadow-blue-900/50">
+                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/30 to-transparent"></div>
+                        <div class="w-12 h-12 rounded-full bg-black/20 flex items-center justify-center z-10 group-hover:scale-110 transition">
+                            <span class="text-3xl">👥</span>
+                        </div>
+                        <div class="text-center z-10">
+                            <span class="block text-lg font-black text-white leading-tight">ARKADAŞLA<br>OYNA</span>
+                            <span class="block text-[10px] text-blue-100 opacity-80">Davet Et</span>
+                        </div>
+                    </button>
+
+                    <button id="multiplayer-br-btn" class="bg-yellow-600 hover:bg-yellow-500 border-b-4 border-yellow-800 rounded-xl p-2 flex flex-col items-center justify-center gap-2 transition group active:scale-95 h-32 relative overflow-hidden shadow-lg shadow-yellow-900/50">
+                        <div class="absolute inset-0 bg-gradient-to-t from-yellow-900/30 to-transparent"></div>
+                        <div class="w-12 h-12 rounded-full bg-black/20 flex items-center justify-center z-10 group-hover:scale-110 transition">
+                            <span class="text-3xl">👑</span>
+                        </div>
+                        <div class="text-center z-10">
+                            <span class="block text-lg font-black text-white leading-tight">BATTLE<br>ROYALE</span>
+                            <span class="block text-[10px] text-yellow-100 opacity-80">4 Kişilik</span>
+                        </div>
+                    </button>
+                </div>
+
+                <button id="vs-cpu-btn" class="w-full h-28 bg-purple-600 hover:bg-purple-500 border-b-4 border-purple-800 rounded-xl p-4 flex items-center justify-center gap-4 transition group active:scale-95 relative overflow-hidden shadow-lg shadow-purple-900/50">
+                    <div class="absolute inset-0 bg-gradient-to-t from-purple-900/30 to-transparent"></div>
+                    <div class="w-14 h-14 rounded-full bg-black/20 flex items-center justify-center z-10 group-hover:rotate-12 transition">
+                        <span class="text-4xl">🤖</span>
                     </div>
-                    <div class="text-left">
-                        <span class="block text-lg font-bold text-green-400 group-hover:text-green-300">GEVŞEK MOD</span>
-                        <span class="block text-xs text-gray-400">Süre sıkıntısı yok (12 Saat)</span>
+                    <div class="text-left z-10">
+                        <span class="block text-2xl font-black text-white tracking-wide">BİLGİSAYAR</span>
+                        <span class="block text-xs text-purple-200">Yapay zeka ile antrenman</span>
                     </div>
                 </button>
 
-                <button id="series-game-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-4 flex items-center gap-4 transition group active:scale-[0.98]">
-                    <div class="w-12 h-12 rounded-full bg-red-900/30 flex items-center justify-center group-hover:bg-red-900/50 transition">
-                        <span class="text-2xl">🔥</span>
-                    </div>
-                    <div class="text-left">
-                        <span class="block text-lg font-bold text-red-400 group-hover:text-red-300">SERİ OYUN</span>
-                        <span class="block text-xs text-gray-400">Hızlı düşün, hızlı yaz (2 Dk)</span>
-                    </div>
-                </button>
-
-                <button id="with-friends-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-4 flex items-center gap-4 transition group active:scale-[0.98]">
-                    <div class="w-12 h-12 rounded-full bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-900/50 transition">
-                        <span class="text-2xl">👥</span>
-                    </div>
-                    <div class="text-left">
-                        <span class="block text-lg font-bold text-blue-400 group-hover:text-blue-300">ARKADAŞINLA OYNA</span>
-                        <span class="block text-xs text-gray-400">Listeden arkadaş seç ve davet et</span>
-                    </div>
-                </button>
-
-                <button id="multiplayer-br-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-4 flex items-center gap-4 transition group active:scale-[0.98]">
-                    <div class="w-12 h-12 rounded-full bg-yellow-900/30 flex items-center justify-center group-hover:bg-yellow-900/50 transition">
-                        <span class="text-2xl">👑</span>
-                    </div>
-                    <div class="text-left">
-                        <span class="block text-lg font-bold text-yellow-400 group-hover:text-yellow-300">BATTLE ROYALE</span>
-                        <span class="block text-xs text-gray-400">4 Kişilik hayatta kalma savaşı</span>
-                    </div>
-                </button>
-
-                <button id="vs-cpu-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-4 flex items-center gap-4 transition group active:scale-[0.98]">
-                    <div class="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center group-hover:bg-purple-900/50 transition">
-                        <span class="text-2xl">🤖</span>
-                    </div>
-                    <div class="text-left">
-                        <span class="block text-lg font-bold text-purple-400 group-hover:text-purple-300">BİLGİSAYARA KARŞI</span>
-                        <span class="block text-xs text-gray-400">Yapay zeka ile antrenman yap</span>
-                    </div>
-                </button>
             </div>
         </div>
         
@@ -727,17 +748,28 @@
 
         <div id="kirtasiye-screen" class="hidden screen-container bg-gray-900 flex flex-col h-full w-full">
     
-            <div class="flex justify-between items-center p-4 border-b border-gray-800 flex-shrink-0">
-                <button id="back-to-main-from-market-btn" class="text-gray-400 hover:text-white transition">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800 flex-shrink-0 h-28 relative">
+                
+                <button id="back-to-main-from-market-btn" class="text-gray-400 hover:text-white transition z-20">
                     <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center gap-2">
-                    ✏️ KIRTASİYE
-                </h2>
-                <div class="w-8"></div>
-            </div>
+
+                <div class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                    <div class="flex items-center gap-1"> 
+                        <img src="/images/kirtasiye.png" 
+                             alt="Kırtasiye" 
+                             class="w-24 h-24 object-contain drop-shadow-xl filter brightness-110">
+                        
+                        <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 drop-shadow-sm">
+                            KIRTASİYE
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="w-8"></div> </div>
+
 
             <div class="p-4 overflow-y-auto flex-grow custom-scrollbar space-y-6">
                 
