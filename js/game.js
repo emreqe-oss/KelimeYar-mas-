@@ -37,6 +37,12 @@ let cpuLoopTimeout = null;
 
 import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement, triggerConfetti } from './utils.js';
 
+// YENİ BR LOBİ ELEMENTLERİ (index.html'den manuel yakalananlar)
+const brLobbyControls = document.getElementById('br-lobby-controls');
+const brLobbyInviteBtn = document.getElementById('br-lobby-invite-btn');
+const brLobbyStartBtn = document.getElementById('br-lobby-start-btn');
+const brLobbyStatusText = document.getElementById('br-lobby-status-text');
+
 import { 
     showScreen, createGrid, createKeyboard, updateKeyboard, getUsername, displayStats, guessGrid, 
     brTimerDisplay, brTurnDisplay, brRoundCounter,
@@ -401,62 +407,85 @@ export function updateTurnDisplay(gameData) {
     // Lig modunda işlem yapma
     if (gameMode === 'league') return;
     
-    // --- BATTLE ROYALE MODU ---
-    if (gameMode === 'multiplayer-br') {
-        if (!brTimerDisplay || !brTurnDisplay) return;
-        
-        brTimerDisplay.textContent = gameData.timeLimit || 60;
-        const brWaitingForPlayers = document.getElementById('br-waiting-for-players');
-        const playerState = gameData.players[currentUserId] || {};
-        const numPlayers = Object.keys(gameData.players).length;
+   // --- BATTLE ROYALE MODU ---
+    if (gameMode === 'multiplayer-br') {
+        // Standart butonları gizle
+        if (startGameBtn) startGameBtn.classList.add('hidden');
+        if (shareGameBtn) shareGameBtn.classList.add('hidden');
+        // Genel davet butonunu da gizle
+        const inviteToLobbyBtn = document.getElementById('invite-to-lobby-btn');
+        if (inviteToLobbyBtn) inviteToLobbyBtn.classList.add('hidden');
+        
+        if (!brTimerDisplay || !brTurnDisplay || !brLobbyControls) return;
+        
+        brTimerDisplay.textContent = gameData.timeLimit || 60;
+        const numPlayers = Object.keys(gameData.players).length;
+        const isCreator = gameData.creatorId === currentUserId;
+        const isPrivate = gameData.visibility === 'private';
+        const playerState = gameData.players[currentUserId] || {};
 
-        if (gameData.status === 'waiting') {
-            brTurnDisplay.textContent = `Oyuncu bekleniyor (${numPlayers}/${gameData.maxPlayers || 4})...`;
-            
-            if (isCreator) {
-                startGameBtn.classList.remove('hidden');
-                if (numPlayers >= 2) { 
-                    startGameBtn.disabled = false;
-                    startGameBtn.textContent = `Başlat (${numPlayers} Kişi)`;
-                    startGameBtn.className = "w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-pointer shadow-lg transform active:scale-95 transition";
-                    startGameBtn.onclick = startGame; 
-                } else {
-                    startGameBtn.disabled = true;
-                    startGameBtn.textContent = "Oyuncu Bekleniyor...";
-                    startGameBtn.className = "w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0 cursor-not-allowed";
-                }
-                // ... (invite buton kodları aynı)
-            } else {
-                startGameBtn.classList.add('hidden');
-            }
-            shareGameBtn.classList.remove('hidden');
-            if (brWaitingForPlayers) brWaitingForPlayers.classList.remove('hidden');
+        if (gameData.status === 'waiting') {
+            // Lobi Arayüzünü göster
+            brLobbyControls.classList.remove('hidden');
+            
+            if (brLobbyStatusText) brLobbyStatusText.textContent = `Oyuncular bekleniyor (${numPlayers}/${gameData.maxPlayers || 8})`;
+            brTurnDisplay.textContent = `Lobi (${numPlayers}/${gameData.maxPlayers || 8})`; // Üstteki küçük skor alanı için
 
-        } else if (gameData.status === 'playing') {
-            startGameBtn.classList.add('hidden');
-            
-            if (playerState.isEliminated) {
-                brTurnDisplay.textContent = "✖️ Elendin!";
-                brTurnDisplay.classList.remove('pulsate');
-            } else if (playerState.hasSolved) {
-                brTurnDisplay.textContent = "✅ Çözdün! Bekle...";
-                brTurnDisplay.classList.add('pulsate', 'text-green-500');
-            } else if (playerState.hasFailed) {
-                brTurnDisplay.textContent = "❌ Hak Bitti! Bekle...";
-                brTurnDisplay.classList.remove('pulsate');
-            } else {
-                brTurnDisplay.textContent = "Tahmin Yap!";
-                brTurnDisplay.classList.add('pulsate');
-            }
-            if (brWaitingForPlayers) brWaitingForPlayers.classList.add('hidden');
-            
-        } else if (gameData.status === 'finished') {
-             if(gameData.matchWinnerId !== undefined) brTurnDisplay.textContent = "👑 MAÇ BİTTİ!";
-             else brTurnDisplay.textContent = "TUR BİTTİ";
-            startGameBtn.classList.add('hidden');
-        }
-        return;
-    }
+            if (isCreator) {
+                // Kurucu ise: Davet butonu sadece özel odalarda görünür
+                brLobbyInviteBtn.classList.toggle('hidden', !isPrivate);
+                if (brLobbyInviteBtn) brLobbyInviteBtn.onclick = () => import('./ui.js').then(ui => ui.openLobbyInviteModal());
+                
+                // Kurucu ise: 2 veya daha fazla oyuncu varsa Başlat butonu görünür
+                brLobbyStartBtn.classList.remove('hidden');
+                
+                if (numPlayers >= 2) {
+                    brLobbyStartBtn.onclick = startGame; // startGame fonksiyonu zaten var
+                    brLobbyStartBtn.textContent = `Oyunu Başlat (${numPlayers} Kişi)`;
+                    brLobbyStartBtn.classList.remove('bg-gray-600', 'text-gray-400');
+                    brLobbyStartBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+                    brLobbyStartBtn.disabled = false;
+                } else {
+                    brLobbyStartBtn.textContent = `Oyuncu Bekleniyor...`;
+                    brLobbyStartBtn.classList.add('bg-gray-600', 'text-gray-400');
+                    brLobbyStartBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'bg-green-600', 'hover:bg-green-500');
+                    brLobbyStartBtn.disabled = true;
+                }
+            } else {
+                // Kurucu değilse, sadece bekleme metni. Butonlar gizli.
+                brLobbyInviteBtn.classList.add('hidden');
+                brLobbyStartBtn.classList.add('hidden');
+            }
+
+        } else if (gameData.status === 'playing') {
+            // Oyun başladığında lobi elementlerini gizle
+            brLobbyControls.classList.add('hidden');
+            
+            // Oyuncu durumu
+            if (playerState.isEliminated) {
+                brTurnDisplay.textContent = "✖️ Elendin!";
+                brTurnDisplay.classList.remove('pulsate');
+            } else if (playerState.hasSolved) {
+                brTurnDisplay.textContent = "✅ Çözdün! Bekle...";
+                brTurnDisplay.classList.add('pulsate', 'text-green-500');
+            } else if (playerState.hasFailed) {
+                brTurnDisplay.textContent = "❌ Hak Bitti! Bekle...";
+                brTurnDisplay.classList.remove('pulsate');
+            } else {
+                brTurnDisplay.textContent = "Tahmin Yap!";
+                brTurnDisplay.classList.add('pulsate');
+            }
+            
+        } else if (gameData.status === 'finished') {
+            brLobbyControls.classList.add('hidden');
+            if(gameData.matchWinnerId !== undefined) brTurnDisplay.textContent = "👑 MAÇ BİTTİ!";
+            else brTurnDisplay.textContent = "TUR BİTTİ";
+        }
+        return;
+    }
+    
+    // --- STANDART VE SERİ OYUN MODLARI ---
+// ... devam eden kod
     
     // --- STANDART VE SERİ OYUN MODLARI ---
     // Sadece butonları yönetiyoruz, yazı yazmıyoruz.
@@ -1154,21 +1183,26 @@ export async function createGame(options = {}) {
     }
     try {
         await setDoc(doc(db, "games", gameId), gameData);
-        state.setGameMode('multiplayer');
-        localStorage.setItem('activeGameId', gameId);
-        state.setCurrentGameId(gameId);
-        state.setLocalGameData(gameData);
-        showScreen('game-screen');
-        initializeGameUI(gameData);
-        if (gameData.status === 'playing') {
-            showScreen('game-screen');
-            initializeGameUI(gameData);
-        } else {
-            console.log("LOG: Oyun kuruldu, rakip bekleniyor. Radar ekranında kalınıyor.");
-        }
-        listenToGameUpdates(gameId);
-        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
-    } catch (error) {
+                state.setGameMode('multiplayer-br');
+                localStorage.setItem('activeGameId', gameId);
+                state.setCurrentGameId(gameId);
+                state.setLocalGameData(gameData);
+                
+                import('./ui.js').then(ui => ui.showScreen('game-screen'));
+                initializeGameUI(gameData); 
+                listenToGameUpdates(gameId);
+                import('./game.js').then(m => m.setupVisibilityHandler(gameId));
+                
+                // Hemen UI'ı güncelle ki lobi butonları görünür olsun
+                import('./game.js').then(m => m.updateTurnDisplay(gameData));
+                
+                if (visibility === 'private') {
+                    showToast("Gizli oda kuruldu. Arkadaşlarını davet et!", false);
+                } else {
+                    showToast("Oda kuruldu. Oyuncu bekleniyor...", false);
+                }
+                
+            } catch (error) {
         console.error("Error creating game:", error);
         showToast("Oyun oluşturulamadı!", true);
     }
@@ -2622,7 +2656,7 @@ export async function createBRGame(visibility = 'public') { // Varsayılan publi
         turnStartTime: serverTimestamp(),
         GUESS_COUNT: 6, 
         gameType: 'multiplayer-br',
-        maxPlayers: 4, // 4 Kişilik
+        maxPlayers: 8, // 8 Kişilik
         currentRound: 1,
         visibility: visibility // <-- YENİ: 'public' veya 'private'
     };
@@ -4023,7 +4057,7 @@ export async function joinRandomBRGame() {
         // Kendi kurmadığımız ve dolu olmayan ilk oyunu bul
         for (const doc of snapshot.docs) {
             const data = doc.data();
-            if (data.creatorId !== userId && data.playerIds.length < (data.maxPlayers || 4)) {
+            if (data.creatorId !== userId && data.playerIds.length < (data.maxPlayers || 8)) {
                 foundGameId = doc.id;
                 break;
             }

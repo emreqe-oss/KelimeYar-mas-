@@ -51,6 +51,9 @@ export let
     // Game Over
     newRoundBtn, mainMenuBtn, shareResultsBtn,
     
+    // Yeni BR Lobi Elementleri
+    brLobbyControls, brLobbyInviteBtn, brLobbyStartBtn, brLobbyStatusText,
+
     // Misc
     userDisplay, invitationModal, 
     copyGameIdBtn,
@@ -85,11 +88,16 @@ dailyGameTitle = document.getElementById('daily-game-title');
         brPlayerSlots.push(document.getElementById(`br-player-slot-${i}`));
     }
 
-    // Yeni BR Butonları
+// Yeni BR Butonları
 btnCreatePublicBr = document.getElementById('btn-create-public-br');
 btnCreatePrivateBr = document.getElementById('btn-create-private-br');
 btnJoinRandomBr = document.getElementById('btn-join-random-br');
-    // Jokers
+    // YENİ LOBİ ELEMENTLERİ
+    brLobbyControls = document.getElementById('br-lobby-controls');
+    brLobbyInviteBtn = document.getElementById('br-lobby-invite-btn');
+    brLobbyStartBtn = document.getElementById('br-lobby-start-btn');
+    brLobbyStatusText = document.getElementById('br-lobby-status-text');
+    // Jokers
     jokerPresentBtn = document.getElementById('joker-present');
     jokerCorrectBtn = document.getElementById('joker-correct');
     jokerRemoveBtn = document.getElementById('joker-remove');
