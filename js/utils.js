@@ -108,3 +108,13 @@ export function triggerConfetti() {
         }));
     }, 250);
 }
+
+// js/utils.js - EN ALTA EKLE
+
+export function triggerVibration(pattern = 10) {
+    // Tarayıcı desteği kontrolü
+    if (navigator.vibrate) {
+        // pattern: milisaniye cinsinden süre (örn: 50) veya dizi (örn: [50, 100, 50])
+        navigator.vibrate(pattern);
+    }
+}

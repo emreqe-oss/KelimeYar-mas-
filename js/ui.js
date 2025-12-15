@@ -1,7 +1,7 @@
 // js/ui.js - DÜZELTİLMİŞ VERSİYON
 
 import * as state from './state.js'; 
-import { getStatsFromProfile, createElement } from './utils.js';
+import { getStatsFromProfile, createElement, triggerVibration } from './utils.js';
 // DİKKAT: game.js importunu buradan kaldırdık (Döngüsel bağımlılığı kırmak için)
 import { getMyFriendsList } from './friends.js';
 
@@ -1383,3 +1383,12 @@ function startDailyCountdown() {
     if (window.dailyTimerInterval) clearInterval(window.dailyTimerInterval);
     window.dailyTimerInterval = setInterval(update, 1000);
 }
+
+// Tüm butonlar için basit titreşim efekti
+document.addEventListener('click', (e) => {
+    // Tıklanan element veya ebeveyni buton ise
+    const btn = e.target.closest('button');
+    if (btn && !btn.disabled) {
+        triggerVibration(10); // Çok hafif titreşim
+    }
+});

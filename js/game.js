@@ -35,7 +35,7 @@ import {
 
 let cpuLoopTimeout = null; 
 
-import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement, triggerConfetti } from './utils.js';
+import { showToast, playSound, shakeCurrentRow, getStatsFromProfile, createElement, triggerConfetti, triggerVibration } from './utils.js';
 
 // YENİ BR LOBİ ELEMENTLERİ (index.html'den manuel yakalananlar)
 const brLobbyControls = document.getElementById('br-lobby-controls');
@@ -1709,6 +1709,7 @@ async function submitGuess() {
         if (!tileInner || tileInner.textContent === '') {
             showToast("Kelime yeterince uzun değil!", true);
             shakeCurrentRow(currentWordLength, currentRow);
+            triggerVibration([50, 50, 50]);
             return;
         }
         guessWord += tileInner.textContent;
@@ -1727,6 +1728,7 @@ async function submitGuess() {
     if (!isValidWord) {
         showToast("Kelime sözlükte bulunamadı!", true);
         shakeCurrentRow(currentWordLength, currentRow);
+        triggerVibration([50, 50, 50]);
         if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
         return;
     }
@@ -1743,6 +1745,7 @@ async function submitGuess() {
     
     const isWinner = (guessWord === secretWord);
     const guessCount = localGameData.players[currentUserId].guesses.length;
+    
 
     if (gameMode === 'multiplayer' || isBattleRoyale(gameMode) || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
         const updates = {
@@ -1750,6 +1753,7 @@ async function submitGuess() {
         };
 
         if (isWinner) {
+            triggerVibration([100, 50, 100]);
             updates[`players.${currentUserId}.hasSolved`] = true;
             const roundScore = calculateRoundScore(guessCount, true);
             const currentScore = localGameData.players[currentUserId].score || 0;
@@ -2027,9 +2031,11 @@ export function handleKeyPress(key) {
         const processedKey = key.toLocaleUpperCase('tr-TR');
         if (processedKey === 'ENTER') {
             playSound('click');
+            triggerVibration(15);
             submitGuess();
         } else if (processedKey === '⌫' || processedKey === 'BACKSPACE') {
             playSound('click');
+            triggerVibration(15);
             deleteLetter();
         } else if ("ERTYUIOPĞÜASDFGHJKLŞİZC VBNMÖÇ".includes(processedKey)) {
             addLetter(processedKey);
@@ -2066,6 +2072,7 @@ function addLetter(letter) {
 
                 front.textContent = letter;
                 playSound('click');
+                triggerVibration(15);
                 break; 
             }
         }
