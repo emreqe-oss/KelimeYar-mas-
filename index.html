@@ -615,21 +615,22 @@
             </button>
 
             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
-            <div id="br-lobby-controls" class="hidden w-full flex flex-col items-center justify-center p-2 my-2 flex-shrink-0">
-                
-                                <p id="br-lobby-status-text" class="text-gray-400 text-center font-bold text-sm mb-3 uppercase tracking-wide">Oyuncular bekleniyor (1/4)</p>
-                
-                                <div class="w-full px-8 space-y-3"> 
-                                        <button id="br-lobby-invite-btn" class="hidden w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-xl text-base flex items-center justify-center gap-2 shadow-lg transition active:scale-95 whitespace-nowrap">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                        </svg>
-                                                <span>Arkadaş Davet Et</span>
-                    </button>
-                    
-                                        <button id="br-lobby-start-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-xl text-base shadow-lg transition active:scale-95 whitespace-nowrap">Oyunu Başlat</button>
-                </div>
-            </div>
+            <div id="br-lobby-controls" class="hidden w-full flex flex-col items-center justify-center my-2 flex-shrink-0">
+<p id="br-lobby-status-text" class="text-gray-400 text-center font-bold text-sm mb-2 uppercase tracking-wide">
+Oyuncular bekleniyor (1/4)
+</p>
+<div class="flex flex-col gap-2 items-center w-full px-10"> 
+<button id="br-lobby-invite-btn" class="hidden bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-xl text-sm w-full flex items-center justify-center shadow-lg transition transform active:scale-95 whitespace-nowrap">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+<path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+</svg>
+<span>Arkadaş Davet Et</span>
+</button>
+<button id="br-lobby-start-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-xl text-sm w-full shadow-lg transition transform active:scale-95 whitespace-nowrap">
+Oyunu Başlat
+</button>
+</div>
+</div>
             <div id="joker-container" class="joker-container">
                 <button id="joker-present" class="joker-button" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.2);">
                     <span class="joker-badge">x1</span>
