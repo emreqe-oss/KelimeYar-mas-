@@ -440,53 +440,50 @@ export function updateMultiplayerScoreBoard(gameData) {
             // P2 diğer oyuncu
             let p2Id = playerIds.find(id => id !== p1Id);
 
-            // P1 Bilgisi
-            const p1 = gameData.players[p1Id];
-            if (p1) {
-                const tierClass = getTierColorClass(p1.leagueTier);
-                const avatar = p1.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
-                p1ScoreEl.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <div class="w-10 h-10 rounded-full border-2 ${tierClass} bg-gray-800 flex-shrink-0">
-                            <img src="${avatar}" class="w-full h-full rounded-full object-cover">
+            // --- P1 (SOL TARAF - BEN) ---
+                const p1 = gameData.players[p1Id];
+                if (p1) {
+                    const tierClass = getTierColorClass(p1.leagueTier);
+                    const avatar = p1.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+                    
+                    // DİKEY HİZALAMA (flex-col)
+                    p1ScoreEl.innerHTML = `
+                        <div class="flex flex-col items-center justify-center min-w-[70px]">
+                            <div class="w-12 h-12 rounded-full border-2 ${tierClass} bg-gray-800 shadow-md mb-1 relative z-10">
+                                <img src="${avatar}" class="w-full h-full rounded-full object-cover">
+                            </div>
+                            <span class="font-bold text-green-400 text-xs truncate max-w-[90px] text-center leading-tight drop-shadow-sm">${p1.username}</span>
+                            <span class="text-[10px] text-gray-300 font-mono font-bold leading-tight mt-0.5">${p1.score || 0} Puan</span>
                         </div>
-                        <div class="flex flex-col overflow-hidden">
-                            <span class="font-bold text-green-400 truncate text-sm">${p1.username}</span>
-                            <span class="text-xs text-white font-mono leading-none">${p1.score || 0} Puan</span>
-                        </div>
-                    </div>
-                `;
-            }
+                    `;
+                }
 
-            // P2 Bilgisi
-            if (p2Id && gameData.players[p2Id]) {
-                const p2 = gameData.players[p2Id];
-                const tierClass = getTierColorClass(p2.leagueTier);
-                const avatar = p2.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
-               
-p2ScoreEl.innerHTML = `
-                    <div class="flex items-center justify-end gap-2">
-                        <div class="flex flex-col items-end overflow-hidden">
-                            <span class="font-bold text-red-400 truncate text-sm">${p2.username}</span>
-                            <span class="text-xs text-white font-mono leading-none">${p2.score || 0} Puan</span>
+                // --- P2 (SAĞ TARAF - RAKİP/CPU) ---
+                if (p2Id && gameData.players[p2Id]) {
+                    const p2 = gameData.players[p2Id];
+                    const tierClass = getTierColorClass(p2.leagueTier);
+                    const avatar = p2.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+
+                    // DİKEY HİZALAMA (flex-col)
+                    p2ScoreEl.innerHTML = `
+                        <div class="flex flex-col items-center justify-center min-w-[70px]">
+                            <div class="w-12 h-12 rounded-full border-2 ${tierClass} bg-gray-800 shadow-md mb-1 relative z-10">
+                                <img src="${avatar}" class="w-full h-full rounded-full object-cover">
+                            </div>
+                            <span class="font-bold text-red-400 text-xs truncate max-w-[90px] text-center leading-tight drop-shadow-sm">${p2.username}</span>
+                            <span class="text-[10px] text-gray-300 font-mono font-bold leading-tight mt-0.5">${p2.score || 0} Puan</span>
                         </div>
-                        <div class="w-10 h-10 rounded-full border-2 ${tierClass} bg-gray-800 flex-shrink-0">
-                            <img src="${avatar}" class="w-full h-full rounded-full object-cover">
+                    `;
+                } else {
+                    // Rakip Yoksa (Aranıyor) - Dikey Format
+                    p2ScoreEl.innerHTML = `
+                        <div class="flex flex-col items-center justify-center opacity-60 min-w-[70px]">
+                            <div class="w-12 h-12 rounded-full border-2 border-dashed border-gray-500 bg-gray-800/50 animate-pulse mb-1"></div>
+                            <span class="text-xs text-gray-400 font-medium">Aranıyor...</span>
                         </div>
-                    </div>
-                `;
-            } else {
-                // Rakip Yoksa
-                p2ScoreEl.innerHTML = `
-                    <div class="flex items-center justify-end gap-2 opacity-50">
-                        <div class="text-right">
-                            <span class="font-bold text-gray-500 text-sm">Aranıyor...</span>
-                        </div>
-                        <div class="w-10 h-10 rounded-full border-2 border-dashed border-gray-600 bg-gray-800 animate-pulse"></div>
-                    </div>
-                `;
+                    `;
+                }
             }
-        }
         return; // İşlem tamam, çık.
     }
 
