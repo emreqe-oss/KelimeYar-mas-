@@ -364,7 +364,12 @@ function getDaysSinceEpoch() {
     return Math.floor((startOfTodayTRT - epoch) / (1000 * 60 * 60 * 24));
 }
 
+// js/game.js - initializeGameUI (TAMAMEN DÜZELTİLMİŞ)
+
+// js/game.js - initializeGameUI (GÜNCELLENMİŞ)
+
 export function initializeGameUI(gameData) {
+    // 1. Kelime Uzunluğu Ayarı
     if (gameData.secretWord && gameData.secretWord.length > 0) {
         if (gameData.wordLength !== gameData.secretWord.length) {
             gameData.wordLength = gameData.secretWord.length;
@@ -372,44 +377,82 @@ export function initializeGameUI(gameData) {
     }
     wordLength = gameData.wordLength;
     
+    // 2. Ana Izgara (Grid) Ayarı
     if (guessGrid) {
-        guessGrid.innerHTML = ''; 
-        guessGrid.classList.remove('br-mode-grid');
+        guessGrid.innerHTML = '';
+        
+        // ÖNCEKİ BR KALINTILARINI TEMİZLE (Çok Önemli)
+        guessGrid.classList.remove('br-mode-grid'); 
+        
+        // Sadece BR modunda özel stil ekle
         if (gameData.gameType === 'multiplayer-br') {
             guessGrid.classList.add('br-mode-grid');
-        } else {
-            
-        }
+        } 
         
+        // Genişlik Ayarı
         if (wordLength === 4) guessGrid.style.maxWidth = '220px';
-        else if (wordLength === 5) guessGrid.style.maxWidth = '260px'; 
-        else guessGrid.style.maxWidth = '300px'; 
+        else if (wordLength === 5) guessGrid.style.maxWidth = '260px';
+        else guessGrid.style.maxWidth = '300px';
     }
     
+    // 3. Izgarayı Oluştur
     createGrid(wordLength, GUESS_COUNT);
     createKeyboard(handleKeyPress);
 
-    const gameMode = state.getGameMode();
-    
+    // 4. RAKİP MİNİ IZGARASI AYARI (CPU TARZI GÖRÜNÜM İÇİN)
+    const miniGridContainer = document.getElementById('opponent-mini-grid');
+    if (miniGridContainer) {
+        // Bu modlardan biri ise Mini Izgarayı GÖSTER
+        const isStandardMode = ['random_series', 'random_loose', 'friend', 'vsCPU'].includes(gameData.gameType);
+        
+        if (isStandardMode) {
+            miniGridContainer.classList.remove('hidden');
+            miniGridContainer.innerHTML = ''; 
+            miniGridContainer.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+            
+            // Eğer oyun devam ediyorsa rakibin tahminlerini mini ızgaraya doldur
+            const currentUserId = state.getUserId();
+            const opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
+            if (opponentId && gameData.players[opponentId]) {
+                const oppGuesses = gameData.players[opponentId].guesses || [];
+                import('./ui.js').then(ui => ui.updateOpponentMiniGrid(oppGuesses, wordLength, 6));
+            }
+        } else {
+            // BR, Daily veya League ise GİZLE
+            miniGridContainer.classList.add('hidden');
+        }
+    }
+
+    // 5. Sayaç Başlatma
+    const gameMode = state.getGameMode(); // State'den alıyoruz
     if (gameData.status === 'playing' && gameMode !== 'daily') {
         setTimeout(() => {
-            startTurnTimer();
+            if (gameData.gameType === 'multiplayer-br') startBRTimer();
+            else startTurnTimer();
         }, 200);
     }
 
-    if (gameMode === 'vsCPU') {
-        const leaveBtn = document.getElementById('leave-game-button');
-        const p2ScoreBox = document.getElementById('player2-score');
+    // 6. Çıkış Butonu
+    const leaveBtnLocal = document.getElementById('leave-game-button');
+    if (leaveBtnLocal) {
+        leaveBtnLocal.classList.remove('hidden');
+        leaveBtnLocal.onclick = (e) => {
+            e.stopPropagation();
+            leaveGame(); // Import sorunu olmaması için direkt çağır
+        };
+    }
+    
+    // 7. UI Temizliği (YENİ EKLENEN KISIM)
+    // Seri oyun başlatıldığında BR elementlerinin gizlendiğinden emin olalım.
+    if (gameData.gameType !== 'multiplayer-br') {
+        const brLobbyControls = document.getElementById('br-lobby-controls');
+        if (brLobbyControls) brLobbyControls.classList.add('hidden');
         
-        if (leaveBtn) {
-            leaveBtn.classList.remove('hidden'); 
-            leaveBtn.className = "bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-sm";
-            leaveBtn.textContent = "Çıkış";
-            
-            if (p2ScoreBox && !p2ScoreBox.contains(leaveBtn)) {
-                p2ScoreBox.appendChild(leaveBtn);
-            }
-        }
+        const multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
+        if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
+
+        const sequentialGameInfo = document.getElementById('sequential-game-info');
+        if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
     }
 }
 
@@ -588,86 +631,89 @@ export function updateTurnDisplay(gameData) {
     }
 }
 
-// js/game.js -> renderGameState (TUR SAYACI DÜZELTİLMİŞ HALİ)
-
-// js/game.js -> renderGameState (KESİN ÇÖZÜM)
+// js/game.js - renderGameState (GÜNCELLENMİŞ)
 
 export async function renderGameState(gameData, didMyGuessChange = false) {
     if (!gameData) return;
 
     const currentUserId = state.getUserId();
-    const gameMode = state.getGameMode();
-    const isBR = (gameMode === 'multiplayer-br');
+    
+    // DÜZELTME: Modu state'den değil, doğrudan gelen veriden (gameData) alıyoruz.
+    const actualGameType = gameData.gameType || 'friend'; 
+    const isBR = (actualGameType === 'multiplayer-br');
+    const isLeague = (actualGameType === 'league');
+    const isDaily = (actualGameType === 'daily');
 
+    // Ses efektleri
     const oldGameData = state.getLocalGameData();
     const oldPlayerId = oldGameData?.currentPlayerId;
     const isMyTurnNow = gameData.currentPlayerId === currentUserId;
 
-    if (!isBR && gameMode !== 'vsCPU' && oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
+    if (!isBR && actualGameType !== 'vsCPU' && oldPlayerId && oldPlayerId !== currentUserId && isMyTurnNow) {
         import('./utils.js').then(u => u.playSound('turn'));
-    }
-
-    // --- BAŞLIK KONTROLÜ (GÜNÜN KELİMESİ) ---
-    if (dailyGameTitle) {
-        if (gameMode === 'daily') dailyGameTitle.classList.remove('hidden');
-        else dailyGameTitle.classList.add('hidden');
     }
 
     // ELEMENTLERİ SEÇ
     const sequentialGameInfo = document.getElementById('sequential-game-info');
     const jokerContainer = document.getElementById('joker-container');
-    const copyBtn = document.getElementById('copy-game-id-btn');
-    const shareBtn = document.getElementById('share-game-btn');
-    const gameIdDisplay = document.getElementById('game-id-display');
-    const leaveBtn = document.getElementById('leave-game-button');
     const multiplayerScoreBoard = document.getElementById('multiplayer-score-board');
     const timerDisplay = document.getElementById('timer-display');
     const roundCounter = document.getElementById('round-counter');
     const keyboardContainer = document.getElementById('keyboard');
-    
-    // --- SKOR ELEMENTLERİ ---
     const p1Score = document.getElementById('player1-score');
     const p2Score = document.getElementById('player2-score');
     const gameInfoBar = document.getElementById('game-info-bar');
-
-    // 1. OYUN TÜRÜNE GÖRE GÖRÜNÜM AYARLARI
     
+    // BR Lobi Elementleri
+    const brLobbyControls = document.getElementById('br-lobby-controls'); 
+
+    // --- 1. GÖRÜNÜM AYARLARI (IF - ELSE IF ZİNCİRİ) ---
+
     // A) BATTLE ROYALE MODU
     if (isBR) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.remove('hidden');
-        if (sequentialGameInfo) sequentialGameInfo.classList.add('hidden');
+        if (sequentialGameInfo) sequentialGameInfo.classList.add('hidden'); 
         if (jokerContainer) jokerContainer.style.display = 'flex';
+        
+        // Standart skorları gizle
+        if (p1Score) p1Score.style.display = 'none';
+        if (p2Score) p2Score.style.display = 'none';
+
+        // Lobi kontrolü (Waiting ise göster, değilse gizle)
+        if (brLobbyControls) {
+            if (gameData.status === 'waiting') brLobbyControls.classList.remove('hidden');
+            else brLobbyControls.classList.add('hidden');
+        }
+
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
     } 
     
-    // B) LİG MODU (SADE VE TEMİZ)
-    else if (gameMode === 'league') {
+    // B) LİG MODU
+    else if (isLeague) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
+        if (brLobbyControls) brLobbyControls.classList.add('hidden'); // BR Lobisini Gizle
         if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
         
         // Puanları ve Tur Sayacını GİZLE
         if (p1Score) p1Score.style.display = 'none';
         if (p2Score) p2Score.style.display = 'none';
         if (roundCounter) roundCounter.style.display = 'none';
-        
         if (jokerContainer) jokerContainer.style.display = 'flex'; 
 
-        // Timer'ı büyüt
         if (timerDisplay) {
             timerDisplay.style.display = 'block';
             if(timerDisplay.parentElement) timerDisplay.parentElement.className = "w-full flex justify-center items-center";
             timerDisplay.className = 'font-mono font-black text-6xl text-yellow-400 tracking-widest drop-shadow-lg';
         }
-        
         if (gameInfoBar) gameInfoBar.style.display = 'none';
     }
 
     // C) GÜNÜN KELİMESİ
-    else if (gameMode === 'daily') {
+    else if (isDaily) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
+        if (brLobbyControls) brLobbyControls.classList.add('hidden'); // BR Lobisini Gizle
         if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
         
-        // İsimleri Gizle, Tarihi Göster
         if (p1Score) p1Score.style.display = 'none';
         if (p2Score) p2Score.style.display = 'none';
 
@@ -676,37 +722,40 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
         }
         if (timerDisplay && timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5";
-        
         if (gameInfoBar) gameInfoBar.style.display = 'none';
         if (jokerContainer) jokerContainer.style.display = 'none'; 
+        
+        // Başlık (Günün Kelimesi)
+        if (dailyGameTitle) dailyGameTitle.classList.remove('hidden');
     }
 
-    // D) STANDART MODLAR (SERİ OYUN, GEVŞEK, ARKADAŞ, vsCPU)
+    // D) STANDART MODLAR (SERİ, GEVŞEK, ARKADAŞ, vsCPU)
     else {
-        // 1. BR Lobisini ve Skor Tablosunu Gizle
+        // --- TEMİZLİK: BR ve Lobi elementlerini KESİN OLARAK gizle ---
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
-        if (document.getElementById('br-lobby-controls')) document.getElementById('br-lobby-controls').classList.add('hidden');
+        if (brLobbyControls) brLobbyControls.classList.add('hidden');
+        if (dailyGameTitle) dailyGameTitle.classList.add('hidden');
+        // -------------------------------------------------------------
 
-        // 2. Sıralı Oyun Bilgi Çubuğunu (CPU Modundaki Gibi) Göster
         if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
 
-        // 3. İsimleri ve Puanları Göster
+        // İsimleri ve Puanları Göster
         if (p1Score) p1Score.style.display = 'block';
         if (p2Score) p2Score.style.display = 'block';
         
         // Puanları Güncelle
         import('./ui.js').then(ui => ui.updateMultiplayerScoreBoard(gameData));
 
-        // 4. Tur Sayacı veya "Rakip Bekleniyor" Yazısı
+        // Tur Sayacı ve "Rakip Bekleniyor"
         if (roundCounter) {
             roundCounter.style.display = 'block';
             
-            if (gameData.status === 'waiting') {
+            if (gameData.status === 'waiting' || gameData.status === 'invited') {
                 roundCounter.textContent = "Rakip Bekleniyor...";
                 roundCounter.classList.add('animate-pulse', 'text-yellow-400');
             } else {
                 roundCounter.classList.remove('animate-pulse', 'text-yellow-400');
-                if (gameData.gameType === 'random_loose') {
+                if (actualGameType === 'random_loose') {
                     roundCounter.textContent = "Gevşek Mod";
                 } else {
                     const current = gameData.currentRound || 1;
@@ -725,47 +774,41 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         }
         
         // vsCPU Çıkış butonu ayarı
-        if (gameMode === 'vsCPU') {
+        if (actualGameType === 'vsCPU') {
+            const leaveBtn = document.getElementById('leave-game-button');
             const p2ScoreBox = document.getElementById('player2-score');
-            if (p2ScoreBox) {
-                p2ScoreBox.style.display = 'flex';
-                p2ScoreBox.style.flexDirection = 'column';
-                p2ScoreBox.style.alignItems = 'flex-end';
-                p2ScoreBox.style.gap = '4px';
-                if (leaveBtn && !p2ScoreBox.contains(leaveBtn)) {
-                    p2ScoreBox.appendChild(leaveBtn);
-                    leaveBtn.className = "bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-sm";
-                    leaveBtn.textContent = "Çıkış";
-                }
+            if (p2ScoreBox && leaveBtn && !p2ScoreBox.contains(leaveBtn)) {
+                 p2ScoreBox.appendChild(leaveBtn);
+                 leaveBtn.classList.remove('hidden');
             }
         }
     }
 
-    // MENÜ BUTONU (Genel)
-    if (leaveBtn) {
-        if (gameMode !== 'vsCPU') { 
-            leaveBtn.classList.remove('hidden');
-            leaveBtn.className = "bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded text-sm absolute top-3 right-3 z-50";
-            leaveBtn.textContent = "Menü";
-            leaveBtn.onclick = (e) => {
+    // MENÜ BUTONU (Genel) - KESİN DÜZELTME
+    const leaveBtnLocal = document.getElementById('leave-game-button');
+    
+    if (leaveBtnLocal) {
+        if (actualGameType !== 'vsCPU') { 
+            leaveBtnLocal.classList.remove('hidden');
+            leaveBtnLocal.className = "bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded text-sm absolute top-3 right-3 z-50";
+            leaveBtnLocal.textContent = "Menü";
+            leaveBtnLocal.onclick = (e) => {
                 e.stopPropagation();
                 import('./game.js').then(m => m.leaveGame());
             };
-        } else {
-             leaveBtn.classList.remove('hidden'); 
-        }
+        } 
     }
 
     // KLAVYE KİLİDİ KONTROLÜ
-    const playerState = gameData.players[currentUserId] || {};
+    const pState = gameData.players[currentUserId] || {};
     let shouldLockKeyboard = false;
 
-    if (gameMode === 'vsCPU') {
+    if (actualGameType === 'vsCPU') {
         const myCpuState = gameData.players[currentUserId];
         if (myCpuState && (myCpuState.hasSolved || myCpuState.hasFailed)) shouldLockKeyboard = true;
     } 
     else if (isBR) {
-        if (playerState.isEliminated || playerState.hasSolved || playerState.hasFailed) shouldLockKeyboard = true;
+        if (pState.isEliminated || pState.hasSolved || pState.hasFailed) shouldLockKeyboard = true;
     } else {
         if (gameData.status === 'finished') shouldLockKeyboard = true;
     }
@@ -775,7 +818,7 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     }
 
     // BUTONLARI GÜNCELLE
-    updateTurnDisplay(gameData); 
+    import('./game.js').then(m => m.updateTurnDisplay(gameData)); 
     
     // KLAVYEYİ GÜNCELLE
     import('./ui.js').then(ui => {
@@ -867,11 +910,11 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     }
     
     // RAKİP KÜÇÜK IZGARASI
-    const isVersusMode = (gameMode === 'multiplayer' || gameMode === 'vsCPU' || gameMode === 'friend' || gameMode === 'random_series') && !isBR;
+    const isVersusMode = (actualGameType === 'multiplayer' || actualGameType === 'vsCPU' || actualGameType === 'friend' || actualGameType === 'random_series' || actualGameType === 'random_loose') && !isBR;
     
     if (isVersusMode && sequentialGameInfo && !sequentialGameInfo.classList.contains('hidden')) {
         let opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
-        if (gameMode === 'vsCPU') opponentId = 'cpu';
+        if (actualGameType === 'vsCPU') opponentId = 'cpu';
 
         if (opponentId && gameData.players[opponentId]) {
             const oppGuesses = gameData.players[opponentId].guesses || [];
@@ -1241,20 +1284,31 @@ export async function createGame(options = {}) {
     state.resetHasUserStartedTyping();
 
     const { invitedFriendId = null, timeLimit = 45, matchLength = 5, gameType = 'friend' } = options;
+    
     if (!db || !state.getUserId()) return showToast("Sunucuya bağlanılamıyor.", true);
+    
     const currentUserId = state.getUserId();
     const username = getUsername();
+    
+    // Kelime seçimi
     const selectedLength = getRandomWordLength();
     const secretWord = await getNewSecretWord(selectedLength);
     if (!secretWord) return;
+
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const playerIdsList = [currentUserId];
     if (invitedFriendId) {
         playerIdsList.push(invitedFriendId);
     }
+
     const gameData = {
-        gameId, wordLength: secretWord.length, secretWord, timeLimit,
-        creatorId: currentUserId, isHardMode: false, matchLength,
+        gameId, 
+        wordLength: secretWord.length, 
+        secretWord, 
+        timeLimit,
+        creatorId: currentUserId, 
+        isHardMode: false, 
+        matchLength,
         currentRound: 1, 
         players: { 
             [currentUserId]: { 
@@ -1270,27 +1324,114 @@ export async function createGame(options = {}) {
         roundWinner: null,
         createdAt: serverTimestamp(),
         turnStartTime: serverTimestamp(),
-        GUESS_COUNT: GUESS_COUNT, gameType,
+        GUESS_COUNT: GUESS_COUNT, 
+        gameType: gameType // Gelen tür neyse o kaydedilir
     };
+
     if (invitedFriendId) { 
         gameData.invitedPlayerId = invitedFriendId; 
     }
+
     try {
         await setDoc(doc(db, "games", gameId), gameData);
-                state.setGameMode('multiplayer-br');
-                localStorage.setItem('activeGameId', gameId);
-                state.setCurrentGameId(gameId);
-                state.setLocalGameData(gameData);
-                
-                import('./ui.js').then(ui => ui.showScreen('game-screen'));
-                initializeGameUI(gameData); 
-                listenToGameUpdates(gameId);
-                import('./game.js').then(m => m.setupVisibilityHandler(gameId));
-                
-                showToast("Oyun kuruldu. Rakip bekleniyor...", false);                
-            } catch (error) {
+        
+        // DÜZELTME: Gelen oyun türünü state'e işle (random_series, vsCPU vb.)
+        state.setGameMode(gameType); 
+        
+        localStorage.setItem('activeGameId', gameId);
+        state.setCurrentGameId(gameId);
+        state.setLocalGameData(gameData);
+        
+        import('./ui.js').then(ui => ui.showScreen('game-screen'));
+        initializeGameUI(gameData); 
+        listenToGameUpdates(gameId);
+        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
+        
+        // Standart oyun mesajı
+        showToast("Oyun kuruldu. Rakip bekleniyor...", false);
+        
+    } catch (error) {
         console.error("Error creating game:", error);
         showToast("Oyun oluşturulamadı!", true);
+    }
+}
+
+export async function createBRGame(visibility = 'public') { 
+    state.resetKnownCorrectPositions();
+    state.resetHasUserStartedTyping();
+
+    const timeLimit = 120; 
+    const wordLength = getRandomWordLength(); 
+
+    if (!db || !state.getUserId()) {
+         return showToast("Sunucuya bağlanılamıyor.", true);
+    }
+    const currentUserId = state.getUserId();
+    const username = getUsername();
+    const secretWord = await getNewSecretWord(wordLength);
+    if (!secretWord) return;
+
+    const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // Profil ve Avatar bilgisini al
+    const profile = state.getCurrentUserProfile();
+    const myAvatar = profile ? profile.avatarUrl : null;
+
+    const gameData = {
+        gameId, wordLength, secretWord, timeLimit,
+        creatorId: currentUserId, 
+        isHardMode: false, 
+        matchLength: 10,
+        players: { 
+            [currentUserId]: { 
+                userId: currentUserId, 
+                username, 
+                avatarUrl: myAvatar,
+                guesses: [], 
+                isEliminated: false, 
+                hasSolved: false, 
+                isWinner: false, 
+                hasFailed: false,
+                jokersUsed: { present: false, correct: false, remove: false } 
+            } 
+        },
+        playerIds: [currentUserId], 
+        currentPlayerId: currentUserId, 
+        status: 'waiting', 
+        roundWinner: null,
+        createdAt: serverTimestamp(),
+        turnStartTime: serverTimestamp(),
+        GUESS_COUNT: 6, 
+        gameType: 'multiplayer-br',
+        maxPlayers: 8, 
+        currentRound: 1,
+        visibility: visibility 
+    };
+
+    try {
+        await setDoc(doc(db, "games", gameId), gameData);
+        state.setGameMode('multiplayer-br');
+        localStorage.setItem('activeGameId', gameId);
+        state.setCurrentGameId(gameId);
+        state.setLocalGameData(gameData);
+        
+        import('./ui.js').then(ui => ui.showScreen('game-screen'));
+        initializeGameUI(gameData); 
+        listenToGameUpdates(gameId);
+        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
+        
+        // Hemen UI'ı güncelle ki lobi butonları görünür olsun
+        import('./game.js').then(m => m.updateTurnDisplay(gameData));
+        
+        if (visibility === 'private') {
+            showToast("Gizli oda kuruldu. Arkadaşlarını davet et!", false);
+        } else {
+            showToast("Oda kuruldu. Oyuncu bekleniyor...", false);
+        }
+        
+    } catch (error) {
+        console.error("Error creating BR game:", error);
+        showToast("BR Oyunu oluşturulamadı!", true);
     }
 }
 
@@ -2712,82 +2853,6 @@ export function startGame() {
 }
 
 // js/game.js -> createBRGame fonksiyonunu güncelle:
-
-export async function createBRGame(visibility = 'public') { // Varsayılan public
-    state.resetKnownCorrectPositions();
-    state.resetHasUserStartedTyping();
-    
-    const timeLimit = 120; 
-    const wordLength = getRandomWordLength(); 
-    // isHardMode BR'de şimdilik kapalı veya false
-    
-    if (!db || !state.getUserId()) {
-         return showToast("Sunucuya bağlanılamıyor.", true);
-    }
-    const currentUserId = state.getUserId();
-    const username = getUsername();
-    const secretWord = await getNewSecretWord(wordLength);
-    if (!secretWord) return;
-    
-    const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-    const profile = state.getCurrentUserProfile();
-    const myAvatar = profile ? profile.avatarUrl : null;
-
-    const gameData = {
-        gameId, wordLength, secretWord, timeLimit,
-        creatorId: currentUserId, 
-        isHardMode: false, 
-        matchLength: 10,
-        players: { 
-            [currentUserId]: { 
-                userId: currentUserId, 
-                username, 
-                avatarUrl: myAvatar,
-                guesses: [], 
-                isEliminated: false, 
-                hasSolved: false, 
-                isWinner: false, 
-                hasFailed: false,
-                jokersUsed: { present: false, correct: false, remove: false } 
-            } 
-        },
-        playerIds: [currentUserId], 
-        currentPlayerId: currentUserId, 
-        status: 'waiting', 
-        roundWinner: null,
-        createdAt: serverTimestamp(),
-        turnStartTime: serverTimestamp(),
-        GUESS_COUNT: 6, 
-        gameType: 'multiplayer-br',
-        maxPlayers: 8, // 8 Kişilik
-        currentRound: 1,
-        visibility: visibility // <-- YENİ: 'public' veya 'private'
-    };
-
-    try {
-        await setDoc(doc(db, "games", gameId), gameData);
-        state.setGameMode('multiplayer-br');
-        localStorage.setItem('activeGameId', gameId);
-        state.setCurrentGameId(gameId);
-        state.setLocalGameData(gameData);
-        
-        import('./ui.js').then(ui => ui.showScreen('game-screen'));
-        initializeGameUI(gameData); 
-        listenToGameUpdates(gameId);
-        import('./game.js').then(m => m.setupVisibilityHandler(gameId));
-        
-        if (visibility === 'private') {
-            showToast("Gizli oda kuruldu. Arkadaşlarını davet et!", false);
-        } else {
-            showToast("Oda kuruldu. Oyuncu bekleniyor...", false);
-        }
-        
-    } catch (error) {
-        console.error("Error creating BR game:", error);
-        showToast("BR Oyunu oluşturulamadı!", true);
-    }
-}
 
 export async function joinBRGame(gameId) {
     state.resetKnownCorrectPositions();
@@ -4417,7 +4482,7 @@ export async function sendQuickChat(message) {
 
 // Görev Tanımları Havuzu
 const QUEST_DEFINITIONS = [
-    { id: 'play_3', type: 'play', target: 3, reward: 150, title: "Isınma Turu", desc: "Herhangi bir modda 3 oyun oyna." },
+    { id: 'play_3', type: 'play', target: 3, reward: 150, title: "Isınma Turu", desc: "3 farklı maç tamamla." },
     { id: 'win_1', type: 'win', target: 1, reward: 200, title: "Zafer Tadı", desc: "1 oyun kazan." },
     { id: 'win_3', type: 'win', target: 3, reward: 500, title: "Seri Galibiyet", desc: "3 oyun kazan." },
     { id: 'find_green_10', type: 'green_tile', target: 10, reward: 100, title: "Yeşil Işık", desc: "Toplam 10 harfi doğru yerinde bil." },
@@ -4525,21 +4590,33 @@ export async function claimQuestReward(questId) {
     const quest = profile.dailyQuests.list[questIndex];
 
     if (quest.completed && !quest.claimed) {
-        // Ödülü ver
-        await import('./game.js').then(m => m.addGold(quest.reward));
+        // 1. Ödülü Ver (Fonksiyon aynı dosyada olduğu için import'a gerek yok)
+        await addGold(quest.reward); 
         
-        // Claimed olarak işaretle
+        // 2. Görevi "Alındı" (claimed) olarak işaretle
         quest.claimed = true;
         profile.dailyQuests.list[questIndex] = quest;
 
-        // DB Kaydet
+        // 3. Veritabanını Güncelle (Hem Altın hem Görev Durumu tek seferde güncellenebilir ama ayrı ayrı güvenlidir)
         const userRef = doc(db, "users", userId);
+        
+        // Sadece günlük görev listesini güncelle (Altın zaten addGold içinde güncellendi)
         await updateDoc(userRef, { dailyQuests: profile.dailyQuests });
         
-        // State Güncelle
+        // 4. Yerel State'i Güncelle
         state.setCurrentUserProfile(profile);
         
-        // Listeyi Yenile
-        import('./ui.js').then(ui => ui.renderQuestList());
+        // 5. Arayüzü Yenile (UI ve Rozet)
+        import('./ui.js').then(ui => {
+            ui.renderQuestList(); // Butonu "Alındı"ya çevir
+            ui.updateQuestBadge(); // Kırmızı noktayı kaldır
+            ui.updateMarketUI();   // Altın bakiyesini güncelle
+        });
+        
+        // Geri bildirim
+        import('./utils.js').then(u => {
+            u.showToast(`+${quest.reward} Altın Kazanıldı!`, false);
+            u.playSound('win');
+        });
     }
 }

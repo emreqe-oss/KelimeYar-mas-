@@ -394,35 +394,118 @@ export function displayStats(profileData) {
         distributionContainer.innerHTML += bar;
     }
 }
+// js/ui.js - updateMultiplayerScoreBoard
 
 export function updateMultiplayerScoreBoard(gameData) {
-    if (!multiplayerScoreBoard) return;
-    
-    const isBR = state.getGameMode() === 'multiplayer-br';
-    const currentUserId = state.getUserId();
-    
-    const sequentialGameInfo = document.getElementById('sequential-game-info');
-    if (sequentialGameInfo) {
-        sequentialGameInfo.classList.toggle('hidden', isBR && state.getGameMode() !== 'daily');
-    }
-    
-    multiplayerScoreBoard.classList.toggle('hidden', !isBR);
+    // Elementleri Seç
+    const mpScoreBoard = document.getElementById('multiplayer-score-board'); 
+    const seqGameInfo = document.getElementById('sequential-game-info');     
+    const brLobby = document.getElementById('br-lobby-controls');            
 
+    // DÜZELTME: Kararı STATE'e göre değil, gelen VERİYE (gameData) göre veriyoruz.
+    // gameData.gameType veritabanından gelen kesin bilgidir.
+    const type = gameData.gameType || 'friend';
+    
+    const isBR = (type === 'multiplayer-br');
+    const isDaily = (type === 'daily');
+    const isLeague = (type === 'league');
+
+    // ---------------------------------------------------------
+    // SENARYO 1: STANDART OYUNLAR (Seri, Gevşek, Arkadaş, vsCPU)
+    // ---------------------------------------------------------
+    if (!isBR && !isDaily && !isLeague) {
+        // 1. BR elementlerini KESİN OLARAK gizle
+        if (mpScoreBoard) mpScoreBoard.classList.add('hidden');
+        if (brLobby) brLobby.classList.add('hidden');
+
+        // 2. Standart tabloyu GÖSTER
+        if (seqGameInfo) seqGameInfo.classList.remove('hidden');
+
+        // 3. İsimleri ve Puanları Doldur
+        const p1ScoreEl = document.getElementById('player1-score');
+        const p2ScoreEl = document.getElementById('player2-score');
+        
+        if (p1ScoreEl && p2ScoreEl) {
+            // Görünür yaptıklarından emin ol
+            p1ScoreEl.style.display = 'block';
+            p2ScoreEl.style.display = 'block';
+
+            const currentUserId = state.getUserId();
+            const playerIds = Object.keys(gameData.players);
+            
+            // P1 her zaman "Ben" (veya kurucu)
+            let p1Id = currentUserId; 
+            if (!gameData.players[p1Id]) p1Id = gameData.creatorId || playerIds[0];
+
+            // P2 diğer oyuncu
+            let p2Id = playerIds.find(id => id !== p1Id);
+
+            // P1 Bilgisi
+            const p1 = gameData.players[p1Id];
+            if (p1) {
+                p1ScoreEl.innerHTML = `<span class="font-bold text-green-400">${p1.username}</span><br>${p1.score || 0} Puan`;
+            }
+
+            // P2 Bilgisi
+            if (p2Id && gameData.players[p2Id]) {
+                const p2 = gameData.players[p2Id];
+                p2ScoreEl.innerHTML = `<span class="font-bold text-red-400">${p2.username}</span><br>${p2.score || 0} Puan`;
+            } else {
+                // Rakip henüz yoksa
+                p2ScoreEl.innerHTML = `<span class="font-bold text-gray-500 animate-pulse">Aranıyor...</span><br>0 Puan`;
+            }
+        }
+        return; // İşlem tamam, çık.
+    }
+
+    // ---------------------------------------------------------
+    // SENARYO 2: BATTLE ROYALE MODU
+    // ---------------------------------------------------------
     if (isBR) {
-        // --- TUR SAYACI GÜNCELLEMESİ (1/10 FORMATI) ---
+        // 1. Standart tabloyu gizle
+        if (seqGameInfo) seqGameInfo.classList.add('hidden');
+
+        // 2. BR tablosunu GÖSTER
+        if (mpScoreBoard) mpScoreBoard.classList.remove('hidden');
+
+        // ... (Mevcut BR skor doldurma kodlarınız aynen devam etsin) ...
+        
+        // Tur Sayacı (BR'ye özel)
         if (brRoundCounter) {
             const current = gameData.currentRound || 1;
             const total = gameData.matchLength || 10; 
             brRoundCounter.textContent = `TUR ${current}/${total}`;
         }
-        // ----------------------------------------------
 
+        // Oyuncu Listesini Sırala ve Göster
         const players = Object.entries(gameData.players)
             .map(([id, data]) => ({ id, ...data }))
             .sort((a, b) => (b.score || 0) - (a.score || 0)); 
 
+        const currentUserId = state.getUserId();
+
         for (let i = 0; i < 8; i++) { 
-            const slot = brPlayerSlots[i];
+            // Eğer brPlayerSlots tanımlı değilse hata vermesin diye kontrol
+            // (Not: brPlayerSlots dizisi dosyanın başında tanımlı olmalı)
+            // Eğer ui.js içinde brPlayerSlots değişkeni yoksa initUI içinde tanımlamıştık, onu kullanır.
+            // Bu kodun devamında sizin mevcut for döngünüz olmalı.
+            
+            // ... BURADAN SONRASI SİZİN ESKİ KODUNUZLA AYNI OLABİLİR ...
+            // Ancak slotları doldurma kodunun çalıştığından emin olun.
+            // Örnek:
+            /*
+            const slot = document.getElementById(`br-player-slot-${i}`); // Direkt DOM'dan alalım garanti olsun
+            if (slot) {
+                // ... slot doldurma işlemleri ...
+            }
+            */
+        }
+        
+        // BR Slot Doldurma Döngüsü (Sizin mevcut kodunuzu buraya entegre edin)
+        // Kopyala-Yapıştır kolaylığı için döngüyü de buraya ekliyorum:
+        
+        for (let i = 0; i < 8; i++) { 
+            const slot = document.getElementById(`br-player-slot-${i}`);
             const player = players[i]; 
 
             if (slot) {
@@ -440,54 +523,22 @@ export function updateMultiplayerScoreBoard(gameData) {
                     let statusColor = 'text-gray-400';
                     let statusText = '';
 
-                    if (hasSolved) {
-                        statusText = "✅"; 
-                        statusColor = 'text-green-400';
-                    } else if (hasFailed || player.isEliminated) {
-                        statusText = "❌"; 
-                        statusColor = 'text-red-400';
-                    } else if (gameData.status === 'playing') {
-                        statusText = `${guessCount}/${gameData.GUESS_COUNT || 6}`;
-                        statusColor = 'text-yellow-400 font-mono font-bold';
-                    } else if (gameData.status === 'waiting') {
-                        statusText = '...';
-                    } else {
-                        statusText = '-';
-                    }
+                    if (hasSolved) { statusText = "✅"; statusColor = 'text-green-400'; } 
+                    else if (hasFailed || player.isEliminated) { statusText = "❌"; statusColor = 'text-red-400'; } 
+                    else if (gameData.status === 'playing') { statusText = `${guessCount}/${gameData.GUESS_COUNT || 6}`; statusColor = 'text-yellow-400 font-mono font-bold'; } 
+                    else if (gameData.status === 'waiting') { statusText = '...'; } 
+                    else { statusText = '-'; }
 
                     slot.className = `${bgColor} px-2 py-1 rounded shadow flex justify-between items-center h-7 border border-gray-600/50`;
-                    nameEl.textContent = player.username;
-                    nameEl.className = `font-bold text-xs truncate w-20 text-left ${nameColor}`;
-                    statusEl.textContent = statusText;
-                    statusEl.className = `text-xs text-right ${statusColor}`;
+                    if(nameEl) { nameEl.textContent = player.username; nameEl.className = `font-bold text-xs truncate w-20 text-left ${nameColor}`; }
+                    if(statusEl) { statusEl.textContent = statusText; statusEl.className = `text-xs text-right ${statusColor}`; }
 
                 } else {
                     slot.className = 'bg-gray-800/50 px-2 py-1 rounded border border-gray-700/50 flex justify-between items-center h-7 opacity-50';
-                    nameEl.textContent = '---';
-                    statusEl.textContent = '';
+                    if(nameEl) nameEl.textContent = '---';
+                    if(statusEl) statusEl.textContent = '';
                 }
             }
-        }
-    }
-
-    const p1ScoreEl = document.getElementById('player1-score');
-    const p2ScoreEl = document.getElementById('player2-score');
-    
-    if (p1ScoreEl && p2ScoreEl && !isBR && state.getGameMode() !== 'daily') {
-        const playerIds = Object.keys(gameData.players);
-        let p1Id = gameData.creatorId || playerIds[0];
-        
-        if (playerIds.length > 0) {
-            const p1 = gameData.players[p1Id];
-            if (p1) p1ScoreEl.innerHTML = `<span class="font-bold">${p1.username}</span><br>${p1.score || 0} Puan`;
-        }
-        
-        if (playerIds.length > 1) {
-            const p2Id = playerIds.find(id => id !== p1Id);
-            const p2 = gameData.players[p2Id];
-            if (p2) p2ScoreEl.innerHTML = `<span class="font-bold">${p2.username}</span><br>${p2.score || 0} Puan`;
-        } else {
-            p2ScoreEl.innerHTML = '';
         }
     }
 }
