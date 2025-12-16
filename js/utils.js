@@ -109,12 +109,15 @@ export function triggerConfetti() {
     }, 250);
 }
 
-// js/utils.js - EN ALTA EKLE
+// js/utils.js - triggerVibration Güncellemesi
 
 export function triggerVibration(pattern = 10) {
     // Tarayıcı desteği kontrolü
-    if (navigator.vibrate) {
-        // pattern: milisaniye cinsinden süre (örn: 50) veya dizi (örn: [50, 100, 50])
-        navigator.vibrate(pattern);
+    if (window.navigator && window.navigator.vibrate) {
+        // pattern: milisaniye cinsinden süre
+        window.navigator.vibrate(pattern);
+        console.log("📳 Titreşim Tetiklendi:", pattern); // Konsola basar
+    } else {
+        console.log("⚠️ Bu cihazda titreşim desteklenmiyor (veya iOS).");
     }
 }

@@ -194,7 +194,7 @@
                         </div>
                         <div class="text-center z-10">
                             <span class="block text-lg font-black text-white leading-tight">BATTLE<br>ROYALE</span>
-                            <span class="block text-[10px] text-yellow-100 opacity-80">4 Kişilik</span>
+                            <span class="block text-[10px] text-yellow-100 opacity-80">8 Kişiye kadar</span>
                         </div>
                     </button>
                 </div>
@@ -342,7 +342,7 @@
                 <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
             </button>
             <h1 class="text-3xl font-bold text-center mb-6 text-yellow-400">Battle Royale</h1>
-            <p class="text-sm text-gray-400 mb-6">4 Kişilik hayatta kalma modu.</p>
+            <p class="text-sm text-gray-400 mb-6">8 Kişiye kadar 10 turluk yarışma modu</p>
             
             <div class="space-y-3 w-full">
                 <button id="btn-create-public-br" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-4 px-4 rounded-xl text-lg shadow-lg flex items-center justify-center gap-2">
@@ -616,9 +616,9 @@
 
             <button id="start-game-btn" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-lg my-1 flex-shrink-0">Oyunu Başlat</button>
             <div id="br-lobby-controls" class="hidden w-full flex flex-col items-center justify-center my-2 flex-shrink-0">
-<p id="br-lobby-status-text" class="text-gray-400 text-center font-bold text-sm mb-2 uppercase tracking-wide">
-Oyuncular bekleniyor (1/4)
-</p>
+<div id="br-lobby-status-text" class="w-full flex flex-col items-center justify-center mb-4">
+    <span class="text-gray-400 font-bold text-sm uppercase tracking-wide">Yükleniyor...</span>
+</div>
 <div class="flex flex-col gap-2 items-center w-full px-10"> 
 <button id="br-lobby-invite-btn" class="hidden bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-xl text-sm w-full flex items-center justify-center shadow-lg transition transform active:scale-95 whitespace-nowrap">
 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -1124,5 +1124,12 @@ Oyunu Başlat
     
     <script type="module" src="js/main.js?v=3.1.1"></script> 
     
+
+    <div id="quick-chat-menu" class="hidden absolute bottom-40 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-2xl shadow-2xl p-3 grid grid-cols-4 gap-3 z-[60]">
+        <button class="chat-option text-3xl hover:scale-125 transition" data-msg="🍀">🍀</button>
+        <button class="chat-option text-3xl hover:scale-125 transition" data-msg="🔥">🔥</button>
+        <button class="chat-option text-3xl hover:scale-125 transition" data-msg="🤦‍♂️">🤦‍♂️</button>
+        <button class="chat-option text-3xl hover:scale-125 transition" data-msg="👏">👏</button>
+    </div>
 </body>
 </html>

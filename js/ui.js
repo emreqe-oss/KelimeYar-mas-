@@ -258,7 +258,7 @@ export function createKeyboard(handleKeyPress) {
         ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
         ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'],
         ['Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç'],
-        ['⌫', 'ENTER']
+        ['⌫', 'CHAT', 'ENTER']
     ];
     keyRows.forEach((row, rowIndex) => {
         const rowDiv = createElement('div', { className: `flex justify-center gap-1 mt-1 w-full ${rowIndex === 3 ? 'gap-2' : ''}` });
@@ -275,7 +275,17 @@ export function createKeyboard(handleKeyPress) {
 
             if (key === '⌫') {
                 keyButton.innerHTML = `<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>`;
-            } else if (key === 'ENTER') {
+            } 
+            // --- YENİ EKLENEN KISIM ---
+            else if (key === 'CHAT') {
+                keyButton.id = 'btn-toggle-chat'; // Main.js'de yakalamak için ID verdik
+                keyButton.className = "keyboard-key rounded font-semibold bg-gray-700 w-12 flex items-center justify-center shadow"; // Özel stil
+                keyButton.innerHTML = "💬";
+                // Onclick olayını main.js'de global dinleyici ile halledeceğiz, burayı boş geçiyoruz.
+                // Varsayılan onclick handleKeyPress'i çağırır, bunu main.js'de engelleyeceğiz.
+            } 
+            // ---------------------------
+            else if (key === 'ENTER') {
                 keyButton.innerHTML = `<svg class="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4l10 6-10 6V4z"/></svg>`;
             } else {
                 keyButton.textContent = key;
@@ -1392,3 +1402,47 @@ document.addEventListener('click', (e) => {
         triggerVibration(10); // Çok hafif titreşim
     }
 });
+
+// js/ui.js - EN ALTA
+
+// js/ui.js - showChatBubble Fonksiyonu (GÜNCELLENMİŞ)
+
+export function showChatBubble(userId, message) {
+    const gameData = state.getLocalGameData();
+    if (!gameData || !gameData.players) return;
+
+    const sender = gameData.players[userId];
+    const senderName = sender ? sender.username : 'Rakip';
+    
+    // Eğer mesajı BEN attıysam (userId === state.getUserId()) göstermeye gerek yok (veya farklı gösterebilirsin)
+    // Ama test için şimdilik herkesinkini gösterelim.
+    
+    const chatContainer = document.getElementById('game-screen'); // Mesajın görüneceği ana ekran
+    
+    // Mesaj Kutusu Oluştur
+    const bubble = document.createElement('div');
+    bubble.className = "fixed bottom-48 left-1/2 transform -translate-x-1/2 bg-gray-800/95 text-white px-4 py-2 rounded-full shadow-2xl border border-gray-500 flex items-center gap-2 z-[60] animate-bounce-short pointer-events-none";    // İçerik: Avatar (varsa) + İsim + Mesaj
+    const avatarUrl = sender.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+    
+    bubble.innerHTML = `
+        <img src="${avatarUrl}" class="w-8 h-8 rounded-full border border-gray-400">
+        <div class="flex flex-col">
+            <span class="text-[10px] text-gray-400 font-bold uppercase leading-none mb-0.5">${senderName}</span>
+            <span class="text-2xl leading-none">${message}</span>
+        </div>
+    `;
+
+    chatContainer.appendChild(bubble);
+
+    // Ses Efekti (Hafif bir 'pop' sesi)
+    import('./utils.js').then(u => u.playSound('click')); // Veya özel bir chat sesi
+
+    // 3 Saniye Sonra Kaldır
+    setTimeout(() => {
+        bubble.style.opacity = '0';
+        bubble.style.transform = 'translate(-50%, -20px)'; // Yukarı doğru uçup kaybolsun
+        bubble.style.transition = 'all 0.5s ease';
+        setTimeout(() => bubble.remove(), 500);
+    }, 3000);
+
+}

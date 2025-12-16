@@ -428,9 +428,54 @@ export function updateTurnDisplay(gameData) {
             // Lobi Arayüzünü göster
             brLobbyControls.classList.remove('hidden');
             
-            if (brLobbyStatusText) brLobbyStatusText.textContent = `Oyuncular bekleniyor (${numPlayers}/${gameData.maxPlayers || 8})`;
-            brTurnDisplay.textContent = `Lobi (${numPlayers}/${gameData.maxPlayers || 8})`; // Üstteki küçük skor alanı için
+            // --- CANLI AVATAR GÖSTERİMİ BAŞLANGICI ---
+            if (brLobbyStatusText) {
+                const playersList = Object.values(gameData.players);
+                const maxPlayers = gameData.maxPlayers || 4; // Varsayılan 4 kişilik
 
+                let avatarsHTML = '<div class="flex justify-center gap-3 mb-3 flex-wrap w-full">';
+
+                // 1. MEVCUT OYUNCULARI EKLE
+                playersList.forEach(p => {
+                    // Varsayılan avatar veya oyuncunun avatarı
+                    const avatarUrl = p.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+                    
+                    avatarsHTML += `
+                        <div class="flex flex-col items-center animate-bounce-short">
+                            <div class="w-12 h-12 rounded-full p-0.5 border-2 border-green-500 shadow-lg shadow-green-500/20 bg-gray-800">
+                                <img src="${avatarUrl}" class="w-full h-full rounded-full object-cover">
+                            </div>
+                            <span class="text-[10px] text-white mt-1.5 font-bold max-w-[64px] truncate">${p.username}</span>
+                        </div>
+                    `;
+                });
+
+                // 2. BOŞ KOLTUKLARI EKLE (Hayalet Görünüm)
+                for(let i = playersList.length; i < maxPlayers; i++) {
+                    avatarsHTML += `
+                        <div class="flex flex-col items-center opacity-40">
+                            <div class="w-12 h-12 rounded-full border-2 border-dashed border-gray-500 bg-gray-800/30 flex items-center justify-center">
+                                <span class="text-gray-500 text-lg font-bold">?</span>
+                            </div>
+                            <span class="text-[10px] text-gray-500 mt-1.5">Boş</span>
+                        </div>
+                    `;
+                }
+                avatarsHTML += '</div>';
+
+                // 3. Altına Bilgi Yazısını Ekle
+                avatarsHTML += `
+                    <div class="text-gray-400 font-bold text-sm uppercase tracking-wide">
+                        Oyuncular Bekleniyor <span class="text-yellow-500">(${numPlayers}/${maxPlayers})</span>
+                    </div>
+                `;
+
+                // HTML'i güncelle
+                brLobbyStatusText.innerHTML = avatarsHTML;
+            }
+            // --- CANLI AVATAR GÖSTERİMİ BİTİŞİ ---
+
+            brTurnDisplay.textContent = `Lobi (${numPlayers}/${gameData.maxPlayers || 4})`;
             if (isCreator) {
                 // Kurucu ise: Davet butonu sadece özel odalarda görünür
                 brLobbyInviteBtn.classList.toggle('hidden', !isPrivate);
@@ -911,6 +956,19 @@ export function listenToGameUpdates(gameId) {
 
         state.setLocalGameData(gameData); 
         
+        // --- QUICK CHAT DİNLEYİCİSİ ---
+        // Eğer bir oyuncunun lastMessage alanı değiştiyse (ve yeni ise) göster
+        Object.values(gameData.players).forEach(p => {
+            // Mesaj varsa ve son 4 saniye içinde atılmışsa
+            if (p.lastMessage && p.lastMessageTime) {
+                const msgTime = p.lastMessageTime.toDate ? p.lastMessageTime.toDate() : new Date(p.lastMessageTime);
+                const now = new Date();
+                if ((now - msgTime) < 4000) { // 4 saniyeden yeniyse
+                    import('./ui.js').then(ui => ui.showChatBubble(p.userId, p.lastMessage));
+                }
+            }
+        });
+
         // Sadece oyun oynanıyorken kontrol et
         if (gameData.status === 'playing') {
             const timeLimit = (gameData.gameType === 'league' ? 120 : (gameData.timeLimit || 60));
@@ -2648,6 +2706,9 @@ export async function createBRGame(visibility = 'public') { // Varsayılan publi
     
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
     
+    const profile = state.getCurrentUserProfile();
+    const myAvatar = profile ? profile.avatarUrl : null;
+
     const gameData = {
         gameId, wordLength, secretWord, timeLimit,
         creatorId: currentUserId, 
@@ -2657,6 +2718,7 @@ export async function createBRGame(visibility = 'public') { // Varsayılan publi
             [currentUserId]: { 
                 userId: currentUserId, 
                 username, 
+                avatarUrl: myAvatar,
                 guesses: [], 
                 isEliminated: false, 
                 hasSolved: false, 
@@ -2731,9 +2793,12 @@ export async function joinBRGame(gameId) {
                 throw new Error("Bu oyun çoktan başladı veya bitti.");
             }
             if (Object.keys(gameData.players).length >= (gameData.maxPlayers || MAX_BR_PLAYERS)) throw new Error("Oyun dolu.");
+            const profile = state.getCurrentUserProfile(); // state.js importunu kontrol et
+            const myAvatar = profile ? profile.avatarUrl : null;
             const newPlayerObject = { 
                 userId: currentUserId, 
                 username, 
+                avatarUrl: myAvatar,
                 guesses: [], 
                 isEliminated: false, 
                 hasSolved: false, 
@@ -4299,5 +4364,23 @@ async function calculateWeeklyLeaderboard(currentUserId) {
     } catch (error) {
         console.error("Haftalık sıralama hatası:", error);
         return { myRank: '-', totalPlayers: '-' };
+    }
+}
+
+// QUICK CHAT GÖNDERME
+export async function sendQuickChat(message) {
+    const gameId = state.getCurrentGameId();
+    const userId = state.getUserId();
+    if (!gameId || !userId) return;
+
+    const gameRef = doc(db, "games", gameId);
+    
+    try {
+        await updateDoc(gameRef, {
+            [`players.${userId}.lastMessage`]: message,
+            [`players.${userId}.lastMessageTime`]: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Mesaj gönderilemedi:", error);
     }
 }

@@ -71,7 +71,8 @@ import {
     useRemoveJoker,
     startRematch,
     abandonGame,
-    joinRandomBRGame // <-- Eklendi
+    joinRandomBRGame,
+    sendQuickChat // <-- Eklendi
 } from './game.js';
 
 import { showToast, playSound } from './utils.js'; // <-- Düzeltildi
@@ -649,6 +650,44 @@ function addEventListeners() {
             handleKeyPress(e.key.toLocaleUpperCase('TR'));
         }
     });
+// --- QUICK CHAT SİSTEMİ ---
+    const chatMenu = document.getElementById('quick-chat-menu');
+
+    // 1. CHAT BUTONUNA TIKLAMA (Event Delegation)
+    // Klavye sonradan oluştuğu için document üzerine dinleyici koyuyoruz
+    document.addEventListener('click', (e) => {
+        // Eğer tıklanan şey Chat butonu ise
+        const chatBtn = e.target.closest('#btn-toggle-chat');
+        if (chatBtn) {
+            e.stopPropagation(); // Klavye harf basmasını engelle
+            if (chatMenu) chatMenu.classList.toggle('hidden'); // Menüyü aç/kapat
+            import('./utils.js').then(u => u.playSound('click'));
+        }
+        
+        // Eğer menü açıkken başka yere tıklanırsa menüyü kapat
+        else if (chatMenu && !chatMenu.classList.contains('hidden') && !e.target.closest('#quick-chat-menu')) {
+            chatMenu.classList.add('hidden');
+        }
+    });
+
+    // 2. EMOJİ SEÇME
+    if (chatMenu) {
+        chatMenu.querySelectorAll('.chat-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const msg = btn.dataset.msg;
+                
+                // Mesajı gönder
+                sendQuickChat(msg);
+                
+                // Menüyü kapat
+                chatMenu.classList.add('hidden');
+                
+                // Geri bildirim sesi
+                import('./utils.js').then(u => u.playSound('click'));
+            });
+        });
+    }
 }
 
 // Tema Yönetimi
