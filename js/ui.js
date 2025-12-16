@@ -443,16 +443,48 @@ export function updateMultiplayerScoreBoard(gameData) {
             // P1 Bilgisi
             const p1 = gameData.players[p1Id];
             if (p1) {
-                p1ScoreEl.innerHTML = `<span class="font-bold text-green-400">${p1.username}</span><br>${p1.score || 0} Puan`;
+                const tierClass = getTierColorClass(p1.leagueTier);
+                const avatar = p1.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+                p1ScoreEl.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 rounded-full border-2 ${tierClass} bg-gray-800 flex-shrink-0">
+                            <img src="${avatar}" class="w-full h-full rounded-full object-cover">
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="font-bold text-green-400 truncate text-sm">${p1.username}</span>
+                            <span class="text-xs text-white font-mono leading-none">${p1.score || 0} Puan</span>
+                        </div>
+                    </div>
+                `;
             }
 
             // P2 Bilgisi
             if (p2Id && gameData.players[p2Id]) {
                 const p2 = gameData.players[p2Id];
-                p2ScoreEl.innerHTML = `<span class="font-bold text-red-400">${p2.username}</span><br>${p2.score || 0} Puan`;
+                const tierClass = getTierColorClass(p2.leagueTier);
+                const avatar = p2.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
+               
+p2ScoreEl.innerHTML = `
+                    <div class="flex items-center justify-end gap-2">
+                        <div class="flex flex-col items-end overflow-hidden">
+                            <span class="font-bold text-red-400 truncate text-sm">${p2.username}</span>
+                            <span class="text-xs text-white font-mono leading-none">${p2.score || 0} Puan</span>
+                        </div>
+                        <div class="w-10 h-10 rounded-full border-2 ${tierClass} bg-gray-800 flex-shrink-0">
+                            <img src="${avatar}" class="w-full h-full rounded-full object-cover">
+                        </div>
+                    </div>
+                `;
             } else {
-                // Rakip henüz yoksa
-                p2ScoreEl.innerHTML = `<span class="font-bold text-gray-500 animate-pulse">Aranıyor...</span><br>0 Puan`;
+                // Rakip Yoksa
+                p2ScoreEl.innerHTML = `
+                    <div class="flex items-center justify-end gap-2 opacity-50">
+                        <div class="text-right">
+                            <span class="font-bold text-gray-500 text-sm">Aranıyor...</span>
+                        </div>
+                        <div class="w-10 h-10 rounded-full border-2 border-dashed border-gray-600 bg-gray-800 animate-pulse"></div>
+                    </div>
+                `;
             }
         }
         return; // İşlem tamam, çık.
@@ -1584,4 +1616,20 @@ export function renderQuestList() {
     });
     
     updateQuestBadge(); // Rozeti güncelle
+}
+
+// js/ui.js - EN ALTA EKLE
+
+function getTierColorClass(tier) {
+    if (!tier) return 'border-gray-600'; // Varsayılan
+    
+    switch(tier.toLowerCase()) {
+        case 'bronze': return 'border-orange-700 shadow-[0_0_10px_rgba(194,65,12,0.4)]'; // Bronz + Hafif Gölge
+        case 'silver': return 'border-gray-300 shadow-[0_0_10px_rgba(209,213,219,0.4)]';   // Gümüş
+        case 'gold': return 'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)]';   // Altın + Parlak
+        case 'platinum': return 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]'; // Platin
+        case 'diamond': return 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.8)]'; // Elmas (Çok Parlak)
+        case 'rookie': 
+        default: return 'border-gray-600'; // Çaylak
+    }
 }

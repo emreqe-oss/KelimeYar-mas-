@@ -59,6 +59,10 @@
                     <button id="stats-btn" class="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-gray-300">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     </button>
+                    <button id="sound-toggle-btn" class="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-green-400">
+                        <svg id="sound-icon-on" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                        <svg id="sound-icon-off" class="w-6 h-6 hidden text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                    </button>
                     <button id="logout-btn" class="p-2 bg-red-900/30 hover:bg-red-900/50 rounded-lg transition text-red-400">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -108,21 +112,23 @@
                          class="w-32 h-32 object-contain drop-shadow-xl transform transition duration-300 group-hover:scale-110 group-hover:-rotate-12 -mr-6">
                 </button>
 
-                <button id="quests-btn" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 rounded-xl py-3 px-6 text-white shadow-lg shadow-pink-900/50 border-b-4 border-pink-800 active:scale-95 transition flex items-center justify-between group relative overflow-hidden mt-4">
-                    <div class="absolute inset-0 bg-white/10 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition duration-700"></div>
-                    
-                    <div class="flex items-center gap-3">
-                        <span class="text-3xl filter drop-shadow-md">📜</span>
-                        <div class="text-left">
-                            <span class="block font-black text-xl tracking-wide drop-shadow-sm">GÖREVLER</span>
-                            <span class="block text-xs text-pink-100 font-medium">Ödülleri Topla!</span>
+                <button id="quests-btn" class="w-full h-32 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 rounded-xl py-2 px-6 text-white shadow-lg shadow-amber-900/50 border-b-4 border-amber-800 active:scale-95 transition flex items-center justify-between group relative overflow-hidden mt-2">
+                        
+                        <div class="absolute inset-0 bg-white/10 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition duration-700"></div>
+                        
+                        <div class="flex-shrink-0 z-10">
+                            <img src="public/images/ferman.png" alt="Görevler" class="w-24 h-24 object-contain filter drop-shadow-xl group-hover:scale-110 group-hover:rotate-3 transition duration-300">
                         </div>
-                    </div>
 
-                    <div id="quest-notification-badge" class="hidden bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-full animate-bounce">
-                        !
-                    </div>
-                </button>
+                        <div class="text-right z-10">
+                            <span class="block font-black text-2xl tracking-wide drop-shadow-sm text-white">GÖREVLER</span>
+                            <span class="block text-sm text-amber-100 font-medium">Ödülleri Topla!</span>
+                        </div>
+
+                        <div id="quest-notification-badge" class="hidden absolute top-3 right-3 bg-red-600 text-white border-2 border-white text-xs font-bold px-2 py-0.5 rounded-full animate-bounce shadow-md z-20">
+                            !
+                        </div>
+                    </button>
 
                 <div class="grid grid-cols-2 gap-4">
                     <button id="friends-btn" class="bg-blue-600 hover:bg-blue-500 rounded-xl py-4 text-white font-bold shadow-md border-b-4 border-blue-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 h-28 group overflow-hidden relative">
@@ -265,6 +271,10 @@
         <div id="register-screen" class="hidden text-center bg-gray-800 p-4 rounded-lg shadow-lg flex-1 flex flex-col justify-center">
             <h1 class="text-3xl font-bold text-center mb-4">Yeni Hesap Oluştur</h1>
             <div class="space-y-3">
+                <p class="text-gray-400 text-xs mb-2">Bir Avatar Seç (Zorunlu)</p>
+                <div id="register-avatar-list" class="flex justify-center gap-3 mb-4 flex-wrap">
+                    </div>
+                <input type="hidden" id="register-selected-avatar-url" value="">
                 <input type="text" id="register-fullname" placeholder="Ad Soyad" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
                 <input type="text" id="register-username" placeholder="Kullanıcı Adı" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white" maxlength="12">
                 <input type="email" id="register-email" placeholder="E-posta Adresi" class="w-full p-2 border rounded-md bg-gray-700 border-gray-600 text-center text-white">
@@ -731,13 +741,19 @@ Oyunu Başlat
 
                 <div id="league-dashboard-section" class="hidden w-full max-w-md flex flex-col h-full overflow-hidden">
                     
-                    <div class="flex justify-between items-center mb-4 bg-gray-900 p-4 rounded-lg border border-yellow-500/30 shadow-lg flex-shrink-0">
+                    <div class="flex justify-between items-center mb-4 bg-gray-900 p-3 rounded-lg border border-yellow-500/30 shadow-lg flex-shrink-0">
                         <div class="text-left">
-                            <p class="text-xs text-gray-400 uppercase">Senin Puanın</p>
-                            <span id="league-total-score" class="text-3xl font-black text-yellow-400 drop-shadow-md">0</span>
+                            <p class="text-[10px] text-gray-400 uppercase">PUAN</p>
+                            <span id="league-total-score" class="text-2xl font-black text-yellow-400 drop-shadow-md">0</span>
                         </div>
+
+                        <div class="flex flex-col items-center justify-center bg-black/20 rounded px-4 py-1">
+                            <span id="league-tier-display" class="text-sm font-black text-gray-300 uppercase tracking-widest drop-shadow-sm">YÜKLENİYOR</span>
+                            <span id="league-group-display" class="text-[10px] text-gray-500 font-mono">...</span>
+                        </div>
+
                         <div class="text-right">
-                            <p class="text-xs text-gray-400 uppercase">Hafta</p>
+                            <p class="text-[10px] text-gray-400 uppercase">HAFTA</p>
                             <span id="league-week-display" class="text-xl font-bold text-white">1</span>
                         </div>
                     </div>

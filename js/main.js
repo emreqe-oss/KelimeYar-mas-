@@ -12,7 +12,7 @@ import { db, auth } from './firebase.js';
 import { onAuthStateChanged } from "firebase/auth"; 
 import { 
     getDoc, doc, collection, query, orderBy, limit, getDocs, 
-    updateDoc, where, onSnapshot // <-- where ve onSnapshot eklendi
+    updateDoc, where, onSnapshot, deleteField // <-- where ve onSnapshot eklendi
 } from "firebase/firestore"; 
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
 import { 
@@ -108,6 +108,7 @@ function checkReferral() {
 function initApp() {
     checkReferral();
     initUI();
+    initRegisterScreenAvatars();
     addEventListeners();
     initAuthListener();
     initTheme();
@@ -175,6 +176,19 @@ function initAuthListener() {
             
             if (userSnap.exists()) {
                 const profileData = userSnap.data();
+                // --- LİG SONUCU BİLDİRİMİ (YENİ) ---
+                if (profileData.lastLeagueMessage) {
+                    const msg = profileData.lastLeagueMessage;
+                    import('./utils.js').then(u => {
+                        // Özel, kalıcı ve şık bir toast veya modal gösterilebilir.
+                        // Şimdilik standart toast ile gösteriyoruz:
+                        u.showToast(`${msg.title}\n${msg.body}\n+${msg.reward} Altın`, false);
+                    });
+                    
+                    // Mesajı bir daha göstermemek için sil
+                    updateDoc(userRef, { lastLeagueMessage: deleteField() });
+                }
+                // ------------------------------------
                 setCurrentUserProfile(profileData);
                 
                 const username = profileData.username || 'Kullanıcı';
@@ -396,6 +410,37 @@ function addEventListeners() {
     if (closeQuestsBtn) {
         closeQuestsBtn.addEventListener('click', () => {
             if (questsModal) questsModal.classList.add('hidden');
+        });
+    }
+
+    // --- SES AÇ/KAPA ---
+    const soundBtn = document.getElementById('sound-toggle-btn');
+    const iconOn = document.getElementById('sound-icon-on');
+    const iconOff = document.getElementById('sound-icon-off');
+
+    // Başlangıç durumunu kontrol et
+    const updateSoundIcon = () => {
+        const isMuted = localStorage.getItem('soundMuted') === 'true';
+        if (isMuted) {
+            iconOn.classList.add('hidden');
+            iconOff.classList.remove('hidden');
+            soundBtn.classList.replace('text-green-400', 'text-gray-400');
+        } else {
+            iconOn.classList.remove('hidden');
+            iconOff.classList.add('hidden');
+            soundBtn.classList.replace('text-gray-400', 'text-green-400');
+        }
+    };
+
+    if (soundBtn) {
+        updateSoundIcon(); // İlk açılışta ayarla
+        soundBtn.addEventListener('click', () => {
+            const isMuted = localStorage.getItem('soundMuted') === 'true';
+            localStorage.setItem('soundMuted', !isMuted); // Tersi yap
+            updateSoundIcon();
+            
+            // Geri bildirim (Sesi açtıysa bip sesi çalsın)
+            if (isMuted) import('./utils.js').then(u => u.playSound('click'));
         });
     }
 
@@ -864,6 +909,48 @@ async function handleChallengeClick(event) {
         button.disabled = false;
         button.textContent = 'Meydan Oku';
     }
+}
+
+// --- KAYIT EKRANI AVATAR YÖNETİMİ ---
+function initRegisterScreenAvatars() {
+    const container = document.getElementById('register-avatar-list');
+    const input = document.getElementById('register-selected-avatar-url');
+    
+    if (!container || !input) return;
+
+    container.innerHTML = ''; // Temizle
+
+    // AVATAR_LIST zaten main.js'de tanımlıydı, onu kullanıyoruz
+    // Eğer tanımlı değilse buraya const AVATAR_LIST = [...] diye ekleyin.
+    
+    AVATAR_LIST.forEach((url, index) => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'w-12 h-12 rounded-full border-4 border-transparent cursor-pointer transition hover:scale-110 object-cover bg-gray-700';
+        
+        // İlk avatarı varsayılan olarak seçelim (Boş gitmesin diye)
+        if (index === 0) {
+            img.classList.add('border-green-500', 'selected-reg-avatar');
+            input.value = url;
+        }
+
+        img.onclick = () => {
+            // Önceki seçimi kaldır
+            container.querySelectorAll('img').forEach(el => {
+                el.classList.remove('border-green-500', 'selected-reg-avatar');
+                el.classList.add('border-transparent');
+            });
+            
+            // Yeni seçimi işaretle
+            img.classList.remove('border-transparent');
+            img.classList.add('border-green-500', 'selected-reg-avatar');
+            
+            // Gizli inputa değeri yaz
+            input.value = url;
+        };
+
+        container.appendChild(img);
+    });
 }
 
 // Uygulamayı başlat

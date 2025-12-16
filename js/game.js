@@ -1296,6 +1296,8 @@ export async function createGame(options = {}) {
     // --- DÜZELTME: Profil Resmini Al ---
     const profile = state.getCurrentUserProfile();
     const myAvatar = profile ? profile.avatarUrl : null;
+    const myTier = profile ? (profile.currentTier || 'rookie') : 'rookie';
+    
     
     // Kelime seçimi
     const selectedLength = getRandomWordLength();
@@ -1321,6 +1323,7 @@ export async function createGame(options = {}) {
             [currentUserId]: { 
                 username, 
                 avatarUrl: myAvatar, // <--- BU SATIRI EKLE (Virgüle dikkat)
+                leagueTier: myTier,
                 guesses: [], 
                 score: 0, 
                 jokersUsed: { present: false, correct: false, remove: false } 
@@ -1384,6 +1387,7 @@ export async function createBRGame(visibility = 'public') {
     // Profil ve Avatar bilgisini al
     const profile = state.getCurrentUserProfile();
     const myAvatar = profile ? profile.avatarUrl : null;
+    const myTier = profile ? (profile.currentTier || 'rookie') : 'rookie'; // <--- YENİ EKLENDİ
 
     const gameData = {
         gameId, wordLength, secretWord, timeLimit,
@@ -1395,6 +1399,7 @@ export async function createBRGame(visibility = 'public') {
                 userId: currentUserId, 
                 username, 
                 avatarUrl: myAvatar,
+                leagueTier: myTier, // <--- YENİ EKLENDİ
                 guesses: [], 
                 isEliminated: false, 
                 hasSolved: false, 
@@ -1471,8 +1476,10 @@ export async function joinGame(gameId) {
             if (Object.keys(gameData.players).length < 2) {
                 const profile = state.getCurrentUserProfile();
                 const myAvatar = profile ? profile.avatarUrl : null;
+                const myTier = profile ? (profile.currentTier || 'rookie') : 'rookie'; // <--- YENİ EKLENDİ
                 const newPlayerState = { 
                     username, 
+                    leagueTier: myTier, // <--- YENİ EKLENDİ
                     guesses: [], 
                     score: 0, 
                     jokersUsed: { present: false, correct: false, remove: false } 
@@ -2895,10 +2902,12 @@ export async function joinBRGame(gameId) {
             if (Object.keys(gameData.players).length >= (gameData.maxPlayers || MAX_BR_PLAYERS)) throw new Error("Oyun dolu.");
             const profile = state.getCurrentUserProfile(); // state.js importunu kontrol et
             const myAvatar = profile ? profile.avatarUrl : null;
+            const myTier = profile ? (profile.currentTier || 'rookie') : 'rookie'; // <--- YENİ EKLENDİ
             const newPlayerObject = { 
                 userId: currentUserId, 
                 username, 
                 avatarUrl: myAvatar,
+                leagueTier: myTier, // <--- YENİ EKLENDİ
                 guesses: [], 
                 isEliminated: false, 
                 hasSolved: false, 
@@ -3555,6 +3564,48 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
         console.error("Kullanıcının lig grubu bulunamadı.");
         return; 
     }
+// --- UI GÜNCELLEME: LİG VE GRUP (FORMAT DÜZENLENDİ) ---
+    const tierDisplay = document.getElementById('league-tier-display');
+    const groupDisplay = document.getElementById('league-group-display');
+
+    // Türkçe Lig İsimleri (Sonlarına 'LİGİ' eklendi)
+    const tierNames = {
+        'rookie': 'ÇAYLAK LİGİ',
+        'bronze': 'BRONZ LİGİ',
+        'silver': 'GÜMÜŞ LİGİ',
+        'gold': 'ALTIN LİGİ',
+        'platinum': 'PLATİN LİGİ',
+        'diamond': 'ELMAS LİGİ'
+    };
+    
+    // Renk Sınıfları (Aynı kalıyor)
+    const tierColors = {
+        'rookie': 'text-gray-400',
+        'bronze': 'text-orange-500',
+        'silver': 'text-gray-300',
+        'gold': 'text-yellow-400',
+        'platinum': 'text-cyan-400',
+        'diamond': 'text-blue-500'
+    };
+
+    if (tierDisplay) {
+        // Eğer listede yoksa varsayılan olarak sonuna LİGİ ekle
+        const tierName = tierNames[tier] || (tier.toUpperCase() + ' LİGİ');
+        tierDisplay.textContent = tierName;
+        
+        tierDisplay.className = `text-sm font-black uppercase tracking-widest drop-shadow-sm ${tierColors[tier] || 'text-white'}`;
+    }
+
+    if (groupDisplay) {
+        const groupNum = groupId.replace('grup_', '');
+        groupDisplay.textContent = `${groupNum}. GRUP`;
+        
+        // DÜZELTME: Puntoyu text-[10px]'den text-xs'e (veya text-sm) çıkarıyoruz.
+        // Ayrıca rengi biraz daha açarak (gray-400) okunabilirliği artırıyoruz.
+        groupDisplay.className = "text-xs font-bold text-gray-400 mt-0.5 tracking-wide";
+    }
+
+
 
     // 2. O Grubun Katılımcılarını Çek (Doğru Adresten)
     const groupPath = `leagues/${weekID}/tiers/${tier}/groups/${groupId}`;
@@ -3724,6 +3775,13 @@ async function fetchAndDisplayLeagueMatches(weekID, userId) {
 
     renderLeagueMatches(myMatchesList, userId); 
     renderLeagueStandings(standingsList, userId); 
+// ... (fetchAndDisplayLeagueMatches fonksiyonunun son satırları) ...
+
+    renderLeagueMatches(myMatchesList, userId); 
+    renderLeagueStandings(standingsList, userId); 
+
+    // --- YENİ: Arka planda bot maçlarını simüle et ---
+    simulateLeagueActivity(weekID, tier, groupId);
 }
 
 // js/game.js -> startLeagueMatch (GÜNCELLENMİŞ)
@@ -4500,41 +4558,56 @@ const QUEST_DEFINITIONS = [
     { id: 'play_br_1', type: 'play_br', target: 1, reward: 300, title: "Battle Royale", desc: "Bir Battle Royale oyununa katıl." }
 ];
 
+// js/game.js - checkAndGenerateDailyQuests (GÜVENLİ & DÜZELTİLMİŞ)
+
 export async function checkAndGenerateDailyQuests() {
     const userId = state.getUserId();
     if (!userId) return;
 
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
+    // Kullanıcıya hissettirmeden arka planda sunucuya soruyoruz
+    console.log("Görev kontrolü: Sunucuya bağlanılıyor...");
     
-    if (!userSnap.exists()) return;
-    const userData = userSnap.data();
-    
-    // Bugünü kontrol et (YYYY-MM-DD formatında)
-    const todayStr = new Date().toISOString().split('T')[0];
-    
-    // Eğer görevler yoksa veya tarih eskiyse YENİ GÖREV OLUŞTUR
-    if (!userData.dailyQuests || userData.dailyQuests.date !== todayStr) {
-        console.log("Yeni günlük görevler oluşturuluyor...");
+    try {
+        // NOT: Buradaki URL, 'firebase deploy' işleminden sonra terminalde çıkan URL olmalıdır.
+        // Genellikle format şöyledir: https://checkandgeneratedailyquests-PROJEID-uc.a.run.app
+        const functionUrl = "https://checkandgeneratedailyquests-wxw6bd452q-uc.a.run.app"; 
         
-        // Rastgele 3 görev seç
-        const shuffled = [...QUEST_DEFINITIONS].sort(() => 0.5 - Math.random());
-        const selectedQuests = shuffled.slice(0, 3).map(q => ({
-            ...q,
-            progress: 0,
-            completed: false,
-            claimed: false
-        }));
+        // Auth Token almamız lazım çünkü sunucu "request.auth" kontrolü yapıyor
+        // (Kullanıcının gerçekten giriş yapmış biri olduğunu kanıtlıyoruz)
+        if (!auth.currentUser) return;
+        const token = await auth.currentUser.getIdToken();
 
-        const newQuestData = {
-            date: todayStr,
-            list: selectedQuests
-        };
+        // HTTP İsteği (Fetch) ile sunucuyu çağırıyoruz
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Güvenlik anahtarı
+            },
+            body: JSON.stringify({ data: {} }) // Firebase onCall fonksiyonları veriyi { data: ... } içinde bekler
+        });
 
-        await updateDoc(userRef, { dailyQuests: newQuestData });
-        // State'i güncelle
-        const newProfile = { ...userData, dailyQuests: newQuestData };
-        state.setCurrentUserProfile(newProfile);
+        if (!response.ok) {
+            throw new Error(`Sunucu hatası: ${response.status}`);
+        }
+
+        const jsonResponse = await response.json();
+        // Firebase functions cevabı .result içinde döner
+        const result = jsonResponse.result; 
+
+        console.log("Sunucu Cevabı:", result ? result.message : "Tamamlandı");
+        
+        // Sunucu veritabanını güncellediği için, biz de yerel state'i yenilemeliyiz
+        const userRef = doc(db, "users", userId);
+        const snap = await getDoc(userRef);
+        if(snap.exists()) {
+            state.setCurrentUserProfile(snap.data());
+            // UI'daki kırmızı noktayı güncelle
+            import('./ui.js').then(ui => ui.updateQuestBadge());
+        }
+
+    } catch (error) {
+        console.error("Görev kontrol hatası:", error);
     }
 }
 
@@ -4629,4 +4702,205 @@ export async function claimQuestReward(questId) {
             u.playSound('win');
         });
     }
+}
+
+// js/game.js - EN ALT KISIM
+
+// js/game.js - EN ALT KISIM (GÜNCELLENMİŞ SİMÜLASYON)
+
+// LİG SİMÜLASYONU (BOTLAR ARASI EŞLEŞMELİ MAÇ)
+async function simulateLeagueActivity(weekID, tier, groupId) {
+    const groupPath = `leagues/${weekID}/tiers/${tier}/groups/${groupId}`;
+    const participantsRef = collection(db, groupPath, "participants");
+    
+    try {
+        const snapshot = await getDocs(participantsRef);
+        const totalPlayers = snapshot.size; 
+        const maxMatches = totalPlayers - 1; 
+
+        const now = new Date();
+        const fourHours = 4 * 60 * 60 * 1000; // 4 Saatlik bekleme süresi
+
+        // 1. ADIM: Maç yapmaya müsait botları topla
+        let eligibleBots = [];
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            
+            if (data.isBot) {
+                const stats = data.stats || { O: 0, G: 0, B: 0, M: 0, P: 0 };
+                // Maç hakkı dolmamış VE son maçından bu yana 4 saat geçmiş botlar
+                let lastSim = data.lastSimulated ? data.lastSimulated.toDate() : new Date(0);
+                
+                if (stats.O < maxMatches && (now - lastSim > fourHours)) {
+                    eligibleBots.push({ id: docSnap.id, data: data, stats: stats });
+                }
+            }
+        });
+
+        // 2. ADIM: Botları rastgele karıştır (Shuffle)
+        eligibleBots.sort(() => 0.5 - Math.random());
+
+        // 3. ADIM: İkili eşleştir ve maç yaptır
+        // Döngüyü 2'şer atlayarak kuruyoruz
+        for (let i = 0; i < eligibleBots.length - 1; i += 2) {
+            const bot1 = eligibleBots[i];
+            const bot2 = eligibleBots[i + 1];
+
+            // Maç Sonucunu Belirle (Zar At)
+            const rand = Math.random();
+            
+            // Bot 1 ve Bot 2'nin Oynadığı Maç Sayısını Artır
+            bot1.stats.O += 1;
+            bot2.stats.O += 1;
+
+            if (rand < 0.4) { 
+                // SENARYO A: Bot 1 Kazanır (3 Puan), Bot 2 Kaybeder (0 Puan)
+                bot1.stats.G += 1;
+                bot1.stats.P += 3;
+                
+                bot2.stats.M += 1;
+                // Bot 2 puan alamaz
+            } 
+            else if (rand < 0.8) { 
+                // SENARYO B: Bot 2 Kazanır (3 Puan), Bot 1 Kaybeder (0 Puan)
+                bot2.stats.G += 1;
+                bot2.stats.P += 3;
+                
+                bot1.stats.M += 1;
+                // Bot 1 puan alamaz
+            } 
+            else { 
+                // SENARYO C: Beraberlik (İkisine de 1 Puan)
+                bot1.stats.B += 1;
+                bot1.stats.P += 1;
+                
+                bot2.stats.B += 1;
+                bot2.stats.P += 1;
+            }
+
+            // --- GÜNCELLEMELERİ YAZ ---
+            
+            // Bot 1 Kaydet
+            const bot1Ref = doc(db, groupPath, "participants", bot1.id);
+            updateDoc(bot1Ref, {
+                stats: bot1.stats,
+                score: bot1.stats.P,
+                lastSimulated: serverTimestamp()
+            });
+
+            // Bot 2 Kaydet
+            const bot2Ref = doc(db, groupPath, "participants", bot2.id);
+            updateDoc(bot2Ref, {
+                stats: bot2.stats,
+                score: bot2.stats.P,
+                lastSimulated: serverTimestamp()
+            });
+
+            console.log(`🤖 Maç Simüle Edildi: ${bot1.data.username} VS ${bot2.data.username}`);
+        }
+        
+        if (eligibleBots.length % 2 !== 0) {
+            console.log("Bir bot eşleşemedi, sonraki turu bekleyecek.");
+        }
+
+    } catch (error) {
+        console.error("Lig simülasyonu hatası:", error);
+    }
+
+    // ... (fetchAndDisplayLeagueMatches sonu) ...
+    
+    renderLeagueMatches(myMatchesList, userId); 
+    renderLeagueStandings(standingsList, userId); 
+
+    // 1. Botlar kendi arasında oynasın
+    simulateLeagueActivity(weekID, tier, groupId);
+    
+    // 2. YENİ: İnsanla yarım kalan maçlarını tamamlasınlar
+    resolvePendingBotMatches(weekID, tier, groupId);
+}
+
+// js/game.js - EN ALT (YENİ FONKSİYON)
+
+// İNSAN vs BOT: Bekleyen Maçları Sonuçlandır (1 Saat Kuralı)
+async function resolvePendingBotMatches(weekID, tier, groupId) {
+    const groupPath = `leagues/${weekID}/tiers/${tier}/groups/${groupId}`;
+    const matchesRef = collection(db, groupPath, "matches");
+    
+    try {
+        const snapshot = await getDocs(matchesRef);
+        const now = new Date();
+        const oneHour = 60 * 60 * 1000; // 1 Saat bekleme süresi (Test için 1000 * 60 yapıp 1dk deneyebilirsiniz)
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            
+            // Eğer maç zaten her iki taraf için bitmişse atla
+            const p1Done = data.p1_data && data.p1_data.completed;
+            const p2Done = data.p2_data && data.p2_data.completed;
+            if (p1Done && p2Done) return;
+
+            // Maçın başlama zamanını kontrol et
+            let startTime = data.createdAt ? data.createdAt.toDate() : new Date(0);
+            // Eğer taraflardan biri "başladıysa" onun süresini baz al (Daha hassas kontrol)
+            if (data.p1_startedAt) startTime = data.p1_startedAt.toDate();
+            
+            // Süre dolmadıysa atla
+            if (now - startTime < oneHour) return;
+
+            // --- KİM EKSİK? ---
+            // Basitlik adına: ID'si 'bot_' veya 'player_' ile başlayan taraf BOT kabul edilir.
+            // Eğer P1 bitirdi, P2 (Bot) bitirmediyse -> Bot'u oynat
+            
+            const isP2Bot = data.p2.startsWith('bot_') || data.p2.startsWith('player_');
+            const isP1Bot = data.p1.startsWith('bot_') || data.p1.startsWith('player_');
+
+            let updateNeeded = false;
+            let updates = {};
+
+            // SENARYO 1: İnsan (P1) oynadı, Bot (P2) bekliyor
+            if (p1Done && !p2Done && isP2Bot) {
+                const botResult = generateSimulatedMatchResult(); // Rastgele skor üret
+                updates['p2_data.guesses'] = botResult.guesses; // Sahte tahminler (görsellik için)
+                updates['p2_data.completed'] = true;
+                updates['p2_data.failed'] = botResult.failed;
+                updateNeeded = true;
+                console.log(`🤖 Bot (${data.p2}) maçı arkadan tamamladı.`);
+            }
+
+            // SENARYO 2: İnsan (P2) oynadı, Bot (P1) bekliyor
+            else if (p2Done && !p1Done && isP1Bot) {
+                const botResult = generateSimulatedMatchResult();
+                updates['p1_data.guesses'] = botResult.guesses;
+                updates['p1_data.completed'] = true;
+                updates['p1_data.failed'] = botResult.failed;
+                updateNeeded = true;
+                console.log(`🤖 Bot (${data.p1}) maçı arkadan tamamladı.`);
+            }
+
+            if (updateNeeded) {
+                const matchRef = doc(db, groupPath, "matches", docSnap.id);
+                updateDoc(matchRef, updates);
+            }
+        });
+
+    } catch (error) {
+        console.error("Bekleyen maçları temizleme hatası:", error);
+    }
+}
+
+// Yardımcı: Bot için rastgele maç sonucu üretir
+function generateSimulatedMatchResult() {
+    const rand = Math.random();
+    const isWin = rand > 0.4; // %60 kazanma şansı (İyi bot)
+    const guessCount = isWin ? Math.floor(Math.random() * 4) + 3 : 6; // 3-6 arası tahmin
+    
+    // Sahte tahmin dizisi (Sadece UI'da kutu sayısı görünsün diye)
+    // Gerçek kelimeler üretmek zor, boş objeler atıyoruz, UI sadece length'e bakıyor genelde.
+    const dummyGuesses = Array(guessCount).fill({ word: 'BOTXX', colors: ['correct','correct','correct','correct','correct'] });
+    
+    return {
+        failed: !isWin,
+        guesses: dummyGuesses
+    };
 }

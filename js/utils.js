@@ -19,6 +19,8 @@ export function showToast(message, isError = false) {
 
 export function playSound(type) {
     // Ses kodları buraya gelecek
+    const isMuted = localStorage.getItem('soundMuted') === 'true';
+    if (isMuted) return; // Ses kapalıysa çalma
 }
 
 export function shakeCurrentRow(wordLength, currentRow) {

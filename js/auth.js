@@ -1,17 +1,18 @@
-// js/auth.js - REFERANS SİSTEMİ EKLENMİŞ FİNAL KOD
+// js/auth.js - REFERANS SİSTEMİ VE AVATAR ZORUNLULUĞU OLAN FİNAL KOD
 
-// Firebase v9'dan gerekli fonksiyonları import ediyoruz
-// EKLENDİ: getDoc ve updateDoc fonksiyonlarını buraya dahil ettik
 import { serverTimestamp, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+// EKLENDİ: updateProfile fonksiyonunu import ettik
 import { 
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword, 
-    signOut 
+    signOut,
+    updateProfile 
 } from "firebase/auth";
 
 import { auth, db } from './firebase.js';
 import { showToast, getFirebaseErrorMessage } from './utils.js';
 import * as state from './state.js';
+import { showScreen } from './ui.js'; // Ekran yönlendirmesi için eklendi
 
 // Elementler
 const emailInput = document.getElementById('email-input');
@@ -34,6 +35,8 @@ export const handleLogin = async () => {
     authLoading.classList.remove('hidden');
     try {
         await signInWithEmailAndPassword(auth, email, password);
+        showToast("Giriş başarılı!", false);
+        showScreen('main-menu-screen'); // Başarılı girişte menüye at
     } catch (error) {
         showToast(getFirebaseErrorMessage(error), true);
     }
@@ -48,6 +51,15 @@ export const handleRegister = async () => {
     const age = registerAge.value;
     const city = registerCity.value;
     const phone = registerPhone.value;
+
+    // --- YENİ EKLENEN KISIM: AVATAR KONTROLÜ ---
+    const avatarInput = document.getElementById('register-selected-avatar-url');
+    const selectedAvatar = avatarInput ? avatarInput.value : null;
+
+    if (!selectedAvatar) {
+        return showToast("Lütfen bir avatar seçin (Zorunlu).", true);
+    }
+    // -------------------------------------------
 
     if (!email || !password || !fullname || !username || !age || !city || !phone) {
         return showToast("Tüm alanları doldurmalısınız.", true);
@@ -81,13 +93,26 @@ export const handleRegister = async () => {
             city: city,
             phone: phone,
             email: email,
+            
+            avatarUrl: selectedAvatar, // <--- YENİ: Avatar URL veritabanına yazılıyor
+            
             createdAt: serverTimestamp(),
             stats: initialStats,
-            gold: 0, // Başlangıç altını (Referans ödülünü karıştırmamak için 0 veya hediye miktarı)
-            inventory: { present: 0, correct: 0, remove: 0 } // Envanter başlangıcı
+            gold: 1000, // Başlangıç altını (1000 yaptık, değiştirebilirsin)
+            inventory: { present: 5, correct: 2, remove: 2 }, // Başlangıç Hediyeleri
+            
+            // Lig Başlangıç Verileri (Hata almamak için)
+            currentTier: 'rookie',
+            currentLeagueWeek: '2024-W1'
         });
 
-        // --- REFERANS ÖDÜL SİSTEMİ BAŞLANGICI ---
+        // 3. Auth Profilini Güncelle (Firebase Auth tarafında da görünsün)
+        await updateProfile(user, {
+            displayName: username,
+            photoURL: selectedAvatar
+        });
+
+        // --- REFERANS ÖDÜL SİSTEMİ (MEVCUT KODUNUZ KORUNDU) ---
         const inviterId = sessionStorage.getItem('invitedBy');
 
         // Kendini davet etmeyi engellemek için kontrol
@@ -112,7 +137,10 @@ export const handleRegister = async () => {
                 console.error("Referans ödülü verilirken hata:", error);
             }
         }
-        // --- REFERANS ÖDÜL SİSTEMİ BİTİŞİ ---
+        // --- REFERANS SİSTEMİ BİTİŞİ ---
+
+        showToast("Kayıt başarılı! Hoş geldin.", false);
+        showScreen('main-menu-screen'); // Başarılı kayıtta menüye at
         
     } catch (error) {
         showToast(getFirebaseErrorMessage(error), true);
@@ -125,9 +153,6 @@ export const handleLogout = async () => {
     const friendsUnsubscribe = state.getFriendsUnsubscribe();
     if (friendsUnsubscribe) friendsUnsubscribe();
     
-    // getInvitesUnsubscribe state.js'de tanımlı değilse bu satırlar hata verebilir,
-    // eğer tanımlıysa kalabilir. Güvenlik için try-catch içine alabilirsin veya 
-    // state.js dosyasında bu fonksiyonların olduğundan emin ol.
     try {
         const invitesUnsubscribe = state.getInvitesUnsubscribe?.();
         if (invitesUnsubscribe) invitesUnsubscribe();
@@ -138,6 +163,8 @@ export const handleLogout = async () => {
 
     try {
         await signOut(auth);
+        showToast("Çıkış yapıldı.", false);
+        showScreen('login-screen'); // Çıkışta login ekranına at
     } catch (error) {
         showToast(getFirebaseErrorMessage(error), true);
     }
