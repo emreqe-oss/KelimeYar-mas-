@@ -1463,6 +1463,7 @@ export function showChatBubble(userId, message) {
     if (!gameData || !gameData.players) return;
 
     const sender = gameData.players[userId];
+    if (!sender) return;
     const senderName = sender ? sender.username : 'Rakip';
     
     // Eğer mesajı BEN attıysam (userId === state.getUserId()) göstermeye gerek yok (veya farklı gösterebilirsin)
@@ -1473,8 +1474,7 @@ export function showChatBubble(userId, message) {
     // Mesaj Kutusu Oluştur
     const bubble = document.createElement('div');
     bubble.className = "fixed bottom-48 left-1/2 transform -translate-x-1/2 bg-gray-800/95 text-white px-4 py-2 rounded-full shadow-2xl border border-gray-500 flex items-center gap-2 z-[60] animate-bounce-short pointer-events-none";    // İçerik: Avatar (varsa) + İsim + Mesaj
-    const avatarUrl = sender.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
-    
+const avatarUrl = (sender && sender.avatarUrl) ? sender.avatarUrl : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";    
     bubble.innerHTML = `
         <img src="${avatarUrl}" class="w-8 h-8 rounded-full border border-gray-400">
         <div class="flex flex-col">

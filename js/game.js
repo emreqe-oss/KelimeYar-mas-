@@ -1019,13 +1019,16 @@ export function listenToGameUpdates(gameId) {
         
         // --- QUICK CHAT DİNLEYİCİSİ ---
         // Eğer bir oyuncunun lastMessage alanı değiştiyse (ve yeni ise) göster
-        Object.values(gameData.players).forEach(p => {
+        Object.entries(gameData.players).forEach(([playerId, p]) => {
             // Mesaj varsa ve son 4 saniye içinde atılmışsa
             if (p.lastMessage && p.lastMessageTime) {
                 const msgTime = p.lastMessageTime.toDate ? p.lastMessageTime.toDate() : new Date(p.lastMessageTime);
                 const now = new Date();
-                if ((now - msgTime) < 4000) { // 4 saniyeden yeniyse
-                    import('./ui.js').then(ui => ui.showChatBubble(p.userId, p.lastMessage));
+                
+                // 4 saniyeden yeniyse göster
+                if ((now - msgTime) < 4000) { 
+                    // p.userId yerine döngüden gelen "playerId" kullanıyoruz.
+                    import('./ui.js').then(ui => ui.showChatBubble(playerId, p.lastMessage));
                 }
             }
         });
@@ -1290,6 +1293,10 @@ export async function createGame(options = {}) {
     const currentUserId = state.getUserId();
     const username = getUsername();
     
+    // --- DÜZELTME: Profil Resmini Al ---
+    const profile = state.getCurrentUserProfile();
+    const myAvatar = profile ? profile.avatarUrl : null;
+    
     // Kelime seçimi
     const selectedLength = getRandomWordLength();
     const secretWord = await getNewSecretWord(selectedLength);
@@ -1313,10 +1320,11 @@ export async function createGame(options = {}) {
         players: { 
             [currentUserId]: { 
                 username, 
+                avatarUrl: myAvatar, // <--- BU SATIRI EKLE (Virgüle dikkat)
                 guesses: [], 
                 score: 0, 
                 jokersUsed: { present: false, correct: false, remove: false } 
-            } 
+            }
         },
         playerIds: playerIdsList, 
         currentPlayerId: currentUserId, 
@@ -1461,6 +1469,8 @@ export async function joinGame(gameId) {
                 return; 
             }
             if (Object.keys(gameData.players).length < 2) {
+                const profile = state.getCurrentUserProfile();
+                const myAvatar = profile ? profile.avatarUrl : null;
                 const newPlayerState = { 
                     username, 
                     guesses: [], 
