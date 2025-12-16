@@ -1446,3 +1446,91 @@ export function showChatBubble(userId, message) {
     }, 3000);
 
 }
+
+// --- GÜNLÜK GÖREVLER UI ---
+
+export function updateQuestBadge() {
+    const profile = state.getCurrentUserProfile();
+    const badge = document.getElementById('quest-notification-badge');
+    if (!badge || !profile || !profile.dailyQuests) return;
+
+    // Tamamlanmış ama toplanmamış ödül var mı?
+    const hasUnclaimed = profile.dailyQuests.list.some(q => q.completed && !q.claimed);
+    
+    if (hasUnclaimed) badge.classList.remove('hidden');
+    else badge.classList.add('hidden');
+}
+
+export function openQuestsModal() {
+    // Önce yeni görev var mı kontrol et (Tarih değiştiyse)
+    import('./game.js').then(m => m.checkAndGenerateDailyQuests()).then(() => {
+        renderQuestList();
+        const modal = document.getElementById('quests-modal');
+        if (modal) modal.classList.remove('hidden');
+    });
+}
+
+export function renderQuestList() {
+    const listContainer = document.getElementById('quests-list-container');
+    const profile = state.getCurrentUserProfile();
+    
+    if (!listContainer || !profile || !profile.dailyQuests) return;
+
+    listContainer.innerHTML = '';
+    const quests = profile.dailyQuests.list;
+
+    quests.forEach(quest => {
+        const percent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+        const isCompleted = quest.completed;
+        const isClaimed = quest.claimed;
+
+        const card = document.createElement('div');
+        card.className = `bg-gray-700/50 border ${isCompleted ? 'border-green-500/50' : 'border-gray-600'} rounded-xl p-3 relative overflow-hidden`;
+
+        let buttonHTML = '';
+        if (isClaimed) {
+            buttonHTML = `<span class="text-gray-500 text-xs font-bold flex items-center gap-1">✅ Alındı</span>`;
+        } else if (isCompleted) {
+            buttonHTML = `
+                <button class="claim-reward-btn bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 px-4 rounded-lg text-xs shadow-lg animate-pulse" data-id="${quest.id}">
+                    ÖDÜLÜ AL
+                </button>`;
+        } else {
+            buttonHTML = `<span class="text-gray-400 text-xs font-mono">${quest.progress}/${quest.target}</span>`;
+        }
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-2 relative z-10">
+                <div>
+                    <h4 class="text-white font-bold text-sm">${quest.title}</h4>
+                    <p class="text-gray-400 text-xs">${quest.desc}</p>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <div class="flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded text-xs text-yellow-400 font-bold border border-yellow-500/20">
+                        <span>+${quest.reward}</span>
+                        <img src="/images/sikke.png" class="w-3 h-3">
+                    </div>
+                    ${buttonHTML}
+                </div>
+            </div>
+            
+            <div class="w-full bg-gray-800 h-2 rounded-full mt-1 overflow-hidden relative z-10">
+                <div class="bg-gradient-to-r from-pink-500 to-rose-500 h-full transition-all duration-500" style="width: ${percent}%"></div>
+            </div>
+            
+            ${isCompleted ? '<div class="absolute inset-0 bg-green-500/5 pointer-events-none"></div>' : ''}
+        `;
+
+        // Buton Dinleyicisi
+        const claimBtn = card.querySelector('.claim-reward-btn');
+        if (claimBtn) {
+            claimBtn.onclick = () => {
+                import('./game.js').then(m => m.claimQuestReward(quest.id));
+            };
+        }
+
+        listContainer.appendChild(card);
+    });
+    
+    updateQuestBadge(); // Rozeti güncelle
+}

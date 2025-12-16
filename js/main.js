@@ -160,6 +160,12 @@ function initAuthListener() {
             authLoading.classList.add('hidden');
             setUserId(user.uid);
             
+            // Günlük Görevleri Kontrol Et
+            import('./game.js').then(m => m.checkAndGenerateDailyQuests()).then(() => {
+                // Rozeti güncelle
+                import('./ui.js').then(ui => ui.updateQuestBadge());
+            });
+            
             // --- YENİ: Global dinleyiciyi başlat ---
             startGlobalGamesListener();
             // --------------------------------------
@@ -375,6 +381,23 @@ const openEditProfileScreen = () => {
 
 // Tüm butonlara tıklama olaylarını ekleyen fonksiyon
 function addEventListeners() {
+
+    // --- GÖREVLER BUTONU ---
+    const questsBtn = document.getElementById('quests-btn');
+    const closeQuestsBtn = document.getElementById('close-quests-modal-btn');
+    const questsModal = document.getElementById('quests-modal');
+
+    if (questsBtn) {
+        questsBtn.addEventListener('click', () => {
+            import('./ui.js').then(ui => ui.openQuestsModal());
+        });
+    }
+
+    if (closeQuestsBtn) {
+        closeQuestsBtn.addEventListener('click', () => {
+            if (questsModal) questsModal.classList.add('hidden');
+        });
+    }
 
     // --- YENİ BR BUTONLARI ---
     if (btnCreatePublicBr) {

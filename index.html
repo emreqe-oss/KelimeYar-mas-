@@ -108,6 +108,22 @@
                          class="w-32 h-32 object-contain drop-shadow-xl transform transition duration-300 group-hover:scale-110 group-hover:-rotate-12 -mr-6">
                 </button>
 
+                <button id="quests-btn" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 rounded-xl py-3 px-6 text-white shadow-lg shadow-pink-900/50 border-b-4 border-pink-800 active:scale-95 transition flex items-center justify-between group relative overflow-hidden mt-4">
+                    <div class="absolute inset-0 bg-white/10 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition duration-700"></div>
+                    
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl filter drop-shadow-md">📜</span>
+                        <div class="text-left">
+                            <span class="block font-black text-xl tracking-wide drop-shadow-sm">GÖREVLER</span>
+                            <span class="block text-xs text-pink-100 font-medium">Ödülleri Topla!</span>
+                        </div>
+                    </div>
+
+                    <div id="quest-notification-badge" class="hidden bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-full animate-bounce">
+                        !
+                    </div>
+                </button>
+
                 <div class="grid grid-cols-2 gap-4">
                     <button id="friends-btn" class="bg-blue-600 hover:bg-blue-500 rounded-xl py-4 text-white font-bold shadow-md border-b-4 border-blue-800 active:scale-95 transition flex flex-col items-center justify-center gap-2 h-28 group overflow-hidden relative">
                         <div class="absolute inset-0 bg-gradient-to-t from-blue-900/30 to-transparent"></div>
@@ -1131,5 +1147,31 @@ Oyunu Başlat
         <button class="chat-option text-3xl hover:scale-125 transition" data-msg="🤦‍♂️">🤦‍♂️</button>
         <button class="chat-option text-3xl hover:scale-125 transition" data-msg="👏">👏</button>
     </div>
+
+    <div id="quests-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 border-2 border-gray-600 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            
+            <div class="bg-gradient-to-r from-pink-700 to-rose-700 p-4 flex justify-between items-center border-b border-gray-600">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">📜</span>
+                    <h2 class="text-xl font-black text-white tracking-wide">GÜNLÜK GÖREVLER</h2>
+                </div>
+                <button id="close-quests-modal-btn" class="bg-black/20 hover:bg-black/40 text-white rounded-full p-1 transition">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="bg-gray-900/50 p-3 text-center border-b border-gray-700">
+                <p class="text-gray-400 text-xs">Görevler her gece 00:00'da yenilenir.</p>
+                <p id="quests-countdown" class="text-pink-400 font-mono font-bold text-sm mt-1">Kalan Süre: --:--:--</p>
+            </div>
+
+            <div id="quests-list-container" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div class="text-center text-gray-500 py-8">Yükleniyor...</div>
+            </div>
+
+        </div>
+    </div>
+    
 </body>
 </html>

@@ -96,6 +96,24 @@ export async function showScoreboard(gameData) {
         isMatchFinished = (totalRounds > 1 && currentRound < totalRounds) ? false : true;
     }
 
+    // --- GÜNLÜK GÖREV GÜNCELLEMESİ ---
+    if (gameData.status === 'finished') {
+        // 1. Oyun Oynama Görevi
+        updateQuestProgress('play', 1); 
+        
+        // 2. Battle Royale Görevi
+        if (gameData.gameType === 'multiplayer-br') {
+            updateQuestProgress('play_br', 1);
+        }
+
+        // 3. Kazanma Görevi (Ben kazandıysam)
+        const myId = state.getUserId();
+        if (gameData.roundWinner === myId || gameData.matchWinnerId === myId) {
+            updateQuestProgress('win', 1);
+        }
+    }
+    // ---------------------------------
+
     // 5. Başlık Mesajını Belirle
     let titleText = "";
     let titleColor = "";
@@ -1803,6 +1821,13 @@ async function submitGuess() {
 
     const secretWord = localGameData.secretWord;
     const colors = calculateColors(guessWord, secretWord);
+    // --- GÜNLÜK GÖREV: YEŞİL HARF ---
+    let greenCount = 0;
+    colors.forEach(c => { if(c === 'correct') greenCount++; });
+    if (greenCount > 0) {
+        updateQuestProgress('green_tile', greenCount);
+    }
+    // --------------------------------
     const newGuess = { word: guessWord, colors: colors };
     
     if (!localGameData.players[currentUserId].guesses) localGameData.players[currentUserId].guesses = [];
@@ -2873,6 +2898,9 @@ async function consumeJokerItem(itemKey) {
     } catch (error) {
         console.error("Joker harcama hatası:", error);
     }
+    
+    // --- GÜNLÜK GÖREV: JOKER ---
+    updateQuestProgress('use_joker', 1);
     
     return true;
 }
@@ -4382,5 +4410,136 @@ export async function sendQuickChat(message) {
         });
     } catch (error) {
         console.error("Mesaj gönderilemedi:", error);
+    }
+}
+
+// js/game.js - EN ALTA EKLE (GÖREV SİSTEMİ)
+
+// Görev Tanımları Havuzu
+const QUEST_DEFINITIONS = [
+    { id: 'play_3', type: 'play', target: 3, reward: 150, title: "Isınma Turu", desc: "Herhangi bir modda 3 oyun oyna." },
+    { id: 'win_1', type: 'win', target: 1, reward: 200, title: "Zafer Tadı", desc: "1 oyun kazan." },
+    { id: 'win_3', type: 'win', target: 3, reward: 500, title: "Seri Galibiyet", desc: "3 oyun kazan." },
+    { id: 'find_green_10', type: 'green_tile', target: 10, reward: 100, title: "Yeşil Işık", desc: "Toplam 10 harfi doğru yerinde bil." },
+    { id: 'use_joker_1', type: 'use_joker', target: 1, reward: 50, title: "Joker Hakkı", desc: "1 kez joker kullan." },
+    { id: 'play_br_1', type: 'play_br', target: 1, reward: 300, title: "Battle Royale", desc: "Bir Battle Royale oyununa katıl." }
+];
+
+export async function checkAndGenerateDailyQuests() {
+    const userId = state.getUserId();
+    if (!userId) return;
+
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) return;
+    const userData = userSnap.data();
+    
+    // Bugünü kontrol et (YYYY-MM-DD formatında)
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Eğer görevler yoksa veya tarih eskiyse YENİ GÖREV OLUŞTUR
+    if (!userData.dailyQuests || userData.dailyQuests.date !== todayStr) {
+        console.log("Yeni günlük görevler oluşturuluyor...");
+        
+        // Rastgele 3 görev seç
+        const shuffled = [...QUEST_DEFINITIONS].sort(() => 0.5 - Math.random());
+        const selectedQuests = shuffled.slice(0, 3).map(q => ({
+            ...q,
+            progress: 0,
+            completed: false,
+            claimed: false
+        }));
+
+        const newQuestData = {
+            date: todayStr,
+            list: selectedQuests
+        };
+
+        await updateDoc(userRef, { dailyQuests: newQuestData });
+        // State'i güncelle
+        const newProfile = { ...userData, dailyQuests: newQuestData };
+        state.setCurrentUserProfile(newProfile);
+    }
+}
+
+// İlerlemeyi Kaydet (Oyun içinden çağrılacak)
+export async function updateQuestProgress(type, amount = 1) {
+    const userId = state.getUserId();
+    const profile = state.getCurrentUserProfile();
+    
+    if (!userId || !profile || !profile.dailyQuests) return;
+
+    // Tarih kontrolü (Eski görevleri güncelleme)
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (profile.dailyQuests.date !== todayStr) return;
+
+    let updated = false;
+    const newList = profile.dailyQuests.list.map(quest => {
+        // Görev tipi eşleşiyor mu ve henüz tamamlanmadı mı?
+        // (Örn: 'play' == 'play' veya 'win' == 'win')
+        if (quest.type === type && !quest.completed) {
+            const newProgress = Math.min(quest.progress + amount, quest.target);
+            
+            if (newProgress !== quest.progress) {
+                updated = true;
+                quest.progress = newProgress;
+                
+                // Görev bitti mi?
+                if (quest.progress >= quest.target) {
+                    quest.completed = true;
+                    import('./utils.js').then(u => {
+                        u.showToast(`🏆 Görev Tamamlandı: ${quest.title}`, false);
+                        u.playSound('win');
+                    });
+                }
+            }
+        }
+        return quest;
+    });
+
+    if (updated) {
+        const newQuestData = { ...profile.dailyQuests, list: newList };
+        
+        // Yerel State Güncelle
+        state.setCurrentUserProfile({ ...profile, dailyQuests: newQuestData });
+        
+        // Veritabanı Güncelle
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { dailyQuests: newQuestData }).catch(console.error);
+        
+        // UI Bildirimini Güncelle (Kırmızı nokta)
+        import('./ui.js').then(ui => ui.updateQuestBadge());
+    }
+}
+
+// Ödül Toplama
+export async function claimQuestReward(questId) {
+    const userId = state.getUserId();
+    const profile = state.getCurrentUserProfile();
+    if (!profile || !profile.dailyQuests) return;
+
+    const questIndex = profile.dailyQuests.list.findIndex(q => q.id === questId);
+    if (questIndex === -1) return;
+
+    const quest = profile.dailyQuests.list[questIndex];
+
+    if (quest.completed && !quest.claimed) {
+        // Ödülü ver
+        await import('./game.js').then(m => m.addGold(quest.reward));
+        
+        // Claimed olarak işaretle
+        quest.claimed = true;
+        profile.dailyQuests.list[questIndex] = quest;
+
+        // DB Kaydet
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { dailyQuests: profile.dailyQuests });
+        
+        // State Güncelle
+        state.setCurrentUserProfile(profile);
+        
+        // Listeyi Yenile
+        import('./ui.js').then(ui => ui.renderQuestList());
     }
 }
