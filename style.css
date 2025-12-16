@@ -216,89 +216,6 @@ body.theme-light .back-button-hitbox:hover {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* =================================== */
-/* === JOKER (YARDIM) BUTON STİLLERİ === */
-/* =================================== */
-.joker-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px; 
-    padding: 8px 0; 
-    flex-shrink: 0; 
-}
-
-/* Joker Butonları İnce Ayar */
-#joker-container {
-    gap: 20px !important; /* Aralarını biraz daha açalım */
-}
-
-.joker-button {
-    width: 56px !important; /* Biraz daha büyük olsun */
-    height: 56px !important;
-    border-width: 2px !important;
-    background-color: transparent; /* JS inline style ile eziyoruz ama olsun */
-}
-
-/* Rozet konumu */
-.joker-badge {
-    top: -5px;
-    right: -5px;
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-}
-
-.joker-button {
-    position: relative;
-    width: 52px; 
-    height: 52px; 
-    border-radius: 50%; 
-    border: 2px solid #6b7280;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-.joker-button:hover:not(:disabled) {
-    transform: scale(1.05);
-    opacity: 0.9;
-}
-.joker-button:disabled {
-    background-color: #374151;
-    opacity: 0.4;
-    cursor: not-allowed;
-    border-color: #4b5563;
-}
-.joker-button svg {
-    width: 28px;
-    height: 28px;
-    color: #ffffff; 
-}
-#joker-correct { background-color: #16a34a; border-color: #22c55e; }
-#joker-present { background-color: #eab308; border-color: #fde047; }
-#joker-remove { background-color: #4b5563; border-color: #9ca3af; }
-
-.joker-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px; 
-    background-color: #ef4444; 
-    color: white;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid white;
-    z-index: 10;
-}
-.joker-button:disabled .joker-badge { display: none; }
-
 /* ============================================== */
 /* === "NASIL OYNANIR?" ANİMASYON STİLLERİ === */
 /* ============================================== */
@@ -693,4 +610,75 @@ body.theme-light .dictionary-meaning {
   .tile {
     forced-color-adjust: none !important;
   }
+}
+
+
+/* ============================================================ */
+/* === JOKER BUTONLARI GÖRSEL DÜZELTMESİ (PNG İKONLAR İÇİN) === */
+/* ============================================================ */
+
+/* 1. Butonun kendisini temizle (Eski yuvarlak renkleri kaldır) */
+.joker-button,
+#joker-present,
+#joker-correct,
+#joker-remove {
+    background-color: transparent !important; /* Arka planı şeffaf yap */
+    background-image: none !important;        /* Samsung fix gradientlerini kaldır */
+    border: none !important;                  /* Kenarlıkları kaldır */
+    box-shadow: none !important;              /* Gölgeleri kaldır (Varsa) */
+    width: 64px !important;                   /* Biraz daha büyük alan */
+    height: 64px !important;
+    border-radius: 0 !important;              /* Yuvarlak zorlamasını kaldır */
+    padding: 0 !important;
+    overflow: visible !important;             /* Rozet (Badge) dışarı taşabilsin */
+}
+
+/* 2. Butonun içindeki SVG'leri (Eski ikonları) gizle */
+.joker-button svg {
+    display: none !important;
+}
+
+/* 3. Yeni eklenen PNG resimleri için stil */
+.joker-button img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* Hafif bir gölge vererek zeminden ayıralım */
+    filter: drop-shadow(0px 4px 3px rgba(0, 0, 0, 0.4));
+    transition: transform 0.1s ease, filter 0.3s ease;
+    pointer-events: none; /* Tıklamayı engellemesin */
+}
+
+/* 4. Hover (Üzerine gelince) Efekti */
+.joker-button:not(:disabled):hover img {
+    transform: scale(1.1);
+    filter: drop-shadow(0px 6px 5px rgba(0, 0, 0, 0.6)) brightness(1.1);
+}
+
+/* 5. Tıklama (Active) Efekti */
+.joker-button:not(:disabled):active img {
+    transform: scale(0.95);
+}
+
+/* 6. Pasif (Disabled) Durum */
+.joker-button:disabled {
+    opacity: 0.5 !important;
+    background-color: transparent !important; /* Gri arka planı engelle */
+    cursor: not-allowed;
+}
+
+.joker-button:disabled img {
+    filter: grayscale(100%) brightness(0.7); /* Siyah beyaz yap */
+}
+
+/* 7. Adet Rozeti (Badge) Ayarı */
+.joker-badge {
+    top: 0px !important;
+    right: 0px !important;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
+    border: 1px solid white !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    z-index: 20; /* Resmin üzerinde dursun */
 }

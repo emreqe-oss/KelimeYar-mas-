@@ -647,20 +647,22 @@ Oyunu Başlat
 </button>
 </div>
 </div>
-            <div id="joker-container" class="joker-container">
-                <button id="joker-present" class="joker-button" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.2);">
-                    <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" /><path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#fbbf24" /></svg>
-                </button>
-                <button id="joker-correct" class="joker-button" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.2);">
-                    <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5));"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712z" fill="#ffffff" /><path d="M19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" fill="#34d399" /></svg>
-                </button>
-                <button id="joker-remove" class="joker-button" style="border-color: #6b7280; background-color: rgba(156, 163, 175, 0.1);">
-                    <span class="joker-badge">x1</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M16.24 3.56l4.2 4.2c.78.78.78 2.05 0 2.83L13.5 17.5L6.5 10.5l6.94-6.94c.78-.78 2.05-.78 2.83 0z" fill="#f59e0b" /><path d="M6.5 10.5L13.5 17.5L8.81 22.19c-.78.78-2.05.78-2.83 0l-4.2-4.2c-.78-.78-.78-2.05 0-2.83L6.5 10.5z" fill="#ffffff" /></svg>
-                </button>
-            </div>
+            <div id="joker-container" class="joker-container flex justify-center gap-6 my-2">
+    <button id="joker-present" class="joker-button relative w-16 h-16 transition transform active:scale-90 disabled:opacity-50 disabled:grayscale">
+        <span class="joker-badge absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full z-20 border border-white shadow-sm">x0</span>
+        <img src="/images/turuncu-kalem.png" alt="İpucu" class="w-full h-full object-contain drop-shadow-xl filter">
+    </button>
+
+    <button id="joker-correct" class="joker-button relative w-16 h-16 transition transform active:scale-90 disabled:opacity-50 disabled:grayscale">
+        <span class="joker-badge absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full z-20 border border-white shadow-sm">x0</span>
+        <img src="/images/yesil-kalem.png" alt="Doğru Yer" class="w-full h-full object-contain drop-shadow-xl filter">
+    </button>
+
+    <button id="joker-remove" class="joker-button relative w-16 h-16 transition transform active:scale-90 disabled:opacity-50 disabled:grayscale">
+        <span class="joker-badge absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full z-20 border border-white shadow-sm">x0</span>
+        <img src="/images/silgi.png" alt="Silgi" class="w-full h-full object-contain drop-shadow-xl filter">
+    </button>
+</div>
             <div id="keyboard" class="w-full flex-shrink-0"></div>
         </div>
 
