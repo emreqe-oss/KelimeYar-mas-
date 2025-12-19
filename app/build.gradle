@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -57,8 +57,8 @@ android {
         applicationId "com.klig.oyun"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 11
-        versionName "11"
+        versionCode 12
+        versionName "12"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -71,15 +71,19 @@ android {
         resValue "string", "launchUrl", launchUrl
 
         
-        // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
-        // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
-        // the TWA, as it will probably give a better user experience for non-mobile devices.
-        resValue "string", "webManifestUrl", 'https://kelime-yar-mas.vercel.app/manifest.json'
+
+        
+            // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
+            // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
+            // the TWA, as it will probably give a better user experience for non-mobile devices.
+            resValue "string", "webManifestUrl", 'https://kelime-yar-mas.vercel.app/manifest.json'
         
 
         
-        // This is used by Meta Quest.
-        resValue "string", "fullScopeUrl", 'https://kelime-yar-mas.vercel.app/'
+            // This is used by Meta Quest.
+            resValue "string", "fullScopeUrl", 'https://kelime-yar-mas.vercel.app/'
+        
+
         
 
         // The hostname is used when building the intent-filter, so the TWA is able to
@@ -143,34 +147,18 @@ android {
 
         resValue "bool", "enableSiteSettingsShortcut", twaManifest.enableSiteSettingsShortcut
         resValue "string", "orientation", twaManifest.orientation
-    }
 
-    // --- MANUEL İMZA AYARLARI BAŞLANGIÇ ---
-    signingConfigs {
-        release {
-            // Anahtar dosyasının yolu: app/ klasörünün bir üstünde (ana dizinde) olmalı
-            storeFile file("../android.keystore") 
-            storePassword "EmreBademErol35***" // Şifren
-            keyAlias "key0"           // Bubblewrap varsayılan takma adı
-            keyPassword "EmreBademErol35***"   // Şifren
-        }
+        
     }
-    // --- MANUEL İMZA AYARLARI BİTİŞ ---
-
     buildTypes {
         release {
-            // İmzalamayı release build tipine uygula
-            signingConfig signingConfigs.release
-            
             minifyEnabled true
         }
     }
-    
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    
     lintOptions {
         checkReleaseBuilds false
     }
@@ -220,6 +208,6 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     
-    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
+        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
     
 }

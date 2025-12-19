@@ -19,8 +19,8 @@
     "path": "C:\\klig\\KelimeYar-mas-\\android.keystore",
     "alias": "key0"
   },
-  "appVersionName": "11",
-  "appVersionCode": 11,
+  "appVersionName": "12",
+  "appVersionCode": 12,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://kelime-yar-mas.vercel.app/manifest.json",
@@ -42,5 +42,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "11"
+  "appVersion": "12"
 }
