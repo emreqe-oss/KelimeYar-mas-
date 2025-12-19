@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "888546992121",
+    "project_id": "kelime-oyunu-flaneur",
+    "storage_bucket": "kelime-oyunu-flaneur.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:888546992121:android:a3679d13abd100d9bb2728",
+        "android_client_info": {
+          "package_name": "com.klig.oyun"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzzRP_VZrh5BtoL1ToWGqhbpI7nm7VHeo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

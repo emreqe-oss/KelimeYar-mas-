@@ -39,8 +39,8 @@
 39-->
 40<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 41    package="com.klig.oyun"
-42    android:versionCode="10"
-43    android:versionName="10" >
+42    android:versionCode="11"
+43    android:versionName="11" >
 44
 45    <uses-sdk
 46        android:minSdkVersion="21"
