@@ -1726,12 +1726,16 @@ function saveDailyGameState(gameState) {
 
 // js/game.js -> restoreDailyGame fonksiyonunu BU HALİYLE DEĞİŞTİR:
 
+// js/game.js -> restoreDailyGame fonksiyonunun TAMAMI
+
+// js/game.js -> restoreDailyGame (GÜVENLİ VERSİYON)
+
 function restoreDailyGame(savedState) {
     console.log("Günün kelimesi durumu kontrol ediliyor...");
     
-    // Eğer oyun zaten bitmişse, oyun ekranını HİÇ açma. Direkt modalı hazırla.
+    // Eğer oyun zaten bitmişse, oyun ekranını HİÇ açma.
     if (savedState.status === 'finished') {
-        // Arka planda state'i güncelle ama ekran değiştirme
+        // State'i güncelle
         state.setGameMode('daily');
         state.setLocalGameData({
             ...savedState,
@@ -1739,42 +1743,60 @@ function restoreDailyGame(savedState) {
             players: { [state.getUserId()]: { guesses: savedState.guesses } }
         });
 
-        // Yükleniyor hissi için kısa bir bekleme (opsiyonel, kaldırılabilir)
         showToast("Sonuçlar yükleniyor...", false);
 
-        // js/game.js -> restoreDailyGame içindeki setTimeout bloğu:
-
-        // ... restoreDailyGame içindeki setTimeout bloğu ...
-        // js/game.js -> restoreDailyGame içinde:
-
         setTimeout(async () => {
-            const profile = state.getCurrentUserProfile();
-            const stats = getStatsFromProfile(profile);
-            
-            // 1. BUGÜNÜN VERİLERİ (Sen, Sıralama, Genel Ort.)
-            // Bu fonksiyon zaten hem senin puanını, hem sıranı, hem de genel ortalamayı döndürüyor.
-            const rankData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
-            
-            // 2. HAFTALIK SENİN ORTALAMAN
-            const weeklyData = await getLast7DaysStats(state.getUserId());
+            // --- HATA DÜZELTME: Değişkenleri en başta varsayılanla tanımlıyoruz ---
+            let rankData = { userScore: 0, userPosition: '-', totalPlayers: '-', avgScore: '-', avgGuesses: '-' };
+            let weeklyData = { avgScore: 0, avgGuesses: '-' }; // <-- ARTIK ÖNCEDEN TANIMLI
+            let globalWeeklyData = { avgScore: '-', avgGuesses: '-' };
+            let weeklyRankData = { myRank: '-', totalPlayers: '-' };
+            let stats = {};
 
-            // 3. HAFTALIK GENEL ORTALAMA
-            const globalWeeklyData = await getGlobalWeeklyStats();
+            try {
+                const profile = state.getCurrentUserProfile();
+                stats = getStatsFromProfile(profile);
+                
+                // Verileri çekmeye çalış (Hata olursa varsayılan değerler kalır, kod patlamaz)
+                try { 
+                    const rData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
+                    if(rData) rankData = rData;
+                } catch(e) { console.log("Günlük veri hatası", e); }
 
-            // 4. HAFTALIK SIRALAMA (YENİ EKLENEN)
-            const weeklyRankData = await calculateWeeklyLeaderboard(state.getUserId());
+                try { 
+                    const wData = await getLast7DaysStats(state.getUserId());
+                    if(wData) weeklyData = wData;
+                } catch(e) { console.log("Haftalık veri hatası", e); }
 
+                try { 
+                    const gData = await getGlobalWeeklyStats();
+                    if(gData) globalWeeklyData = gData;
+                } catch(e) { console.log("Global veri hatası", e); }
+                
+                // calculateWeeklyLeaderboard fonksiyonu var mı kontrol et
+                try {
+                     if (typeof calculateWeeklyLeaderboard === 'function') {
+                        const wrData = await calculateWeeklyLeaderboard(state.getUserId());
+                        if(wrData) weeklyRankData = wrData;
+                     }
+                } catch(e) {}
+
+            } catch (err) {
+                console.error("Veri hazırlama ana hatası:", err);
+            }
+
+            // UI'ı güncelle
             import('./ui.js').then(ui => {
                 ui.openDailyResultModal(stats, {
                     // BUGÜN
-                    userScore: rankData?.userScore || 0,
+                    userScore: rankData.userScore,
                     userGuessCount: savedState.guesses.length,
-                    userDailyRank: rankData?.userPosition || '-',
-                    totalDailyPlayers: rankData?.totalPlayers || '-',
-                    dailyGlobalScore: rankData?.avgScore || '-',
-                    dailyGlobalGuesses: rankData?.avgGuesses || '-',
+                    userDailyRank: rankData.userPosition,
+                    totalDailyPlayers: rankData.totalPlayers,
+                    dailyGlobalScore: rankData.avgScore,
+                    dailyGlobalGuesses: rankData.avgGuesses,
                     
-                    // HAFTALIK
+                    // HAFTALIK (weeklyData yukarıda tanımlı olduğu için hata vermez)
                     weeklyUserScore: weeklyData.avgScore,
                     weeklyUserGuesses: weeklyData.avgGuesses,
                     weeklyGlobalScore: globalWeeklyData.avgScore,
@@ -1783,12 +1805,12 @@ function restoreDailyGame(savedState) {
                     weeklyTotalPlayers: weeklyRankData.totalPlayers
                 });
             });
+
         }, 500);
         return;
     }
 
-    // --- EĞER OYUN BİTMEMİŞSE BURADAN DEVAM EDER ---
-    
+    // --- EĞER OYUN BİTMEMİŞSE BURADAN DEVAM EDER (Standart akış) ---
     state.resetKnownCorrectPositions(); 
     state.resetHasUserStartedTyping();
     
@@ -1814,7 +1836,7 @@ function restoreDailyGame(savedState) {
             [state.getUserId()]: { 
                 username: getUsername(), 
                 guesses: savedState.guesses, 
-                score: 0,
+                score: 0, 
                 jokersUsed: savedState.jokersUsed || { present: false, correct: false, remove: false } 
             } 
         },
@@ -1828,23 +1850,21 @@ function restoreDailyGame(savedState) {
     state.setGameMode('daily');
     state.setLocalGameData(gameData);
     
-    showScreen('game-screen'); // Oyun bitmemişse ekranı aç
+    showScreen('game-screen'); 
     initializeGameUI(gameData);
     renderGameState(gameData, true);
 }
-
-// BU YENİ FONKSİYONU DA game.js'in EN ALTINA EKLE:
 // js/game.js -> getLast7DaysStats (GÜVENLİ VERSİYON)
 
 async function getLast7DaysStats(userId) {
-    // Son 7 günün skorlarını çekip ortalamasını alır
-    // Not: Index hatası almamak için sadece userId ile sorgulayıp JS'de filtreliyoruz.
+    if (!userId) return { avgScore: 0, avgGuesses: '-' }; // Kullanıcı yoksa güvenli çıkış
+
     const todayIndex = getDaysSinceEpoch();
     const startDay = todayIndex - 7;
     
     try {
         const leaderboardRef = collection(db, 'daily_leaderboard');
-        // Sadece kullanıcıya göre sorgula (Index gerektirmez)
+        // Index hatasını önlemek için sadece userId ile çekip JS tarafında filtreleyeceğiz
         const q = query(leaderboardRef, where('userId', '==', userId));
         
         const snapshot = await getDocs(q);
@@ -1854,10 +1874,10 @@ async function getLast7DaysStats(userId) {
 
         snapshot.forEach(doc => {
             const d = doc.data();
-            // Son 7 güne ait mi kontrol et
-            if (d.dayIndex > startDay && d.dayIndex <= todayIndex && d.didWin) {
-                totalScore += d.score;
-                totalGuesses += d.guessCount;
+            // Veri bütünlüğü kontrolü ve Tarih filtresi
+            if (d && d.dayIndex > startDay && d.dayIndex <= todayIndex && d.didWin) {
+                totalScore += (d.score || 0);
+                totalGuesses += (d.guessCount || 0);
                 count++;
             }
         });
@@ -1871,6 +1891,7 @@ async function getLast7DaysStats(userId) {
 
     } catch (e) {
         console.error("Haftalık veri hatası:", e);
+        // Hata durumunda uygulama çökmesin diye varsayılan değer dön
         return { avgScore: 0, avgGuesses: '-' };
     }
 }
@@ -4253,21 +4274,40 @@ function getRandomBotName() {
     return botNames[randomIndex];
 }
 
+// js/game.js -> assignBotToGame fonksiyonunun TAMAMI
+
 async function assignBotToGame(gameId) {
+    // 1. Bot ismini belirle
     const botId = 'bot_' + Date.now(); 
     const botName = getRandomBotName();
     
-    console.log(`LOG: 45sn doldu. Bot atanıyor: ${botName}`);
+    console.log(`LOG: Süre doldu. Bot atanıyor: ${botName}`);
 
     const gameRef = doc(db, "games", gameId);
     
+    // 2. Oyuncuların kullandığı avatar listesi (main.js ile aynı)
+    const AVAILABLE_AVATARS = [
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar1&background=%236b7280',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar2&background=%23ef4444',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar3&background=%23f59e0b',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar4&background=%2310b981',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar5&background=%233b82f6',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=avatar6&background=%238b5cf6',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=huso&background=%23ec4899',
+        'https://api.dicebear.com/8.x/pixel-art/svg?seed=gemini&background=%2314b8a6'
+    ];
+
+    // Listeden rastgele bir avatar seç
+    const randomAvatar = AVAILABLE_AVATARS[Math.floor(Math.random() * AVAILABLE_AVATARS.length)];
+
+    // 3. Bot verilerini hazırla
     const botPlayerState = { 
         username: botName, 
         guesses: [], 
         score: 0, 
         jokersUsed: { present: false, correct: false, remove: false },
-        avatarUrl: "https://.../bot_avatar.png", // Veya null (varsayılan)
-        leagueTier: ['bronze', 'silver', 'gold'][Math.floor(Math.random()*3)], // Rastgele lig
+        avatarUrl: randomAvatar, // <-- Düzeltilmiş gerçek avatar URL'si
+        leagueTier: ['bronze', 'silver', 'gold'][Math.floor(Math.random()*3)], 
         isBot: true
     };
 
@@ -4278,6 +4318,7 @@ async function assignBotToGame(gameId) {
             
             const gameData = gameDoc.data();
             
+            // Eğer son anda gerçek oyuncu girdiyse botu iptal et
             if (Object.keys(gameData.players).length >= 2) {
                 console.log("LOG: Gerçek oyuncu girdiği için bot iptal edildi.");
                 return;
