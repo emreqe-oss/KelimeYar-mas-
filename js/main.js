@@ -12,8 +12,9 @@ import { db, auth } from './firebase.js';
 import { onAuthStateChanged } from "firebase/auth"; 
 import { 
     getDoc, doc, collection, query, orderBy, limit, getDocs, 
-    updateDoc, where, onSnapshot, deleteField // <-- where ve onSnapshot eklendi
+    updateDoc, where, onSnapshot, deleteField, startAfter // <-- where ve onSnapshot eklendi
 } from "firebase/firestore"; 
+
 import { handleLogin, handleRegister, handleLogout } from './auth.js';
 import { 
     searchUsers,
@@ -76,6 +77,11 @@ import {
 } from './game.js';
 
 import { showToast, playSound } from './utils.js'; // <-- Düzeltildi
+
+
+let lastVisibleRankDoc = null; // Son çekilen dökümanı tutar
+let currentRankCount = 1;      // Sıralama sayısını tutar
+let isRankingLoading = false;  // Çift tıklamayı önlemek için
 
 // --- SERVICE WORKER KAYDI (Bunu Ekle) ---
 if ('serviceWorker' in navigator) {
@@ -267,82 +273,144 @@ function initAuthListener() {
 }
 
 // Global Sıralama
-async function fetchAndDisplayGlobalRanking() {
+// --- GELİŞMİŞ SIRALAMA FONKSİYONU ---
+async function fetchAndDisplayGlobalRanking(loadMore = false) {
     const listElement = document.getElementById('global-ranking-list');
     const loadingElement = document.getElementById('global-ranking-loading');
-    if (!listElement || !loadingElement) return;
+    const loadMoreBtn = document.getElementById('load-more-ranking-btn');
+    
+    if (!listElement || isRankingLoading) return;
+    
+    isRankingLoading = true;
 
-    listElement.innerHTML = '';
-    loadingElement.classList.remove('hidden');
-    loadingElement.textContent = "Sıralama yükleniyor..."; 
+    // Eğer "Daha Fazla" değilse (yani ilk açılışsa), her şeyi sıfırla
+    if (!loadMore) {
+        listElement.innerHTML = '';
+        loadingElement.classList.remove('hidden');
+        loadMoreBtn.classList.add('hidden');
+        lastVisibleRankDoc = null;
+        currentRankCount = 1;
+    } else {
+        loadMoreBtn.textContent = "Yükleniyor...";
+        loadMoreBtn.disabled = true;
+    }
 
     try {
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, 
-            orderBy("stats.wins", "desc"), 
-            orderBy("stats.played", "asc"),
-            limit(20) 
-        );
+        let q;
+
+        // Sorguyu hazırla
+        if (loadMore && lastVisibleRankDoc) {
+            // Devamını getir (Pagination)
+            q = query(usersRef, 
+                orderBy("stats.wins", "desc"), 
+                orderBy("stats.played", "asc"),
+                startAfter(lastVisibleRankDoc), // <-- Kaldığı yerden devam et
+                limit(50) 
+            );
+        } else {
+            // İlk sayfa
+            q = query(usersRef, 
+                orderBy("stats.wins", "desc"), 
+                orderBy("stats.played", "asc"),
+                limit(50) 
+            );
+        }
 
         const querySnapshot = await getDocs(q);
-        let rank = 1;
         const currentUserId = getUserId(); 
+        let currentUserRow = null;
+
+        loadingElement.classList.add('hidden');
 
         if (querySnapshot.empty) {
-            loadingElement.textContent = "Henüz sıralamaya girecek kimse yok.";
+            if(!loadMore) loadingElement.textContent = "Henüz sıralama yok.";
+            loadMoreBtn.classList.add('hidden'); // Daha fazla veri yoksa butonu gizle
+            isRankingLoading = false;
             return;
         }
+
+        // Son dökümanı kaydet (Bir sonraki tur için)
+        lastVisibleRankDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
 
         querySnapshot.forEach(doc => {
             const user = doc.data();
             const stats = user.stats || { played: 0, wins: 0 };
             
+            // Kullanıcı adı yoksa atla
             if (!user.username) return; 
 
             const row = document.createElement('div');
-            row.className = 'ranking-row'; 
+            row.className = 'ranking-row p-3 border-b border-gray-700 flex justify-between items-center animate-fade-in'; 
             
             const isMe = doc.id === currentUserId;
             if (isMe) {
-                row.classList.add('current-user'); 
+                row.classList.add('bg-indigo-900/50', 'border-indigo-500', 'border'); 
+                currentUserRow = row;
+            } else {
+                row.classList.add('hover:bg-gray-700/50', 'transition');
             }
 
             const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
             const wins = stats.wins || 0;
 
             row.innerHTML = `
-                <div class="rank-details">
-                    <span class="rank-number">${rank}.</span>
-                    <span class="rank-username">${user.username}</span>
-                </div>
-                <div class="rank-actions">
-                    <div class="rank-score">
-                        <span>Başarı: <strong>%${winRate}</strong></span>
-                        <span>Kazanma: <strong>${wins}</strong></span>
+                <div class="flex items-center gap-3">
+                    <span class="font-bold text-gray-400 w-8 text-right text-sm">${currentRankCount}.</span>
+                    <div class="flex flex-col">
+                        <span class="font-bold text-white ${isMe ? 'text-yellow-400' : ''} truncate max-w-[120px]">${user.username}</span>
+                        <span class="text-[10px] text-gray-500">Kazanma: ${wins}</span>
                     </div>
+                </div>
+                <div class="text-right">
+                    <span class="block font-bold text-green-400 text-sm">%${winRate}</span>
+                    <span class="text-[10px] text-gray-500">BAŞARI</span>
                 </div>
             `;
             
+            // Meydan Oku Butonu
             if (!isMe) {
+                const actionDiv = document.createElement('div');
+                actionDiv.className = "ml-2";
                 const challengeButton = document.createElement('button');
-                challengeButton.className = 'challenge-btn';
-                challengeButton.textContent = 'Meydan Oku';
+                challengeButton.className = 'bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold py-1.5 px-2.5 rounded transition';
+                challengeButton.textContent = 'VS';
                 challengeButton.dataset.opponentId = doc.id;
                 challengeButton.dataset.opponentName = user.username;
-                challengeButton.addEventListener('click', handleChallengeClick);
-                
-                row.querySelector('.rank-actions').appendChild(challengeButton);
+                challengeButton.onclick = handleChallengeClick; // addEventListener yerine onclick daha hafif
+                actionDiv.appendChild(challengeButton);
+                row.appendChild(actionDiv);
+            } else {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = "w-[42px]"; 
+                row.appendChild(emptyDiv);
             }
             
             listElement.appendChild(row);
-            rank++;
+            currentRankCount++; // Sırayı artır
         });
 
-        loadingElement.classList.add('hidden');
+        // Buton durumunu güncelle
+        if (querySnapshot.docs.length < 50) {
+            loadMoreBtn.classList.add('hidden'); // 50'den az geldiyse listenin sonudur
+        } else {
+            loadMoreBtn.classList.remove('hidden');
+            loadMoreBtn.textContent = "👇 Daha Fazla Göster";
+            loadMoreBtn.disabled = false;
+        }
+
+        // Kendi ismine odaklan (Sadece ilk yüklemede ve eğer listedeyse)
+        if (!loadMore && currentUserRow) {
+            setTimeout(() => {
+                currentUserRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
 
     } catch (error) {
         console.error("Sıralama yüklenirken hata:", error);
         loadingElement.textContent = "Sıralama yüklenemedi.";
+    } finally {
+        isRankingLoading = false;
     }
 }
 
@@ -410,6 +478,13 @@ function addEventListeners() {
     if (closeQuestsBtn) {
         closeQuestsBtn.addEventListener('click', () => {
             if (questsModal) questsModal.classList.add('hidden');
+        });
+    }
+
+    const loadMoreRankingBtn = document.getElementById('load-more-ranking-btn');
+    if (loadMoreRankingBtn) {
+        loadMoreRankingBtn.addEventListener('click', () => {
+            fetchAndDisplayGlobalRanking(true); // true = loadMore modu
         });
     }
 
@@ -529,9 +604,14 @@ function addEventListeners() {
         btnShowStandings.addEventListener('click', () => switchLeagueTab('standings'));
     }
 
-    // İstatistik Butonları
-    statsBtn.addEventListener('click', openStatsScreen);
-    statsBtnMain.addEventListener('click', openStatsScreen);
+// İstatistik Butonları (Hata Düzeltmesi)
+    if (statsBtn) {
+        statsBtn.addEventListener('click', openStatsScreen);
+    }
+    
+    if (statsBtnMain) {
+        statsBtnMain.addEventListener('click', openStatsScreen);
+    }
 
     // İstatistik Sekme Butonları
     document.getElementById('show-personal-stats-tab-btn').addEventListener('click', () => switchStatsTab('personal'));
@@ -541,6 +621,7 @@ function addEventListeners() {
     howToPlayBtn.addEventListener('click', () => {
         showScreen('how-to-play-screen');
         playTutorialAnimation(); 
+        import('./game.js').then(m => m.updateQuestProgress('view_tutorial', 1));
     });
     closeHowToPlayBtn.addEventListener('click', () => {
         history.back();
@@ -570,7 +651,7 @@ function addEventListeners() {
                 navigator.clipboard.writeText(text);
                 import('./utils.js').then(u => u.showToast("Link kopyalandı! Arkadaşına gönder.", false));
             }
-            
+            import('./game.js').then(m => m.updateQuestProgress('invite_friend', 1));
             // DİKKAT: Buradaki "addGold" kodunu SİLDİK. 
             // Artık sadece linki gönderiyoruz, ödül kayıt olunca gelecek.
         });
@@ -580,9 +661,19 @@ function addEventListeners() {
     closeProfileBtn.addEventListener('click', () => history.back());
     document.getElementById('back-to-main-from-edit-profile-btn').addEventListener('click', () => history.back());
 
-    // Tema Butonları
-    themeLightBtn.addEventListener('click', () => switchTheme('light'));
-    themeDarkBtn.addEventListener('click', () => switchTheme('dark'));
+   
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+            // Eğer şu an dark ise light yap, değilse dark yap
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            switchTheme(newTheme);
+            
+            // Efekt sesi
+            import('./utils.js').then(u => u.playSound('click'));
+        });
+    }
 
     // Geri Butonları
     backToMainMenuBtn.addEventListener('click', () => history.back());
@@ -696,6 +787,18 @@ function addEventListeners() {
     if (jokerCorrectBtn) jokerCorrectBtn.addEventListener('click', useCorrectJoker);
     if (jokerRemoveBtn) jokerRemoveBtn.addEventListener('click', useRemoveJoker);
 
+    // js/main.js -> addEventListeners içine ekle
+
+    // Reklam İzleme Butonu (data-amount="500" olan)
+    document.querySelectorAll('.buy-gold-btn[data-amount="500"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // ... (Reklam izleme kodların buradaysa altına ekle)
+            
+            // --- GÖREV TETİKLEYİCİSİ ---
+            // (Not: Gerçekte reklamın BİTMESİNİ beklemek gerekir ama şimdilik tıklayınca verelim)
+            import('./game.js').then(m => m.updateQuestProgress('watch_ad', 1));
+        });
+    });
     // === PROFİL VE AVATAR LISTENERS ===
     
     document.getElementById('main-menu-avatar').addEventListener('click', openEditProfileScreen);
@@ -756,16 +859,71 @@ function addEventListeners() {
             });
         });
     }
+    // js/main.js -> addEventListeners fonksiyonunun içine, EN ALTA ekle:
+
+    // --- YENİ GÖREV TETİKLEYİCİLERİ (PAYLAŞIM) ---
+
+    // 1. Normal Oyun Sonu Paylaş Butonu (shareResultsBtn zaten import edilmiş)
+    if (shareResultsBtn) {
+        shareResultsBtn.addEventListener('click', () => {
+            // Basit paylaşım metni
+            const text = "Kelime Yarışması'nda skoruma bak! Sen de oyna.";
+            
+            if (navigator.share) {
+                navigator.share({ title: 'Kelime Yarışması', text: text }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(text);
+                import('./utils.js').then(u => u.showToast("Sonuç panoya kopyalandı!", false));
+            }
+            
+            // GÖREVİ TAMAMLA: 'Hava At'
+            import('./game.js').then(m => m.updateQuestProgress('share_result', 1));
+        });
+    }
+
+    // 2. Günlük Oyun Sonu Paylaş Butonu (ID ile direkt seçiyoruz)
+    const dailyShareBtn = document.getElementById('daily-share-btn');
+    if (dailyShareBtn) {
+        dailyShareBtn.addEventListener('click', () => {
+            const text = "Günün Kelimesi'ni çözdüm! Sıra sende.";
+            
+            if (navigator.share) {
+                navigator.share({ title: 'Günün Kelimesi', text: text }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(text);
+                import('./utils.js').then(u => u.showToast("Sonuç panoya kopyalandı!", false));
+            }
+
+            // GÖREVİ TAMAMLA: 'Hava At'
+            import('./game.js').then(m => m.updateQuestProgress('share_result', 1));
+        });
+    }
 }
 
 // Tema Yönetimi
+// js/main.js -> switchTheme (GÜNCELLENMİŞ HALİ)
+
 function switchTheme(theme) {
+    const iconSun = document.getElementById('theme-icon-sun');
+    const iconMoon = document.getElementById('theme-icon-moon');
+
     if (theme === 'light') {
+        // Aydınlık Modu Aç
         document.body.classList.add('theme-light');
         localStorage.setItem('theme', 'light');
+        
+        // Aydınlıktayız -> Ay ikonunu göster (Karanlığa geçiş için)
+        if(iconSun) iconSun.classList.add('hidden');
+        if(iconMoon) iconMoon.classList.remove('hidden');
+        
     } else {
+        // Karanlık Modu Aç
         document.body.classList.remove('theme-light');
         localStorage.setItem('theme', 'dark');
+        
+        // Karanlıktayız -> Güneş ikonunu göster (Aydınlığa geçiş için)
+        if(iconSun) iconSun.classList.remove('hidden');
+        if(iconMoon) iconMoon.classList.add('hidden');
     }
 }
 
@@ -873,6 +1031,7 @@ async function saveProfileChanges(dataToSave = {}, isAvatarSave = false) {
         if (!isAvatarSave) {
             saveButton.disabled = false;
             saveButton.textContent = 'Değişiklikleri Kaydet';
+            import('./game.js').then(m => m.updateQuestProgress('change_avatar', 1));
         }
     }
 }
@@ -900,8 +1059,10 @@ async function handleChallengeClick(event) {
         });
 
         showToast(`${opponentName} adlı oyuncuya meydan okundu!`);
+        import('./game.js').then(m => m.updateQuestProgress('challenge_rank', 1));
         showScreen('my-games-screen');
         switchMyGamesTab('active'); 
+        
 
     } catch (error) {
         console.error("Meydan okuma başarısız:", error);

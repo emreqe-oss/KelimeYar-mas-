@@ -4135,6 +4135,7 @@ export async function addWordToDictionary(word) {
             btn.disabled = true;
         }
         showToast("Sözlüğe eklendi!", false);
+        updateQuestProgress('add_dict', 1);
     } catch (error) { 
         console.error("Kelime ekleme hatası:", error);
         showToast("Hata oluştu.", true); 
@@ -4676,14 +4677,37 @@ export async function sendQuickChat(message) {
 
 // js/game.js - EN ALTA EKLE (GÖREV SİSTEMİ)
 
-// Görev Tanımları Havuzu
+// js/game.js -> QUEST_DEFINITIONS (Genişletilmiş Liste)
+
 const QUEST_DEFINITIONS = [
-    { id: 'play_3', type: 'play', target: 3, reward: 150, title: "Isınma Turu", desc: "3 farklı maç tamamla." },
-    { id: 'win_1', type: 'win', target: 1, reward: 200, title: "Zafer Tadı", desc: "1 oyun kazan." },
-    { id: 'win_3', type: 'win', target: 3, reward: 500, title: "Seri Galibiyet", desc: "3 oyun kazan." },
-    { id: 'find_green_10', type: 'green_tile', target: 10, reward: 100, title: "Yeşil Işık", desc: "Toplam 10 harfi doğru yerinde bil." },
-    { id: 'use_joker_1', type: 'use_joker', target: 1, reward: 50, title: "Joker Hakkı", desc: "1 kez joker kullan." },
-    { id: 'play_br_1', type: 'play_br', target: 1, reward: 300, title: "Battle Royale", desc: "Bir Battle Royale oyununa katıl." }
+    // --- OYNANIŞ (KLASİK) ---
+    { id: 'play_5', type: 'play', target: 5, reward: 200, title: "Maratoncu", desc: "5 oyun tamamla." },
+    { id: 'win_3', type: 'win', target: 3, reward: 500, title: "Yenilmez", desc: "3 oyun kazan." },
+    { id: 'win_fast_1', type: 'win_fast', target: 1, reward: 400, title: "Şimşek Hızı", desc: "Bir kelimeyi 4 veya daha az tahminde bil." },
+    
+    // --- HARF AVCILIĞI ---
+    { id: 'find_green_20', type: 'green_tile', target: 20, reward: 250, title: "Yeşil Vadi", desc: "Toplam 20 harfi doğru yerinde bil." },
+    { id: 'find_yellow_25', type: 'yellow_tile', target: 25, reward: 250, title: "Sarı Alarm", desc: "Toplam 25 harf bul (yerleri yanlış olabilir)." },
+    
+    // --- SOSYAL & ETKİLEŞİM (SENİN İSTEDİKLERİN) ---
+    { id: 'invite_friend_1', type: 'invite_friend', target: 1, reward: 1000, title: "Elçi", desc: "Bir arkadaşını oyuna davet et (Link paylaş)." },
+    { id: 'challenge_rank_1', type: 'challenge_rank', target: 1, reward: 300, title: "Cesur Yürek", desc: "Genel sıralamadan birine meydan oku." },
+    { id: 'share_result_1', type: 'share_result', target: 1, reward: 200, title: "Hava At", desc: "Bir oyun sonucunu paylaş." },
+    
+    // --- EKONOMİ & KIRTASİYE ---
+    { id: 'watch_ad_1', type: 'watch_ad', target: 1, reward: 600, title: "Sinema Saati", desc: "Kırtasiye'de bir reklam izle." },
+    { id: 'spend_gold_1', type: 'spend_gold', target: 1, reward: 100, title: "Müşteri", desc: "Kırtasiyeden herhangi bir ürün al." },
+    { id: 'use_joker_3', type: 'use_joker', target: 3, reward: 150, title: "Joker", desc: "Toplam 3 kez joker kullan." },
+
+    // --- KEŞİF & EĞİTİM (TUTORIAL TADINDA) ---
+    { id: 'add_dict_1', type: 'add_dict', target: 1, reward: 200, title: "Lügatçı", desc: "Sözlüğüne yeni bir kelime ekle." },
+    { id: 'change_avatar_1', type: 'change_avatar', target: 1, reward: 150, title: "Yeni İmaj", desc: "Profilinden avatarını değiştir." },
+    { id: 'change_theme_1', type: 'change_theme', target: 1, reward: 100, title: "Gece/Gündüz", desc: "Temayı (Aydınlık/Karanlık) değiştir." },
+    { id: 'view_tutorial_1', type: 'view_tutorial', target: 1, reward: 50, title: "Öğrenci", desc: "'Nasıl Oynanır' ekranını aç." },
+    
+    // --- MODLAR ---
+    { id: 'play_br_1', type: 'play_br', target: 1, reward: 350, title: "Arena", desc: "Bir Battle Royale maçına katıl." },
+    { id: 'play_cpu_1', type: 'play_vs_cpu', target: 1, reward: 100, title: "Antrenman", desc: "Bilgisayara karşı oyna." }
 ];
 
 // js/game.js - checkAndGenerateDailyQuests (GÜVENLİ & DÜZELTİLMİŞ)
