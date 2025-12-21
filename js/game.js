@@ -716,10 +716,10 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
         if (gameInfoBar) gameInfoBar.style.display = 'none';
     }
 
-    // C) GÜNÜN KELİMESİ
+// C) GÜNÜN KELİMESİ
     else if (isDaily) {
         if (multiplayerScoreBoard) multiplayerScoreBoard.classList.add('hidden');
-        if (brLobbyControls) brLobbyControls.classList.add('hidden'); // BR Lobisini Gizle
+        if (brLobbyControls) brLobbyControls.classList.add('hidden');
         if (sequentialGameInfo) sequentialGameInfo.classList.remove('hidden');
         
         if (p1Score) p1Score.style.display = 'none';
@@ -729,11 +729,15 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
             roundCounter.style.display = 'block'; 
             roundCounter.textContent = new Date().toLocaleDateString('tr-TR'); 
         }
-        if (timerDisplay && timerDisplay.parentElement) timerDisplay.parentElement.className = "text-center w-1/5";
+        
+        // --- DEĞİŞİKLİK: SAYAÇ GİZLEME ---
+        if (timerDisplay) timerDisplay.style.display = 'none'; // Sayacı gizle
+        if(timerDisplay && timerDisplay.parentElement) timerDisplay.parentElement.className = "hidden"; // Kapsayıcıyı da gizle
+        // ---------------------------------
+
         if (gameInfoBar) gameInfoBar.style.display = 'none';
         if (jokerContainer) jokerContainer.style.display = 'none'; 
         
-        // Başlık (Günün Kelimesi)
         if (dailyGameTitle) dailyGameTitle.classList.remove('hidden');
     }
 
@@ -1569,116 +1573,187 @@ export async function joinGame(gameId) {
     }
 }
 
-// YENİ: Günün kelimesini Firestore'dan çeken fonksiyon
+// js/game.js içinde bu fonksiyonu bul ve bununla değiştir:
+
 async function getDailySecretWord() {
+    console.log("Günün kelimesi sunucudan talep ediliyor...");
+
+    // 1. ÖNCE SUNUCUYA SOR (Güvenli Yol)
     try {
+        // Firebase'den 'system_data/daily' dökümanını çekiyoruz
         const docRef = doc(db, "system_data", "daily");
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            console.log("Günün kelimesi sunucudan alındı.");
-            return data.word.toLocaleUpperCase('tr-TR');
+            
+            // Veritabanındaki tarih ile bugünün tarihi eşleşiyor mu?
+            // (Admin eski bir kelimeyi unutmuş olabilir, kontrol edelim)
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            // Eğer veritabanında tarih alanı varsa ve bugünle eşleşiyorsa kullan
+            if (data.date === todayStr && data.word) {
+                console.log("✅ Günün kelimesi SUNUCUDAN alındı (Güvenli).");
+                return data.word.toLocaleUpperCase('tr-TR');
+            } else {
+                console.warn("⚠️ Sunucudaki kelime güncel değil (Eski tarihli). Yerele geçiliyor.");
+            }
         } else {
-            console.warn("Günün kelimesi veritabanında yok! Yerele dönülüyor.");
-            // Acil durum yedeği (Veritabanı boşsa oyun çökmesin)
-            return "KALEM"; 
+            console.warn("⚠️ Sunucuda 'daily' dökümanı bulunamadı. Yerele geçiliyor.");
         }
     } catch (error) {
-        console.error("Günün kelimesi alınamadı:", error);
-        return "KALEM"; // Hata olursa yedek kelime
+        console.error("❌ Sunucu bağlantı hatası:", error);
+        // İnternet yoksa veya kota dolduysa buraya düşer.
     }
+
+    // 2. SUNUCUDA SORUN VARSA: TARİHE GÖRE OTOMATİK SEÇ (Yedek Plan / Fallback)
+    // Bu kısım oyunun "Asla Çökmemesini" garanti eder.
+    
+    console.log("🔄 Yedek plan devreye girdi: Yerel Sözlük Kullanılıyor.");
+    
+    const wordList = allWordList["5"] || []; 
+    if (wordList.length === 0) return "KALEM"; // En kötü ihtimal yedeği
+
+    // Bugünün tarihine göre sabit bir sayı üret (Seed)
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now - start;
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    const year = now.getFullYear();
+
+    // Matematiksel formülle listeden günün kelimesini seç
+    // (Yıl + Gün) kombinasyonu her oyuncu için AYNI kelimeyi üretir.
+    const index = (year * 365 + dayOfYear) % wordList.length;
+
+    return wordList[index].toLocaleUpperCase('tr-TR');
 }
 
+// js/game.js -> startNewGame (GÜNCEL - SÜRESİZ VERSİYON)
+
+// js/game.js -> startNewGame (Final - Tarih Kontrollü)
+
 export async function startNewGame(config) {
+    // Temizlik
     state.resetKnownCorrectPositions();
     state.resetHasUserStartedTyping();
-
     state.setGameMode(config.mode);
+    
     let secretWord;
     const initialGuesses = config.initialGuesses || []; 
 
-    const gameSettings = { isHardMode: false };
+    const gameSettings = { 
+        isHardMode: false,
+        wordLength: 5,
+        timeLimit: 60,
+        matchLength: 1
+    };
+    
     switch (config.mode) {
+        // ... (Diğer case'ler vsCPU, league vs. aynı kalabilir) ...
         case 'vsCPU':
             gameSettings.wordLength = getRandomWordLength();
             gameSettings.timeLimit = 120; 
             gameSettings.matchLength = 5;
-            
             setTimeout(startCpuLoop, 1000); 
             break;
+
         case 'league':
             secretWord = config.secretWord;
-            if (!secretWord) { showToast("Lig kelimesi yüklenemedi.", true); return; }
+            if (!secretWord) { import('./utils.js').then(u => u.showToast("Lig kelimesi yüklenemedi.", true)); return; }
             gameSettings.wordLength = secretWord.length;
             gameSettings.timeLimit = 120; 
             gameSettings.matchLength = 1;
             break;
+
         case 'daily':
-            secretWord = await getDailySecretWord();
-            
-            if (!secretWord) {
-                showToast("Günün kelimesi sunucudan alınamadı.", true);
+            // 1. ÖNCE KAYIT KONTROLÜ (En Öncelikli Adım)
+            // getDailyGameState artık tarih kontrolünü kendi içinde yapıyor.
+            // Eğer null değilse, kesinlikle bugünün geçerli kaydıdır.
+            const savedState = getDailyGameState();
+
+            if (savedState) {
+                console.log("💾 Geçerli kayıt bulundu, direkt geri yükleniyor.");
+                restoreDailyGame(savedState);
+                return; // KRİTİK: Fonksiyonu burada kesiyoruz!
+            }
+
+            // 2. Kayıt Yoksa Yeni Kelimeyi Al
+            const currentDailyWord = await getDailySecretWord();
+            if (!currentDailyWord) {
+                import('./utils.js').then(u => u.showToast("Günün kelimesi yüklenemedi.", true));
                 return;
             }
-            const dailyState = getDailyGameState(); 
-            if (dailyState && dailyState.secretWord === secretWord) {
-                restoreDailyGame(dailyState);
-                return; 
-            }
+
+            // 3. Yeni Oyun Başlat
+            secretWord = currentDailyWord;
             gameSettings.wordLength = secretWord.length;
-            gameSettings.timeLimit = 120;
+            gameSettings.timeLimit = null; // Süre Yok
             gameSettings.matchLength = 1;
             break;
-        default:
-            showToast("Bilinmeyen oyun modu!", true);
-            return;
+            
+        case 'random_loose':
+            gameSettings.timeLimit = 43200; 
+            gameSettings.matchLength = 1;
+            break;
+
+        case 'random_series':
+            gameSettings.timeLimit = 120;
+            gameSettings.matchLength = 5;
+            break;
     }
-    if (!secretWord) {
+
+    // Kelime üretimi (Daily harici durumlar için güvenlik)
+    if (!secretWord && config.mode !== 'vsCPU') { 
+         secretWord = await getNewSecretWord(gameSettings.wordLength || 5);
+    }
+    if (!secretWord && config.mode === 'vsCPU') {
         secretWord = await getNewSecretWord(gameSettings.wordLength);
     }
+
     if (!secretWord) {
-        showToast("Oyun için kelime alınamadı.", true);
+        import('./utils.js').then(u => u.showToast("Oyun için kelime alınamadı.", true));
         return;
     }
 
-    if (secretWord.length !== gameSettings.wordLength) {
-        console.error(`Senkronizasyon Hatası: ${gameSettings.wordLength} harfli istendi, ${secretWord.length} harfli alındı.`);
-        showToast("Sunucu hatası. Oyun yeniden başlatılıyor...", true);
-        setTimeout(() => startNewGame(config), 1000); 
-        return; 
-    }
-
+    // Oyun Verisini Oluştur
     const gameData = {
-        wordLength: gameSettings.wordLength, secretWord: secretWord, timeLimit: gameSettings.timeLimit,
-        isHardMode: gameSettings.isHardMode, currentRound: 1, matchLength: gameSettings.matchLength,
+        wordLength: gameSettings.wordLength, 
+        secretWord: secretWord, 
+        timeLimit: gameSettings.timeLimit, 
+        isHardMode: gameSettings.isHardMode, 
+        currentRound: 1, 
+        matchLength: gameSettings.matchLength,
         players: { 
             [state.getUserId()]: { 
                 username: getUsername(), 
                 guesses: initialGuesses, 
                 score: 0,
+                hasSolved: false,
+                hasFailed: false,
+                isEliminated: false,
                 jokersUsed: { present: false, correct: false, remove: false } 
             } 
         },
         ...(config.mode === 'vsCPU' ? { players: { 
-            [state.getUserId()]: { 
-                username: getUsername(), 
-                guesses: [], 
-                score: 0,
-                jokersUsed: { present: false, correct: false, remove: false } 
-            },
-            'cpu': { 
-                username: 'Bilgisayar', 
-                guesses: [], 
-                score: 0,
-                jokersUsed: { present: false, correct: false, remove: false } 
-            } 
+            [state.getUserId()]: { username: getUsername(), guesses: [], score: 0, jokersUsed: { present: false, correct: false, remove: false } },
+            'cpu': { username: 'Bilgisayar', guesses: [], score: 0, jokersUsed: { present: false, correct: false, remove: false } } 
         } } : {}),
-        currentPlayerId: state.getUserId(), status: 'playing', turnStartTime: new Date(), GUESS_COUNT: GUESS_COUNT,
+        currentPlayerId: state.getUserId(), 
+        status: 'playing', 
+        turnStartTime: new Date(), 
+        GUESS_COUNT: 6,
         gameType: config.mode,
     };
+
+    // Veriyi Kaydet
     state.setLocalGameData(gameData);
     
+    // GÜNLÜK MOD İSE -> HEMEN KAYDET (Boş bile olsa kaydı başlatalım ki reload yapınca gitmesin)
+    if (config.mode === 'daily') {
+        saveDailyGameState(gameData);
+    }
+
     if (initialGuesses.length > 0) {
          const known = {};
          initialGuesses.forEach(g => {
@@ -1690,169 +1765,125 @@ export async function startNewGame(config) {
     showScreen('game-screen');
     initializeGameUI(gameData);
     await renderGameState(gameData);
+
     if (config.mode === 'vsCPU') {
         if (typeof cpuLoopTimeout !== 'undefined' && cpuLoopTimeout) clearTimeout(cpuLoopTimeout);
-        console.log("vsCPU Başlatılıyor: Bot 1.5sn sonra devreye girecek.");
         setTimeout(() => startCpuLoop('cpu'), 1500); 
     }
 }
 
+// js/game.js -> Helper Fonksiyonlar (Mevcutlarını sil, bunları yapıştır)
+
 function getDailyGameState() {
-    const saved = localStorage.getItem(`dailyGameState_${state.getUserId()}`);
-    if (!saved) return null;
+    const userId = state.getUserId();
+    if (!userId) return null;
+
+    const key = `dailyGameState_${userId}`;
+    const savedString = localStorage.getItem(key);
+    
+    if (!savedString) return null;
+
     try {
-        const parsedState = JSON.parse(saved);
-        const savedWord = parsedState.secretWord;
-        const currentDailyWord = getDailySecretWord();
-        if (savedWord === currentDailyWord) {
-             return parsedState;
+        const savedState = JSON.parse(savedString);
+        
+        // KONTROL: Kayıt bugüne mi ait?
+        const todayStr = new Date().toISOString().split('T')[0]; // "2023-10-27" formatı
+        
+        if (savedState.date === todayStr) {
+            console.log("✅ Bugüne ait kayıt bulundu:", savedState);
+            return savedState;
+        } else {
+            console.warn("⚠️ Kayıt eski tarihli, siliniyor.");
+            localStorage.removeItem(key); // Eski kaydı temizle
+            return null;
         }
-        return null;
-    } catch (e) { return null; }
+    } catch (e) { 
+        console.error("Kayıt okuma hatası:", e);
+        return null; 
+    }
 }
 
 function saveDailyGameState(gameState) {
+    const userId = state.getUserId();
+    if (!userId || !gameState) return;
+
+    // Sadece gerekli verileri alıp temiz bir obje oluşturuyoruz
     const toSave = {
-        date: new Date().toDateString(),
-        guesses: gameState.players[state.getUserId()].guesses,
-        status: gameState.status,
+        date: new Date().toISOString().split('T')[0], // Tarih damgası
         secretWord: gameState.secretWord,
-        jokersUsed: gameState.players[state.getUserId()].jokersUsed 
+        guesses: gameState.players[userId].guesses || [],
+        score: gameState.players[userId].score || 0,
+        status: gameState.status,
+        roundWinner: gameState.roundWinner,
+        jokersUsed: gameState.players[userId].jokersUsed || { present: false, correct: false, remove: false }
     };
-    localStorage.setItem(`dailyGameState_${state.getUserId()}`, JSON.stringify(toSave));
+
+    const key = `dailyGameState_${userId}`;
+    localStorage.setItem(key, JSON.stringify(toSave));
+    // console.log("💾 Oyun kaydedildi:", toSave); // Test için konsolu kirletmeyelim
 }
 
-// js/game.js içindeki restoreDailyGame fonksiyonunu GÜNCELLE:
-
-// js/game.js -> restoreDailyGame fonksiyonunu BU HALİYLE DEĞİŞTİR:
-
-// js/game.js -> restoreDailyGame fonksiyonunun TAMAMI
-
-// js/game.js -> restoreDailyGame (GÜVENLİ VERSİYON)
-
 function restoreDailyGame(savedState) {
-    console.log("Günün kelimesi durumu kontrol ediliyor...");
+    console.log("🔄 Günün kelimesi geri yükleniyor. Durum:", savedState.status);
     
-    // Eğer oyun zaten bitmişse, oyun ekranını HİÇ açma.
-    if (savedState.status === 'finished') {
-        // State'i güncelle
-        state.setGameMode('daily');
-        state.setLocalGameData({
-            ...savedState,
-            gameType: 'daily',
-            players: { [state.getUserId()]: { guesses: savedState.guesses } }
-        });
+    state.setGameMode('daily');
+    const currentUserId = state.getUserId();
 
-        showToast("Sonuçlar yükleniyor...", false);
-
-        setTimeout(async () => {
-            // --- HATA DÜZELTME: Değişkenleri en başta varsayılanla tanımlıyoruz ---
-            let rankData = { userScore: 0, userPosition: '-', totalPlayers: '-', avgScore: '-', avgGuesses: '-' };
-            let weeklyData = { avgScore: 0, avgGuesses: '-' }; // <-- ARTIK ÖNCEDEN TANIMLI
-            let globalWeeklyData = { avgScore: '-', avgGuesses: '-' };
-            let weeklyRankData = { myRank: '-', totalPlayers: '-' };
-            let stats = {};
-
-            try {
-                const profile = state.getCurrentUserProfile();
-                stats = getStatsFromProfile(profile);
-                
-                // Verileri çekmeye çalış (Hata olursa varsayılan değerler kalır, kod patlamaz)
-                try { 
-                    const rData = await getDailyLeaderboardStats(state.getUserId(), savedState.secretWord);
-                    if(rData) rankData = rData;
-                } catch(e) { console.log("Günlük veri hatası", e); }
-
-                try { 
-                    const wData = await getLast7DaysStats(state.getUserId());
-                    if(wData) weeklyData = wData;
-                } catch(e) { console.log("Haftalık veri hatası", e); }
-
-                try { 
-                    const gData = await getGlobalWeeklyStats();
-                    if(gData) globalWeeklyData = gData;
-                } catch(e) { console.log("Global veri hatası", e); }
-                
-                // calculateWeeklyLeaderboard fonksiyonu var mı kontrol et
-                try {
-                     if (typeof calculateWeeklyLeaderboard === 'function') {
-                        const wrData = await calculateWeeklyLeaderboard(state.getUserId());
-                        if(wrData) weeklyRankData = wrData;
-                     }
-                } catch(e) {}
-
-            } catch (err) {
-                console.error("Veri hazırlama ana hatası:", err);
-            }
-
-            // UI'ı güncelle
-            import('./ui.js').then(ui => {
-                ui.openDailyResultModal(stats, {
-                    // BUGÜN
-                    userScore: rankData.userScore,
-                    userGuessCount: savedState.guesses.length,
-                    userDailyRank: rankData.userPosition,
-                    totalDailyPlayers: rankData.totalPlayers,
-                    dailyGlobalScore: rankData.avgScore,
-                    dailyGlobalGuesses: rankData.avgGuesses,
-                    
-                    // HAFTALIK (weeklyData yukarıda tanımlı olduğu için hata vermez)
-                    weeklyUserScore: weeklyData.avgScore,
-                    weeklyUserGuesses: weeklyData.avgGuesses,
-                    weeklyGlobalScore: globalWeeklyData.avgScore,
-                    weeklyGlobalGuesses: globalWeeklyData.avgGuesses,
-                    weeklyRank: weeklyRankData.myRank,
-                    weeklyTotalPlayers: weeklyRankData.totalPlayers
-                });
-            });
-
-        }, 500);
-        return;
-    }
-
-    // --- EĞER OYUN BİTMEMİŞSE BURADAN DEVAM EDER (Standart akış) ---
-    state.resetKnownCorrectPositions(); 
-    state.resetHasUserStartedTyping();
-    
-    const known = {};
-    if(savedState.guesses) {
-        savedState.guesses.forEach(g => {
-            g.colors.forEach((c, i) => { 
-                if(c === 'correct') known[i] = g.word[i]; 
-            });
-        });
-    }
-    state.setKnownCorrectPositions(known);
-
-    const gameData = {
-        wordLength: savedState.secretWord.length, 
-        secretWord: savedState.secretWord, 
-        timeLimit: 60,
-        isHardMode: false, 
-        currentRound: 1, 
-        matchLength: 1, 
-        roundWinner: null,
-        players: { 
-            [state.getUserId()]: { 
-                username: getUsername(), 
-                guesses: savedState.guesses, 
-                score: 0, 
-                jokersUsed: savedState.jokersUsed || { present: false, correct: false, remove: false } 
-            } 
-        },
-        currentPlayerId: state.getUserId(), 
-        status: savedState.status, 
-        turnStartTime: new Date(), 
-        GUESS_COUNT: 6,
+    // Veriyi State formatına uygun hale getir
+    const restoredGameData = {
+        ...savedState,
         gameType: 'daily',
+        currentPlayerId: currentUserId,
+        timeLimit: null, // Süre yok
+        GUESS_COUNT: 6,
+        players: { 
+            [currentUserId]: { 
+                username: getUsername(),
+                guesses: savedState.guesses || [],
+                score: savedState.score || 0,
+                jokersUsed: savedState.jokersUsed || { present: false, correct: false, remove: false },
+                // Eğer oyun bitmişse flagleri doğru ayarla
+                hasSolved: savedState.status === 'finished' && savedState.roundWinner === currentUserId,
+                hasFailed: savedState.status === 'finished' && savedState.roundWinner !== currentUserId,
+                isEliminated: false
+            } 
+        }
     };
 
-    state.setGameMode('daily');
-    state.setLocalGameData(gameData);
+    state.setLocalGameData(restoredGameData);
+
+    // --- DÜZELTME BURADA ---
+    // Artık dinamik import (import('./ui.js').then...) kullanmıyoruz.
+    // Çünkü bu fonksiyonlar dosyanın en üstünde zaten import edilmiş durumda.
+    // Bu sayede "is not a function" hatası çözülecek.
+
+    // 1. Ekranı Aç
+    showScreen('game-screen');
     
-    showScreen('game-screen'); 
-    initializeGameUI(gameData);
-    renderGameState(gameData, true);
+    // 2. Tahtayı ve Klavyeyi Oluştur
+    initializeGameUI(restoredGameData); 
+    
+    // 3. Harfleri Boya
+    renderGameState(restoredGameData, true);
+
+    // 4. Eğer oyun BİTMİŞSE -> Direkt sonuç ekranına (Scoreboard) git
+    if (savedState.status === 'finished') {
+        console.log("🏁 Oyun zaten tamamlanmış. Sonuç ekranı açılıyor.");
+        stopTurnTimer();
+        
+        // Klavye kilitli olmalı
+        const keyboard = document.getElementById('keyboard');
+        if (keyboard) keyboard.style.pointerEvents = 'none';
+
+        // 500 milisaniye bekleyip skorbordu aç (Kullanıcı önce tahtayı görsün)
+        setTimeout(() => {
+            showScoreboard(restoredGameData);
+        }, 500);
+    } else {
+        // Bitmemişse klavyeyi aç, devam etsin
+        const keyboard = document.getElementById('keyboard');
+        if (keyboard) keyboard.style.pointerEvents = 'auto';
+    }
 }
 // js/game.js -> getLast7DaysStats (GÜVENLİ VERSİYON)
 
@@ -1982,6 +2013,8 @@ export async function saveDailyResultToDatabase(userId, username, secretWord, di
     }
 }
 
+// js/game.js -> submitGuess fonksiyonunun TAMAMI
+
 async function submitGuess() {
     const localGameData = state.getLocalGameData();
     if (!localGameData || localGameData.status !== 'playing') return;
@@ -1990,10 +2023,12 @@ async function submitGuess() {
     const currentUserId = state.getUserId();
     const playerState = localGameData.players[currentUserId];
 
-    if (!playerState || playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || (playerState.guesses && playerState.guesses.length >= GUESS_COUNT)) {
+    // 1. Güvenlik ve Durum Kontrolleri
+    if (!playerState || playerState.isEliminated || playerState.hasSolved || playerState.hasFailed || (playerState.guesses && playerState.guesses.length >= localGameData.GUESS_COUNT)) {
         return;
     }
     
+    // 2. Tahmin Edilen Kelimeyi Topla
     let guessWord = '';
     const currentRow = playerState.guesses ? playerState.guesses.length : 0;
     const currentWordLength = localGameData.wordLength || 5;
@@ -2011,6 +2046,7 @@ async function submitGuess() {
         guessWord += tileInner.textContent;
     }
 
+    // 3. Zor Mod (Hard Mode) Kontrolü
     if (localGameData.isHardMode && playerState.guesses.length > 0) {
         if (!checkHardMode(guessWord, playerState.guesses)) {
             shakeCurrentRow(currentWordLength, currentRow);
@@ -2018,8 +2054,10 @@ async function submitGuess() {
         }
     }
 
+    // Arayüzü Kilitle
     if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
 
+    // 4. Kelime Geçerlilik Kontrolü (Sözlük)
     const isValidWord = await checkWordValidity(guessWord);
     if (!isValidWord) {
         showToast("Kelime sözlükte bulunamadı!", true);
@@ -2029,17 +2067,17 @@ async function submitGuess() {
         return;
     }
 
+    // 5. Renkleri Hesapla
     const secretWord = localGameData.secretWord;
     const colors = calculateColors(guessWord, secretWord);
-    // --- GÜNLÜK GÖREV: YEŞİL HARF ---
+    
+    // Görev: Yeşil Harf Sayacı
     let greenCount = 0;
     colors.forEach(c => { if(c === 'correct') greenCount++; });
-    if (greenCount > 0) {
-        updateQuestProgress('green_tile', greenCount);
-    }
-    // --------------------------------
+    if (greenCount > 0) updateQuestProgress('green_tile', greenCount);
+
+    // Yeni Tahmini Ekle
     const newGuess = { word: guessWord, colors: colors };
-    
     if (!localGameData.players[currentUserId].guesses) localGameData.players[currentUserId].guesses = [];
     localGameData.players[currentUserId].guesses.push(newGuess);
     
@@ -2049,11 +2087,64 @@ async function submitGuess() {
     const isWinner = (guessWord === secretWord);
     const guessCount = localGameData.players[currentUserId].guesses.length;
     
+    // ============================================================
+    // === GÜNLÜK MOD (DAILY) ÖZEL BLOĞU (SORUNSUZ VERSİYON) ===
+    // ============================================================
+    if (gameMode === 'daily') {
+        
+        // A) Önce oyunun durumunu güncelle (Local Data)
+        if (isWinner) {
+            localGameData.status = 'finished';
+            localGameData.roundWinner = currentUserId;
+            localGameData.players[currentUserId].hasSolved = true;
+            localGameData.players[currentUserId].score = calculateDailyScore(guessCount, true);
+            await updateStats(true, guessCount); // İstatistikleri işle
+        } 
+        else if (guessCount >= localGameData.GUESS_COUNT) {
+            localGameData.status = 'finished';
+            localGameData.roundWinner = null;
+            localGameData.players[currentUserId].hasFailed = true;
+            await updateStats(false, guessCount); // İstatistikleri işle
+        }
+
+        // B) UI Güncelle (Boyama işlemi)
+        // renderGameState asenkron olduğu için bekliyoruz, böylece boyama bitmeden sonuç ekranı gelmez.
+        await renderGameState(localGameData, true);
+
+        // C) Durumu Kesin Olarak Kaydet (LocalStorage)
+        // Status 'finished' olduktan sonra kaydettiğimiz için tekrar girince algılayacak.
+        saveDailyGameState(localGameData);
+
+        // D) Oyun Bittiyse -> Veritabanı ve Sonuç Ekranı
+        if (localGameData.status === 'finished') {
+            stopTurnTimer(); // Varsa sayacı durdur
+            
+            const didWin = isWinner;
+            const score = localGameData.players[currentUserId].score;
+
+            // Arka planda veritabanına yaz (Hata olsa bile oyun akışı bozulmaz)
+            saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, didWin, guessCount, score)
+                .catch(err => console.error("DB Kayıt Hatası:", err));
+
+            // DİREKT SONUÇ EKRANINI (Scoreboard) GÖSTER
+            // İstatistik modalını çağırmıyoruz, böylece "weeklyData is not defined" hatası almazsın.
+            // Kullanıcı isterse "İstatistikler" butonuna basıp oradan bakar.
+            setTimeout(() => {
+                showScoreboard(localGameData);
+            }, 1500); 
+        } else {
+            // Oyun bitmediyse klavyeyi geri aç
+            if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+        }
+        
+        return; // Daily modu burada biter, aşağı inip diğer kodları çalıştırmaz.
+    }
+    // ============================================================
+
+    // ... Diğer Modlar (Multiplayer, Friend, vsCPU vb.) ...
 
     if (gameMode === 'multiplayer' || isBattleRoyale(gameMode) || gameMode === 'friend' || gameMode === 'random_series' || gameMode === 'random_loose') {
-        const updates = {
-            [`players.${currentUserId}.guesses`]: localGameData.players[currentUserId].guesses
-        };
+        const updates = { [`players.${currentUserId}.guesses`]: localGameData.players[currentUserId].guesses };
 
         if (isWinner) {
             triggerVibration([100, 50, 100]);
@@ -2061,8 +2152,7 @@ async function submitGuess() {
             const roundScore = calculateRoundScore(guessCount, true);
             const currentScore = localGameData.players[currentUserId].score || 0;
             updates[`players.${currentUserId}.score`] = currentScore + roundScore;
-        } 
-        else if (guessCount >= GUESS_COUNT) {
+        } else if (guessCount >= localGameData.GUESS_COUNT) {
             updates[`players.${currentUserId}.hasFailed`] = true;
         }
 
@@ -2074,174 +2164,61 @@ async function submitGuess() {
         }
     } 
     
-    // js/game.js -> submitGuess içinde "else if (gameMode === 'league')" bloğu:
-
     else if (gameMode === 'league') {
         const weekID = localGameData.leagueWeekID;
         const matchId = localGameData.leagueMatchId;
-        const tier = localGameData.leagueTier;       // <-- EKLENDİ
-        const groupId = localGameData.leagueGroupId; // <-- EKLENDİ
-        const userId = state.getUserId();
+        const tier = localGameData.leagueTier;
+        const groupId = localGameData.leagueGroupId;
         
         if (weekID && matchId && tier && groupId) {
-            // YENİ DOĞRU YOL: tiers -> groups -> matches
             const matchRef = doc(db, "leagues", weekID, "tiers", tier, "groups", groupId, "matches", matchId);
-            
             try {
                 await runTransaction(db, async (transaction) => {
                     const mDoc = await transaction.get(matchRef);
                     if (!mDoc.exists()) throw "Maç bulunamadı";
-                    
                     const mData = mDoc.data();
-                    const playerKey = (mData.p1 === userId) ? 'p1_data' : 'p2_data';
-                    
+                    const playerKey = (mData.p1 === currentUserId) ? 'p1_data' : 'p2_data';
                     const updates = {};
                     updates[`${playerKey}.guesses`] = localGameData.players[currentUserId].guesses;
                     
                     if (isWinner) {
                         updates[`${playerKey}.completed`] = true; 
                         updates[`${playerKey}.failed`] = false;
-                    } else if (guessCount >= GUESS_COUNT) {
+                    } else if (guessCount >= localGameData.GUESS_COUNT) {
                         updates[`${playerKey}.completed`] = true;
                         updates[`${playerKey}.failed`] = true;
                     }
-                    
                     transaction.update(matchRef, updates);
                 });
                 
-                if (isWinner || guessCount >= GUESS_COUNT) {
+                if (isWinner || guessCount >= localGameData.GUESS_COUNT) {
                     localGameData.status = 'finished';
-                    localGameData.roundWinner = isWinner ? currentUserId : null; 
+                    localGameData.roundWinner = isWinner ? currentUserId : null;
                     state.setLocalGameData(localGameData);
                     stopTurnTimer();
-                    
                     setTimeout(() => showScoreboard(localGameData), 1000);
                 }
-                
-            } catch (e) {
-                console.error("Lig güncelleme hatası:", e);
-                showToast("Bağlantı hatası: Puan kaydedilemedi.", true);
-            }
-        } else {
-            console.error("Eksik lig bilgisi:", { weekID, matchId, tier, groupId });
+            } catch (e) { console.error(e); }
         }
     }
     
-    else {
-        if (gameMode === 'vsCPU') {
-            if (isWinner) {
-                localGameData.players[currentUserId].hasSolved = true;
-                const roundScore = calculateRoundScore(guessCount, true);
-                localGameData.players[currentUserId].score += roundScore;
-                
-                await updateStats(true, guessCount);
-                showToast("Tebrikler! Bilgisayar bekleniyor...", false);
-
-            } else if (guessCount >= GUESS_COUNT) {
-                localGameData.players[currentUserId].hasFailed = true;
-                await updateStats(false, guessCount);
-                showToast("Hakkın bitti! Bilgisayar bekleniyor...", true);
-            }
-            
-            state.setLocalGameData(localGameData);
-            checkVsCpuGameEnd(); 
+    else if (gameMode === 'vsCPU') {
+        if (isWinner) {
+            localGameData.players[currentUserId].hasSolved = true;
+            const roundScore = calculateRoundScore(guessCount, true);
+            localGameData.players[currentUserId].score += roundScore;
+            await updateStats(true, guessCount);
+            showToast("Tebrikler! Bilgisayar bekleniyor...", false);
+        } else if (guessCount >= localGameData.GUESS_COUNT) {
+            localGameData.players[currentUserId].hasFailed = true;
+            await updateStats(false, guessCount);
+            showToast("Hakkın bitti! Bilgisayar bekleniyor...", true);
         }
-        
-        else if (gameMode === 'daily') {
-            saveDailyGameState(localGameData);
-
-            if (isWinner) {
-                localGameData.status = 'finished';
-                localGameData.roundWinner = currentUserId;
-                await updateStats(true, guessCount);
-                const dailyScore = calculateDailyScore(guessCount, true);
-                
-                // 1. Bugünü Kaydet ve Sıralamayı Al
-                const rankData = await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, true, guessCount, dailyScore);
-                saveDailyGameState(localGameData);
-                
-                // ... (rankData ve weeklyData alındıktan sonra) ...
-
-                // Global Veriyi Çek (YENİ)
-                const globalWeeklyData = await getGlobalWeeklyStats();
-
-                // --- YENİ MODALI AÇ ---
-                setTimeout(() => {
-                    const profile = state.getCurrentUserProfile();
-                    const stats = getStatsFromProfile(profile);
-                    
-                    import('./ui.js').then(ui => {
-                        ui.openDailyResultModal(stats, {
-                            userPosition: rankData.userPosition,
-                            totalPlayers: rankData.totalPlayers,
-                            userGuessCount: guessCount,
-                            userScore: dailyScore,
-                            avgScore: rankData.avgScore || '-',
-                            avgGuesses: rankData.avgGuesses || '-',
-                            
-                            weeklyUserScore: weeklyData.avgScore,
-                            weeklyUserGuesses: weeklyData.avgGuesses,
-                            
-                            // Genel (Herkes - ARTIK GERÇEK VERİ)
-                            weeklyGlobalScore: globalWeeklyData.avgScore,
-                            weeklyGlobalGuesses: globalWeeklyData.avgGuesses
-                        });
-                    });
-                }, 1500);
-
-            } else if (guessCount >= GUESS_COUNT) {
-                localGameData.status = 'finished';
-                localGameData.roundWinner = null;
-                await updateStats(false, guessCount);
-                
-                // 1. Kaydet
-                const rankData = await saveDailyResultToDatabase(currentUserId, getUsername(), secretWord, false, guessCount, 0);
-                saveDailyGameState(localGameData);
-
-                // 2. Haftalık Veri (Kaybettiği için yine çekilmeli)
-                const weeklyData = await getLast7DaysStats(currentUserId);
-
-                // --- YENİ MODALI AÇ (Kaybetti) ---
-                setTimeout(() => {
-                    const profile = state.getCurrentUserProfile();
-                    const stats = getStatsFromProfile(profile);
-                    
-                    import('./ui.js').then(ui => {
-                        ui.openDailyResultModal(stats, {
-                            // Bugün
-                            userPosition: rankData.userPosition, 
-                            totalPlayers: rankData.totalPlayers,
-                            userGuessCount: -1, // Başarısız
-                            userScore: 0,
-                            avgScore: rankData.avgScore || '-',
-                            avgGuesses: rankData.avgGuesses || '-',
-                            // Haftalık
-                            weeklyUserScore: weeklyData.avgScore,
-                            weeklyUserGuesses: weeklyData.avgGuesses,
-                            weeklyGlobalScore: "436",
-                            weeklyGlobalGuesses: "4.2"
-                        });
-                    });
-                }, 1500);
-            }
-        }
+        state.setLocalGameData(localGameData);
+        checkVsCpuGameEnd();
     }
 
-    if (isWinner || guessCount >= GUESS_COUNT) {
-        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-        
-        if (gameMode === 'multiplayer' || gameMode === 'league' || isBattleRoyale(gameMode)) {
-            const msg = isWinner ? "Tebrikler! Diğer oyuncular bekleniyor..." : "Hakkın bitti! Diğerleri bekleniyor...";
-            const isSuccess = isWinner;
-            showToast(msg, !isSuccess);
-        }
-    }
-
-    renderGameState(localGameData, true).then(() => {
-        if (gameMode === 'daily' && localGameData.status === 'finished') {
-            setTimeout(() => showScoreboard(localGameData), 1500);
-        }
-    });
+    renderGameState(localGameData, true);
 }
 
 export async function failTurn(guessWord = '') {
@@ -2746,12 +2723,23 @@ export async function startNewRound() {
     }
 }
 
+// js/game.js -> startTurnTimer (GÜNCEL)
+
 export function startTurnTimer() {
     const gameMode = state.getGameMode();
+    
+    // --- DEĞİŞİKLİK: GÜNLÜK MOD İSE SAYACI BAŞLATMA VE GİZLE ---
+    if (gameMode === 'daily') {
+        stopTurnTimer();
+        if (timerDisplay) timerDisplay.style.display = 'none'; // Sayacı ekrandan sil
+        return;
+    }
+    // -----------------------------------------------------------
+
     const localGameData = state.getLocalGameData();
     const currentUserId = state.getUserId(); 
 
-    if (isBattleRoyale(gameMode) || gameMode === 'daily') return;
+    if (isBattleRoyale(gameMode)) return;
     
     stopTurnTimer(); 
 
@@ -2767,7 +2755,6 @@ export function startTurnTimer() {
     const startTimeObj = localGameData.turnStartTime;
 
     if (!startTimeObj) {
-        console.warn("Zaman verisi yok, sayaç manuel başlatılıyor.");
         turnStartTime = new Date();
     } else if (startTimeObj.toDate) {
         turnStartTime = startTimeObj.toDate(); 
@@ -2805,7 +2792,6 @@ export function startTurnTimer() {
         if (timeLeft <= 0) {
             stopTurnTimer(); 
             if (myState && !myState.hasFailed && !myState.hasSolved) {
-                console.log("Süre bitti, tur başarısız.");
                 await failTurn(''); 
             }
         }

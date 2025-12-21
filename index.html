@@ -11,46 +11,137 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
-    <style>
-    /* Kaydırma Çubuğu Tasarımı */
-    ::-webkit-scrollbar {
-        width: 8px; /* Çubuğun genişliği */
+<style>
+    /* ============================================================ */
+    /* === 1. GENEL AYARLAR, SCROLLBAR VE OYUN NESNELERİ === */
+    /* ============================================================ */
+
+    /* Kaydırma Çubuğu (Scrollbar) Tasarımı */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1f2937; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4338ca; }
+
+    /* Oyun İçi ve Genel Yardımcı Sınıflar */
+    .back-button-hitbox { padding: 8px !important; margin-left: -8px !important; cursor: pointer; display: flex; align-items: center; }
+    #leave-game-button, #main-menu-btn { cursor: pointer; }
+    
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+    /* Tile (Kare) Animasyonları ve Renkleri */
+    .tile { @apply w-full h-12 border-2 border-gray-600 bg-gray-800 flex items-center justify-center text-2xl font-bold uppercase select-none transition-all duration-300 relative; perspective: 1000px; }
+    .tile.correct { @apply bg-green-600 border-green-600 text-white; }
+    .tile.present { @apply bg-yellow-600 border-yellow-600 text-white; }
+    .tile.absent { @apply bg-gray-600 border-gray-600 text-white; }
+    
+    .tile-inner { @apply w-full h-full flex items-center justify-center backface-hidden absolute top-0 left-0 transition-transform duration-500; backface-visibility: hidden; }
+    .tile-inner.front { transform: rotateX(0deg); }
+    .tile-inner.back { transform: rotateX(180deg); }
+    .tile.flip .tile-inner.front { transform: rotateX(180deg); }
+    .tile.flip .tile-inner.back { transform: rotateX(0deg); }
+    .br-mode-grid .tile { height: 2.5rem !important; font-size: 1.25rem !important; } 
+
+
+    /* ============================================================ */
+    /* === 2. KOYU TEMA (DEFAULT) - SAĞ BUTON RENKLENDİRMESİ === */
+    /* ============================================================ */
+    
+    /* Ortak Buton Yapısı */
+    #theme-toggle-btn, #sound-toggle-btn, #logout-btn, #dictionary-menu-btn {
+         background-color: rgba(31, 41, 55, 0.5) !important; /* Şeffaf Koyu Gri */
+         border-width: 2px !important;
+         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+         transition: all 0.2s ease;
     }
-    ::-webkit-scrollbar-track {
-        background: #1f2937; /* Arka plan rengi (koyu gri) */
-        border-radius: 4px;
+
+    /* Butonlara Özel Renkler */
+    #dictionary-menu-btn { border-color: #d97706 !important; color: #fbbf24 !important; }
+    #logout-btn { border-color: #991b1b !important; color: #f87171 !important; background-color: rgba(69, 10, 10, 0.4) !important; }
+    #theme-toggle-btn { border-color: #4338ca !important; color: #818cf8 !important; }
+    #sound-toggle-btn { border-color: #166534 !important; color: #4ade80 !important; }
+
+    /* Tıklama Efekti */
+    #theme-toggle-btn:active, #sound-toggle-btn:active, #logout-btn:active, #dictionary-menu-btn:active {
+        transform: scale(0.95);
+        filter: brightness(1.2);
     }
-    ::-webkit-scrollbar-thumb {
-        background: #4f46e5; /* Çubuğun rengi (mor/mavi) */
-        border-radius: 4px;
+
+
+    /* ============================================================ */
+    /* === 3. AÇIK TEMA (LIGHT MODE) ÖZELLEŞTİRMELERİ === */
+    /* ============================================================ */
+
+    /* --- Header (Üst Bar) - Koyu Siyah (Yüksek Kontrast) --- */
+    body.theme-light #main-menu-screen header {
+        background-color: #111827 !important; /* Simsiyah */
+        border-bottom: 2px solid #374151 !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+        backdrop-filter: none !important;
     }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #4338ca; /* Üzerine gelinceki rengi */
+
+    /* Header İçi Yazı Renkleri */
+    body.theme-light #main-menu-username { color: #ffffff !important; }
+    body.theme-light #main-menu-stats { color: #9ca3af !important; font-weight: normal !important; }
+    body.theme-light #main-menu-gold-display { color: #facc15 !important; text-shadow: none !important; }
+
+    /* --- Sağ Üst Butonlar (Açık Tema Uyumu) --- */
+    body.theme-light #theme-toggle-btn,
+    body.theme-light #sound-toggle-btn,
+    body.theme-light #logout-btn,
+    body.theme-light #dictionary-menu-btn {
+         background-color: rgba(31, 41, 55, 0.8) !important; /* Daha opak koyu zemin */
+         border-width: 2px !important;
+         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
     }
+    
+    /* Buton Renkleri (Aynı kalıyor, sadece selector gücü artırıldı) */
+    body.theme-light #dictionary-menu-btn { border-color: #d97706 !important; color: #fbbf24 !important; }
+    body.theme-light #logout-btn { border-color: #991b1b !important; color: #f87171 !important; background-color: rgba(153, 27, 27, 0.2) !important; }
+    body.theme-light #theme-toggle-btn { border-color: #4f46e5 !important; color: #a5b4fc !important; }
+    body.theme-light #sound-toggle-btn { border-color: #166534 !important; color: #4ade80 !important; }
+    
+    /* Tıklama efekti */
+    body.theme-light #theme-toggle-btn:active,
+    body.theme-light #sound-toggle-btn:active,
+    body.theme-light #logout-btn:active,
+    body.theme-light #dictionary-menu-btn:active {
+        transform: scale(0.95); filter: brightness(1.2);
+    }
+
+    /* --- Alt Menü (Footer) Butonları --- */
+    body.theme-light #theme-toggle-btn-footer,
+    body.theme-light #dictionary-btn-footer {
+         background-color: #ffffff !important;
+         border: 2px solid #e5e7eb !important;
+         color: #374151 !important;
+         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* --- Kırtasiye (Market) Ekranı Düzeltmeleri --- */
+    /* Mevcut Bakiye Kartı: Beyaz */
+    body.theme-light #kirtasiye-screen .bg-gradient-to-r.from-gray-800.to-gray-900 {
+        background: #ffffff !important;
+        border: 2px solid #e5e7eb !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+    }
+    /* Yazılar ve İkonlar */
+    body.theme-light #kirtasiye-screen .text-gray-400.text-xs.font-bold { color: #6b7280 !important; }
+    body.theme-light #kirtasiye-screen p.text-white.text-sm { color: #111827 !important; }
+    
+    /* Altın Kutusu */
+    body.theme-light #kirtasiye-screen .bg-yellow-500\/20 {
+        background-color: #fef3c7 !important;
+        border-color: #fcd34d !important;
+    }
+    body.theme-light #user-gold-display { color: #d97706 !important; text-shadow: none !important; }
     </style>
 
-    <style>
-        .back-button-hitbox { padding: 8px !important; margin-left: -8px !important; cursor: pointer; display: flex; align-items: center; }
-        #leave-game-button, #main-menu-btn { cursor: pointer; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        
-        /* Oyun içi stiller */
-        .tile { @apply w-full h-12 border-2 border-gray-600 bg-gray-800 flex items-center justify-center text-2xl font-bold uppercase select-none transition-all duration-300 relative; perspective: 1000px; }
-        .tile.correct { @apply bg-green-600 border-green-600 text-white; }
-        .tile.present { @apply bg-yellow-600 border-yellow-600 text-white; }
-        .tile.absent { @apply bg-gray-600 border-gray-600 text-white; }
-        .tile-inner { @apply w-full h-full flex items-center justify-center backface-hidden absolute top-0 left-0 transition-transform duration-500; backface-visibility: hidden; }
-        .tile-inner.front { transform: rotateX(0deg); }
-        .tile-inner.back { transform: rotateX(180deg); }
-        .tile.flip .tile-inner.front { transform: rotateX(180deg); }
-        .tile.flip .tile-inner.back { transform: rotateX(0deg); }
-        .br-mode-grid .tile { height: 2.5rem !important; font-size: 1.25rem !important; } 
-    </style>
-    
+
     <link rel="stylesheet" href="style.css">
+    
 </head>
 <body class="bg-gray-900 text-gray-200 overflow-hidden">
     
@@ -188,8 +279,8 @@
         <button id="how-to-play-btn" class="flex items-center gap-3 hover:opacity-80 transition active:scale-95">
             <div class="bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-black text-2xl shadow-lg">?</div>
             <div class="flex flex-col items-start text-left">
-                <span class="text-[11px] font-black text-gray-800 dark:text-white leading-none">NASIL</span>
-                <span class="text-[11px] font-black text-gray-800 dark:text-white leading-none">OYNANIR?</span>
+                <span class="text-[11px] font-black text-white leading-none">NASIL</span>
+                <span class="text-[11px] font-black text-white leading-none">OYNANIR?</span>
             </div>
         </button>
     </div>
