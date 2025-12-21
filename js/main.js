@@ -30,8 +30,8 @@ import {
     switchFriendTab, 
     switchMyGamesTab,
     loginBtn, registerBtn, logoutBtn, goToRegisterBtn, backToLoginBtn,
-    newGameBtn, myGamesBtn, friendsBtn, statsBtn, statsBtnMain,
-    howToPlayBtn, closeHowToPlayBtn, themeLightBtn, themeDarkBtn,
+    newGameBtn, myGamesBtn, friendsBtn,statsBtn, statsBtnMain,
+    howToPlayBtn, closeHowToPlayBtn,
     backToMainMenuBtn, 
     backToMainMenuFromGamesBtn,
     backToMainFromFriendsBtn,
@@ -108,6 +108,28 @@ function checkReferral() {
         sessionStorage.setItem('invitedBy', refId);
         console.log("Referans tespit edildi:", refId);
     }
+}
+
+function switchTheme(theme) {
+    const sunIcons = document.querySelectorAll('[id*="theme-icon-sun"]');
+    const moonIcons = document.querySelectorAll('[id*="theme-icon-moon"]');
+
+    if (theme === 'light') {
+        document.body.classList.add('theme-light');
+        localStorage.setItem('theme', 'light');
+        sunIcons.forEach(el => el.classList.add('hidden'));
+        moonIcons.forEach(el => el.classList.remove('hidden'));
+    } else {
+        document.body.classList.remove('theme-light');
+        localStorage.setItem('theme', 'dark');
+        sunIcons.forEach(el => el.classList.remove('hidden'));
+        moonIcons.forEach(el => el.classList.add('hidden'));
+    }
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    switchTheme(savedTheme);
 }
 // --------------------------------
 // 3. ANA FONKSİYONLAR
@@ -488,6 +510,20 @@ function addEventListeners() {
         });
     }
 
+    
+    // --- TEMA BUTONLARI (ÜST VE ALT) ---
+    // Bu kod sayfadaki tüm tema butonlarını (header ve footer) otomatik bulur
+    const themeToggleButtons = document.querySelectorAll('#theme-toggle-btn, #theme-toggle-btn-footer');
+    
+    themeToggleButtons.forEach(btn => {
+        btn.onclick = () => {
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            switchTheme(newTheme);
+            import('./utils.js').then(u => u.playSound('click'));
+        };
+    });
+
     // --- SES AÇ/KAPA ---
     const soundBtn = document.getElementById('sound-toggle-btn');
     const iconOn = document.getElementById('sound-icon-on');
@@ -604,12 +640,12 @@ function addEventListeners() {
         btnShowStandings.addEventListener('click', () => switchLeagueTab('standings'));
     }
 
-// İstatistik Butonları (Hata Düzeltmesi)
-    if (statsBtn) {
+// js/main.js -> Satır 622'deki o bloğu sil ve bunu yapıştır:
+    if (typeof statsBtn !== 'undefined' && statsBtn) {
         statsBtn.addEventListener('click', openStatsScreen);
     }
     
-    if (statsBtnMain) {
+    if (typeof statsBtnMain !== 'undefined' && statsBtnMain) {
         statsBtnMain.addEventListener('click', openStatsScreen);
     }
 
@@ -662,19 +698,6 @@ function addEventListeners() {
     document.getElementById('back-to-main-from-edit-profile-btn').addEventListener('click', () => history.back());
 
    
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
-            const currentTheme = localStorage.getItem('theme') || 'dark';
-            // Eğer şu an dark ise light yap, değilse dark yap
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            switchTheme(newTheme);
-            
-            // Efekt sesi
-            import('./utils.js').then(u => u.playSound('click'));
-        });
-    }
-
     // Geri Butonları
     backToMainMenuBtn.addEventListener('click', () => history.back());
     backToMainMenuFromGamesBtn.addEventListener('click', () => history.back()); 
@@ -900,38 +923,6 @@ function addEventListeners() {
     }
 }
 
-// Tema Yönetimi
-// js/main.js -> switchTheme (GÜNCELLENMİŞ HALİ)
-
-function switchTheme(theme) {
-    const iconSun = document.getElementById('theme-icon-sun');
-    const iconMoon = document.getElementById('theme-icon-moon');
-
-    if (theme === 'light') {
-        // Aydınlık Modu Aç
-        document.body.classList.add('theme-light');
-        localStorage.setItem('theme', 'light');
-        
-        // Aydınlıktayız -> Ay ikonunu göster (Karanlığa geçiş için)
-        if(iconSun) iconSun.classList.add('hidden');
-        if(iconMoon) iconMoon.classList.remove('hidden');
-        
-    } else {
-        // Karanlık Modu Aç
-        document.body.classList.remove('theme-light');
-        localStorage.setItem('theme', 'dark');
-        
-        // Karanlıktayız -> Güneş ikonunu göster (Aydınlığa geçiş için)
-        if(iconSun) iconSun.classList.remove('hidden');
-        if(iconMoon) iconMoon.classList.add('hidden');
-    }
-}
-
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    switchTheme(savedTheme);
-}
-
 // ===================================================
 // === AVATAR/PROFİL FONKSİYONLARI ===
 // ===================================================
@@ -1113,6 +1104,7 @@ function initRegisterScreenAvatars() {
         container.appendChild(img);
     });
 }
+
 
 // Uygulamayı başlat
 initApp();
