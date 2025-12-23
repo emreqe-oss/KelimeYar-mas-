@@ -1557,7 +1557,7 @@ async function getDailySecretWord() {
 
 // js/game.js -> startNewGame (GÜNCEL - SÜRESİZ VERSİYON)
 
-// js/game.js -> startNewGame (Final - Tarih Kontrollü)
+// js/game.js -> startNewGame (FİNAL - vsCPU KAYITLI VERSİYON)
 
 export async function startNewGame(config) {
     // Temizlik
@@ -1575,13 +1575,14 @@ export async function startNewGame(config) {
         matchLength: 1
     };
     
+    // Oyun ID'si oluştur (Eğer config'den gelmiyorsa)
+    const gameId = config.gameId || Math.random().toString(36).substring(2, 8).toUpperCase();
+
     switch (config.mode) {
-        // ... (Diğer case'ler vsCPU, league vs. aynı kalabilir) ...
         case 'vsCPU':
             gameSettings.wordLength = getRandomWordLength();
             gameSettings.timeLimit = 120; 
             gameSettings.matchLength = 5;
-            setTimeout(startCpuLoop, 1000); 
             break;
 
         case 'league':
@@ -1593,33 +1594,24 @@ export async function startNewGame(config) {
             break;
 
         case 'daily':
-            // 1. ÖNCE KAYIT KONTROLÜ (En Öncelikli Adım)
-            // getDailyGameState artık tarih kontrolünü kendi içinde yapıyor.
-            // Eğer null değilse, kesinlikle bugünün geçerli kaydıdır.
             const savedState = getDailyGameState();
-
             if (savedState) {
-                console.log("💾 Geçerli kayıt bulundu, direkt geri yükleniyor.");
                 restoreDailyGame(savedState);
-                return; // KRİTİK: Fonksiyonu burada kesiyoruz!
+                return;
             }
-
-            // 2. Kayıt Yoksa Yeni Kelimeyi Al
             const currentDailyWord = await getDailySecretWord();
             if (!currentDailyWord) {
                 import('./utils.js').then(u => u.showToast("Günün kelimesi yüklenemedi.", true));
                 return;
             }
-
-            // 3. Yeni Oyun Başlat
             secretWord = currentDailyWord;
             gameSettings.wordLength = secretWord.length;
-            gameSettings.timeLimit = null; // Süre Yok
+            gameSettings.timeLimit = null; 
             gameSettings.matchLength = 1;
             break;
             
         case 'random_loose':
-            gameSettings.timeLimit = 43200; 
+            gameSettings.timeLimit = null; 
             gameSettings.matchLength = 1;
             break;
 
@@ -1629,12 +1621,9 @@ export async function startNewGame(config) {
             break;
     }
 
-    // Kelime üretimi (Daily harici durumlar için güvenlik)
-    if (!secretWord && config.mode !== 'vsCPU') { 
-         secretWord = await getNewSecretWord(gameSettings.wordLength || 5);
-    }
-    if (!secretWord && config.mode === 'vsCPU') {
-        secretWord = await getNewSecretWord(gameSettings.wordLength);
+    // Kelime üretimi
+    if (!secretWord) {
+        secretWord = await getNewSecretWord(gameSettings.wordLength || 5);
     }
 
     if (!secretWord) {
@@ -1642,17 +1631,28 @@ export async function startNewGame(config) {
         return;
     }
 
+    // Profil bilgilerini al
+    const currentUserId = state.getUserId();
+    const profile = state.getCurrentUserProfile();
+    const myAvatar = profile ? profile.avatarUrl : null;
+    const myTier = profile ? (profile.currentTier || 'rookie') : 'rookie';
+
     // Oyun Verisini Oluştur
     const gameData = {
+        gameId: gameId, // ID'yi ekledik
         wordLength: gameSettings.wordLength, 
         secretWord: secretWord, 
         timeLimit: gameSettings.timeLimit, 
         isHardMode: gameSettings.isHardMode, 
         currentRound: 1, 
         matchLength: gameSettings.matchLength,
+        
+        // Oyuncu Verileri
         players: { 
-            [state.getUserId()]: { 
+            [currentUserId]: { 
                 username: getUsername(), 
+                avatarUrl: myAvatar,
+                leagueTier: myTier,
                 guesses: initialGuesses, 
                 score: 0,
                 hasSolved: false,
@@ -1661,42 +1661,70 @@ export async function startNewGame(config) {
                 jokersUsed: { present: false, correct: false, remove: false } 
             } 
         },
-        ...(config.mode === 'vsCPU' ? { players: { 
-            [state.getUserId()]: { username: getUsername(), guesses: [], score: 0, jokersUsed: { present: false, correct: false, remove: false } },
-            'cpu': { username: 'Bilgisayar', guesses: [], score: 0, jokersUsed: { present: false, correct: false, remove: false } } 
-        } } : {}),
-        currentPlayerId: state.getUserId(), 
+        currentPlayerId: currentUserId, 
         status: 'playing', 
-        turnStartTime: new Date(), 
+        turnStartTime: serverTimestamp(), // Sunucu saati
         GUESS_COUNT: 6,
         gameType: config.mode,
-        difficulty: config.difficulty || 'average', // <--- YENİ: Zorluk seviyesini kaydet
-
+        difficulty: config.difficulty || 'average', // Zorluk seviyesi
+        
+        // Sorgulama yapabilmek için gerekli alan
+        playerIds: [currentUserId] 
     };
 
-    // Veriyi Kaydet
+    // vsCPU ise Bilgisayarı Ekle
+    if (config.mode === 'vsCPU') {
+        gameData.players['cpu'] = { 
+            username: 'Bilgisayar', 
+            avatarUrl: 'https://api.dicebear.com/8.x/bottts/svg?seed=cpu', // Bot avatarı
+            leagueTier: 'gold',
+            guesses: [], 
+            score: 0, 
+            jokersUsed: { present: false, correct: false, remove: false },
+            isBot: true 
+        };
+        gameData.playerIds.push('cpu');
+    }
+
+    // Veriyi Kaydet (Önce Local)
     state.setLocalGameData(gameData);
+    state.setCurrentGameId(gameId);
+    localStorage.setItem('activeGameId', gameId);
+
+    // --- KRİTİK EKLENTİ: vsCPU OYUNUNU VERİTABANINA YAZ ---
+    if (config.mode === 'vsCPU') {
+        try {
+            await setDoc(doc(db, "games", gameId), gameData);
+        } catch (e) {
+            console.error("vsCPU oyunu kaydedilemedi:", e);
+        }
+    }
+    // ------------------------------------------------------
     
-    // GÜNLÜK MOD İSE -> HEMEN KAYDET (Boş bile olsa kaydı başlatalım ki reload yapınca gitmesin)
+    // GÜNLÜK MOD İSE -> LOCALSTORAGE YAZ
     if (config.mode === 'daily') {
         saveDailyGameState(gameData);
     }
 
-    if (initialGuesses.length > 0) {
-         const known = {};
-         initialGuesses.forEach(g => {
-             g.colors.forEach((c, i) => { if(c === 'correct') known[i] = g.word[i]; });
-         });
-         state.setKnownCorrectPositions(known);
-    }
-
+    // Ekranı Başlat
     showScreen('game-screen');
     initializeGameUI(gameData);
     await renderGameState(gameData);
 
+    // Sayaçları Başlat
+    setTimeout(() => {
+        if (gameData.timeLimit !== null) startTurnTimer();
+    }, 500);
+
+    // Bot Döngüsünü Başlat
     if (config.mode === 'vsCPU') {
         if (typeof cpuLoopTimeout !== 'undefined' && cpuLoopTimeout) clearTimeout(cpuLoopTimeout);
         setTimeout(() => startCpuLoop('cpu'), 1500); 
+    }
+    
+    // Veritabanı dinleyicisini başlat (vsCPU için de gerekli artık)
+    if (config.mode === 'vsCPU') {
+        listenToGameUpdates(gameId);
     }
 }
 
@@ -5008,53 +5036,75 @@ function generateSimulatedMatchResult() {
     };
 }
 
-// js/game.js - EN ALTA VEYA UYGUN BİR YERE
+// js/game.js -> handleVsCpuClick (GÜNCELLENMİŞ)
 
 export async function handleVsCpuClick() {
     const userId = state.getUserId();
     if (!userId) return import('./utils.js').then(u => u.showToast("Giriş yapmalısın.", true));
 
-    // 1. Veritabanında bitmemiş vsCPU oyunu var mı bak
-    const gamesRef = collection(db, 'games');
-    const q = query(gamesRef, 
-        where('gameType', '==', 'vsCPU'),
-        where('playerIds', 'array-contains', userId),
-        where('status', '==', 'playing'), // Hala oynanıyor olmalı
-        limit(1)
-    );
-
-    const snapshot = await getDocs(q);
-
-    if (!snapshot.empty) {
-        // Yarım kalan oyun var! Modalı aç.
-        const gameDoc = snapshot.docs[0];
-        const gameId = gameDoc.id;
+    // Yükleniyor efekti verelim (Butonu kilitlemek iyi olur ama şimdilik toast yeterli)
+    
+    try {
+        const gamesRef = collection(db, 'games');
         
-        const modal = document.getElementById('cpu-resume-modal');
-        const btnResume = document.getElementById('btn-cpu-resume');
-        const btnNew = document.getElementById('btn-cpu-new-game');
+        // DİKKAT: Firebase Console'da INDEX oluşturman gerekebilir.
+        // Hata alırsan konsoldaki linke tıkla.
+        const q = query(gamesRef, 
+            where('gameType', '==', 'vsCPU'),
+            where('playerIds', 'array-contains', userId),
+            where('status', '==', 'playing'),
+            orderBy('createdAt', 'desc'), // En son oyunu getir
+            limit(1)
+        );
 
-        if (modal && btnResume && btnNew) {
-            modal.classList.remove('hidden');
+        const snapshot = await getDocs(q);
 
-            // DEVAM ET BUTONU
-            btnResume.onclick = () => {
-                modal.classList.add('hidden');
-                joinGame(gameId); // Mevcut oyuna gir
-            };
+        if (!snapshot.empty) {
+            // Yarım kalan oyun bulundu
+            const gameDoc = snapshot.docs[0];
+            const gameId = gameDoc.id;
+            const gameData = gameDoc.data();
+            
+            // Eğer oyun aslında bitmişse ama status 'playing' kaldıysa temizle
+            // (Bu kontrolü yapmazsak sonsuz döngüye girer)
+            const myPlayer = gameData.players[userId];
+            if (myPlayer && (myPlayer.hasSolved || myPlayer.hasFailed)) {
+                 // Oyun bitmiş ama veritabanında kalmış, bunu bitirip yenisini açalım
+                 await abandonGame(gameId);
+                 document.getElementById('cpu-difficulty-modal').classList.remove('hidden');
+                 return;
+            }
 
-            // YENİ OYUN BUTONU
-            btnNew.onclick = async () => {
-                modal.classList.add('hidden');
-                // Eski oyunu bitir (Kaybetti sayılır veya iptal edilir)
-                await abandonGame(gameId); 
-                // Zorluk seçme ekranını aç
-                document.getElementById('cpu-difficulty-modal').classList.remove('hidden');
-            };
+            const modal = document.getElementById('cpu-resume-modal');
+            const btnResume = document.getElementById('btn-cpu-resume');
+            const btnNew = document.getElementById('btn-cpu-new-game');
+
+            if (modal) {
+                modal.classList.remove('hidden');
+
+                // DEVAM ET
+                btnResume.onclick = () => {
+                    modal.classList.add('hidden');
+                    joinGame(gameId); // Oyuna gir
+                };
+
+                // YENİ OYUN
+                btnNew.onclick = async () => {
+                    modal.classList.add('hidden');
+                    // Eski oyunu sil (Veya finished yap)
+                    await deleteDoc(doc(db, "games", gameId)); 
+                    // Yeni zorluk seçimi
+                    document.getElementById('cpu-difficulty-modal').classList.remove('hidden');
+                };
+            }
+        } else {
+            // Hiç oyun yok, direkt zorluk seçimi
+            document.getElementById('cpu-difficulty-modal').classList.remove('hidden');
         }
-    } else {
-        // Yarım kalan oyun yok, direkt Zorluk Seçimi aç
-        const diffModal = document.getElementById('cpu-difficulty-modal');
-        if(diffModal) diffModal.classList.remove('hidden');
+    } catch (error) {
+        console.error("vsCPU oyun kontrol hatası:", error);
+        // Hata olursa (örn: index yoksa) kullanıcıyı bekletmemek için direkt modalı aç
+        // Aynı zamanda konsola hata basar ki index linkini görebilesin.
+        document.getElementById('cpu-difficulty-modal').classList.remove('hidden');
     }
 }
