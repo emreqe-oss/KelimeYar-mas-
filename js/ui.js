@@ -855,6 +855,8 @@ export function renderMyGamesLists(activeGames, finishedGames, invites) {
     // -----------------------------------------------------
 }
 
+// js/ui.js -> updateJokerUI
+
 export function updateJokerUI(unusedParam, isMyTurn, gameStatus) {
     const jokers = [jokerPresentBtn, jokerCorrectBtn, jokerRemoveBtn];
     const jokerKeys = ['present', 'correct', 'remove'];
@@ -862,7 +864,8 @@ export function updateJokerUI(unusedParam, isMyTurn, gameStatus) {
     const profile = state.getCurrentUserProfile();
     const inventory = profile ? (profile.inventory || {}) : {};
 
-    const canPlay = isMyTurn && gameStatus === 'playing';
+    // DÜZELTME: isMyTurn kontrolünü kaldırdık. Sadece oyun 'playing' ise yeterli.
+    const canPlay = (gameStatus === 'playing'); 
 
     jokers.forEach((btn, index) => {
         if (!btn) return;
@@ -1630,3 +1633,12 @@ function getTierColorClass(tier) {
         default: return 'border-gray-600'; // Çaylak
     }
 }
+
+// js/ui.js - EN ALTA EKLE
+
+// HTML'den erişilebilmesi için window'a atıyoruz
+window.selectCpuDifficulty = (diff) => {
+    document.getElementById('cpu-difficulty-modal').classList.add('hidden');
+    // startNewGame fonksiyonuna zorluk seviyesini (difficulty) gönderiyoruz
+    import('./game.js').then(m => m.startNewGame({ mode: 'vsCPU', difficulty: diff }));
+};

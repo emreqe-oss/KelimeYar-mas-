@@ -720,6 +720,14 @@ function addEventListeners() {
         backToMainFromDictionaryBtn.addEventListener('click', () => showScreen('main-menu-screen'));
     }
 
+     // ALT MENÜDEKİ SÖZLÜK BUTONU
+    const footerDictionaryBtn = document.getElementById('dictionary-btn-footer');
+    if (footerDictionaryBtn) {
+        footerDictionaryBtn.addEventListener('click', () => {
+            import('./ui.js').then(ui => ui.openDictionaryScreen());
+        });
+    }
+
     // --- LİG SEKMELERİ ---
     if (btnShowFixtures) btnShowFixtures.addEventListener('click', () => switchLeagueTab('fixtures'));
     if (btnShowStandings) btnShowStandings.addEventListener('click', () => switchLeagueTab('standings'));
@@ -788,7 +796,13 @@ function addEventListeners() {
     if(backToMainFromFriendsBtn) backToMainFromFriendsBtn.addEventListener('click', () => history.back());
 
     // --- OYUN MODU SEÇİMİ ---
-    if(vsCpuBtn) vsCpuBtn.addEventListener('click', () => startNewGame({ mode: 'vsCPU' }));
+if(vsCpuBtn) {
+        vsCpuBtn.addEventListener('click', () => {
+            // Direkt başlatmak yerine kontrol fonksiyonuna yönlendir
+            import('./game.js').then(m => m.handleVsCpuClick());
+        });
+    }
+    
     if(dailyWordBtn) dailyWordBtn.addEventListener('click', () => startNewGame({ mode: 'daily' }));
     
     if(randomGameBtn) {
