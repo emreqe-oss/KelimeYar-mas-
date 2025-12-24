@@ -922,16 +922,19 @@ function updateKnownPositions(playerGuesses) {
     return newPositions;
 }
 
-// js/game.js -> listenToGameUpdates (SÜRE AŞIMI DÜZELTİLMİŞ)
+// js/game.js -> listenToGameUpdates (DEMOKRASİ & İTAAT GÜNCELLEMESİ)
 
 export function listenToGameUpdates(gameId) {
+    // Önce eski dinleyicileri temizle
     const gameUnsubscribe = state.getGameUnsubscribe();
     if (gameUnsubscribe) gameUnsubscribe();
+    
     const gameRef = doc(db, "games", gameId);
 
     const unsubscribe = onSnapshot(gameRef, (docSnapshot) => { 
         const gameData = docSnapshot.data();
         
+        // Oyun silinmişse çıkar
         if (!gameData) {
             import('./utils.js').then(u => u.showToast("Oyun sonlandırıldı."));
             leaveGame();
@@ -939,51 +942,72 @@ export function listenToGameUpdates(gameId) {
         }
         
         const currentUserId = state.getUserId();
-        const oldGameData = state.getLocalGameData(); 
+        const oldGameData = state.getLocalGameData(); // Önceki yerel durum
 
-        // 1. YENİ TUR KONTROLÜ
-        if (oldGameData && gameData.currentRound > oldGameData.currentRound) {
-            console.log(`LOG: Yeni tur (${gameData.currentRound}) algılandı.`);
+        // ============================================================
+        // 1. KRİTİK: YENİ TUR / OYUN SENKRONİZASYONU (İTAAT MODU)
+        // ============================================================
+        // Eğer sunucudaki tur, benim bildiğimden ilerideyse veya oyun yeni başladıysa:
+        // Eski her şeyi unut, sayacı durdur, hatayı sil ve yeni duruma geç.
+        
+        const isNewRound = oldGameData && gameData.currentRound > oldGameData.currentRound;
+        const isGameJustStarted = (oldGameData?.status === 'waiting' || oldGameData?.status === 'invited') && gameData.status === 'playing';
+
+        if (isNewRound || isGameJustStarted) {
+            console.log(`♻️ SENKRONİZASYON: Sunucu Turu: ${gameData.currentRound}, Yerel Tur: ${oldGameData?.currentRound || 0}`);
+            
+            // a) Eski sayacı ve zaman aşımlarını DERHAL durdur.
+            stopTurnTimer(); 
+            
+            // b) Yerel veriyi HEMEN güncelle ki aşağıda eski veriye bakıp hata vermesin.
+            state.setLocalGameData(gameData);
+            
+            // c) UI Temizliği
             state.resetKnownCorrectPositions(); 
             state.resetHasUserStartedTyping();
             
+            // d) Ekran geçişleri (Gerekiyorsa)
+            if (isGameJustStarted) {
+                const mmScreen = document.getElementById('matchmaking-screen');
+                if (mmScreen && !mmScreen.classList.contains('hidden')) showScreen('game-screen');
+            }
+            
+            // e) Yeni Grid ve Klavye
             import('./ui.js').then(ui => {
                 if (ui.resetUIForNewRound) ui.resetUIForNewRound();
                 ui.createGrid(gameData.wordLength, gameData.GUESS_COUNT); 
+                ui.showScreen('game-screen'); // Sonuç ekranından zorla oyuna çek
             });
 
+            // f) Klavye Kilidini Aç
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
-        }
 
-        // 2. OYUNA GİRİŞ EKRANI KONTROLÜ
-        const isGameJustStarted = (oldGameData?.status === 'waiting' || oldGameData?.status === 'invited') && gameData.status === 'playing';
-        
-        if (isGameJustStarted) {
-            const matchmakingScreen = document.getElementById('matchmaking-screen');
-            if (matchmakingScreen && !matchmakingScreen.classList.contains('hidden')) {
-                showScreen('game-screen');
-            }
-            initializeGameUI(gameData);
-            
+            // g) Sayacı Yeni Verilerle Başlat (Biraz gecikmeli ki UI otursun)
             setTimeout(() => {
                 if (gameData.gameType === 'multiplayer-br') startBRTimer();
                 else startTurnTimer();
             }, 500);
+
+            // Yeni tura geçiş yapıldığı için fonksiyonun geri kalanını bu seferlik atla.
+            // Zaten yeni veri state'e işlendi, bir sonraki snapshot veya timer bunu yönetecek.
+            return; 
         }
 
-        // 3. CPU (BOT) KONTROLÜ
+        // ============================================================
+        // 2. STATE GÜNCELLEME VE CPU KONTROLÜ
+        // ============================================================
+        state.setLocalGameData(gameData); // Veriyi güncelle
+
         if (gameData.status === 'playing') {
             const opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
             const opponentData = gameData.players[opponentId];
-            
+            // Eğer oyun kurucu bensem ve rakip botsa döngüyü işlet
             if (opponentData && opponentData.isBot && gameData.creatorId === currentUserId) {
                 startCpuLoop(opponentId); 
             }
         }
-
-        state.setLocalGameData(gameData); 
         
-        // 4. QUICK CHAT
+        // Quick Chat (Mesajlaşma)
         Object.entries(gameData.players).forEach(([playerId, p]) => {
             if (p.lastMessage && p.lastMessageTime) {
                 const msgTime = p.lastMessageTime.toDate ? p.lastMessageTime.toDate() : new Date(p.lastMessageTime);
@@ -995,61 +1019,54 @@ export function listenToGameUpdates(gameId) {
         });
 
         // ============================================================
-        // 5. ZAMAN AŞIMI POLİSİ (KRİTİK DÜZELTME BURADA YAPILDI)
+        // 3. ZAMAN AŞIMI POLİSİ (DEMOKRASİ MODU)
         // ============================================================
-        if (gameData.status === 'playing') {
-            // Süresiz oyun değilse kontrol et
-            if (gameData.timeLimit !== null) {
-                const timeLimit = (gameData.gameType === 'league' ? 120 : (gameData.timeLimit || 120));
+        // Sadece kendi ekranımız açıkken çalışır. 
+        // Eğer bir oyuncunun süresi dolmuşsa ve hala oynamaya çalışıyorsa onu "Yandı" olarak işaretler.
+        
+        if (gameData.status === 'playing' && gameData.timeLimit !== null) {
+            const timeLimit = (gameData.gameType === 'league' ? 120 : (gameData.timeLimit || 120));
+            
+            let startTime = gameData.turnStartTime;
+            if (startTime && startTime.toDate) startTime = startTime.toDate();
+            else if (!(startTime instanceof Date)) startTime = new Date();
+
+            const now = new Date();
+            const elapsedSeconds = (now - startTime) / 1000;
+
+            // Tolerans payı: Süre + 5 saniye
+            if (elapsedSeconds > (timeLimit + 5)) {
                 
-                let startTime = gameData.turnStartTime;
-                if (startTime && startTime.toDate) startTime = startTime.toDate();
-                else if (!(startTime instanceof Date)) startTime = new Date();
+                const updates = {};
+                let needUpdate = false;
 
-                const now = new Date();
-                const elapsedSeconds = (now - startTime) / 1000;
-
-                // Tolerans payı: Süre + 2 saniye
-                if (elapsedSeconds > (timeLimit + 2)) {
-                    
-                    // Sadece benim değil, HERKESİN durumunu kontrol et
-                    const updates = {};
-                    let needUpdate = false;
-
-                    Object.keys(gameData.players).forEach(playerId => {
-                        const p = gameData.players[playerId];
-                        
-                        // Eğer oyuncu bot değilse VE henüz bitirmediyse VE elenmediyse
-                        if (!p.isBot && !p.hasSolved && !p.hasFailed && !p.isEliminated) {
-                            console.warn(`⚠️ ZAMAN AŞIMI: ${p.username} (${playerId}) için süre doldu. Müdahale ediliyor.`);
-                            updates[`players.${playerId}.hasFailed`] = true;
-                            needUpdate = true;
-                        }
-                    });
-
-                    // Eğer 'yandı' işaretlenmesi gereken biri varsa veritabanına yaz
-                    if (needUpdate) {
-                        // Eğer ben de yandıysam yerel kilitleri vur
-                        if (updates[`players.${currentUserId}.hasFailed`]) {
-                            stopTurnTimer();
-                            if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-                            import('./utils.js').then(u => u.showToast("Süre doldu!", true));
-                        }
-                        
-                        // Veritabanını güncelle (Bu sayede A oyuncusunun ekranı kapalı olsa bile veritabanında 'hasFailed' olur)
-                        updateDoc(gameRef, updates).catch(e => console.log("Zaman aşımı güncelleme hatası:", e));
+                Object.keys(gameData.players).forEach(playerId => {
+                    const p = gameData.players[playerId];
+                    // Bot olmayan, bitirmemiş ve elenmemiş oyuncuları yak
+                    if (!p.isBot && !p.hasSolved && !p.hasFailed && !p.isEliminated) {
+                        console.warn(`⚠️ ZAMAN AŞIMI: ${p.username} (${playerId}) yakıldı.`);
+                        updates[`players.${playerId}.hasFailed`] = true;
+                        needUpdate = true;
                     }
+                });
+
+                if (needUpdate) {
+                    // Eğer ben de yandıysam kendi arayüzümü kilitle
+                    if (updates[`players.${currentUserId}.hasFailed`]) {
+                        stopTurnTimer();
+                        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
+                        import('./utils.js').then(u => u.showToast("Süre doldu!", true));
+                    }
+                    // Veritabanını güncelle (Herkes bunu yapmaya çalışır, ilk yazan kazanır)
+                    updateDoc(gameRef, updates).catch(e => console.log("Zaman aşımı güncelleme çakışması (Normal):", e));
                 }
             }
         }
+
         // ============================================================
-
-        // 6. HARF GÜNCELLEMELERİ
-        if (gameData.players && gameData.players[currentUserId]) {
-             // Bilinen harfleri güncelleme (UI tarafı)
-        }
-
-        // 7. TUR BİTİRME KONTROLÜ (HERKES TAMAMLADI MI?)
+        // 4. OYUN BİTİRME KONTROLÜ (DEMOKRASİ MODU - BR DÜZELTMESİ)
+        // ============================================================
+        
         if (gameData.status === 'playing') {
             const allPlayerIds = Object.keys(gameData.players);
             
@@ -1061,21 +1078,27 @@ export function listenToGameUpdates(gameId) {
                 return p.isEliminated || p.hasSolved || p.hasFailed; 
             });
 
-            // Eğer herkes bitirdiyse (Zaman aşımı polisi yukarıda failed yaptıysa burası true döner)
             if (isEveryoneDone) {
-                // Bu işlemi sadece bir kişinin yapması yeterli (Çakışma olmasın diye Creator yapar)
-                // AMA Creator yoksa (offline ise) veya ben Creator isem ben yaparım.
-                // Basitlik için: Herkes dener, Firestore son yazanı kabul eder.
+                // Kural: Normalde sadece Kurucu (Creator) oyunu bitirir.
+                // AMA: Eğer süre aşırı geçtiyse (Limit + 15sn) ve oyun hala bitmediyse (Creator uyuyor),
+                // HERHANGİ BİRİ oyunu bitirme yetkisine sahip olur.
                 
-                // Buradaki kontrolü "Ben Creatorsam VEYA Creator offline ise (zaman geçtiyse)" şeklinde düşünebiliriz.
-                // Şimdilik sadece Creator kontrolü ile deneyelim, çünkü yukarıdaki Polis zaten herkesi 'failed' yaptığı için
-                // oyunun kilitlenme ihtimali kalmadı.
+                const timeLimit = (gameData.timeLimit || 120);
+                let startTime = gameData.turnStartTime;
+                if (startTime && startTime.toDate) startTime = startTime.toDate();
+                else startTime = new Date();
                 
-                if (gameData.creatorId === currentUserId) {
-                    console.log("Herkes tamamladı. Tur bitiriliyor...");
+                const elapsed = (new Date() - startTime) / 1000;
+                const isEmergency = elapsed > (timeLimit + 3); // Kurucu 3 saniyedir kayıp
+
+                if (gameData.creatorId === currentUserId || isEmergency) {
+                    console.log(`🏁 Tur Bitiyor... (Yetkili: ${gameData.creatorId === currentUserId ? 'Kurucu' : 'Acil Durum Protokolü'})`);
+                    
                     let updates = {};
                     
+                    // --- BATTLE ROYALE MANTIĞI ---
                     if (gameData.gameType === 'multiplayer-br') {
+                        // Maç Bitti mi? (Tur sayısı doldu mu?)
                         if (gameData.currentRound >= (gameData.matchLength || 10)) {
                              const playersArr = Object.values(gameData.players);
                              playersArr.sort((a, b) => (b.score || 0) - (a.score || 0));
@@ -1083,11 +1106,12 @@ export function listenToGameUpdates(gameId) {
                              const winnerId = winner.userId || Object.keys(gameData.players).find(key => gameData.players[key] === winner);
                              updates = { status: 'finished', matchWinnerId: winnerId };
                         } else {
+                             // Sadece tur bitti
                              updates = { status: 'finished' };
                         }
                     } 
+                    // --- STANDART OYUN MANTIĞI ---
                     else {
-                        // Seri Oyun Mantığı
                         const playersArr = Object.entries(gameData.players).map(([key, val]) => ({ ...val, userId: key }));
                         const solvers = playersArr.filter(p => p.hasSolved);
                         let winnerId = null;
@@ -1096,7 +1120,7 @@ export function listenToGameUpdates(gameId) {
                             solvers.sort((a, b) => (a.guesses ? a.guesses.length : 99) - (b.guesses ? b.guesses.length : 99));
                             winnerId = solvers[0].userId;
                         } else {
-                            winnerId = null;
+                            winnerId = null; // Kimse bilemedi
                         }
 
                         const currentRound = gameData.currentRound || 1;
@@ -1113,56 +1137,45 @@ export function listenToGameUpdates(gameId) {
                     
                     updateDoc(gameRef, updates).catch(err => console.error("Tur bitirme hatası:", err));
                 }
-                // Creator değilsem ama oyunun bittiğini görüyorsam ve oyun hala 'playing' ise
-                // (Creator offline durumu için yedek mekanizma eklenebilir ama şu anki yapı yeterli olacaktır)
             }
         }
 
-        const wasFinished = oldGameData?.status === 'finished';
-        const isNowPlaying = gameData.status === 'playing';
-        
-        if (wasFinished && isNowPlaying) {
-            showScreen('game-screen');
-            initializeGameUI(gameData);
-            setTimeout(() => {
-                if (gameData.gameType === 'multiplayer-br') startBRTimer();
-                else startTurnTimer();
-            }, 500);
-        }
+        // ============================================================
+        // 5. SONUÇ EKRANINA GEÇİŞ (UI GÜNCELLEME)
+        // ============================================================
         
         const currentGuesses = gameData.players[currentUserId]?.guesses || [];
         const oldGuessesCount = oldGameData?.players[currentUserId]?.guesses.length || 0;
         const didMyGuessChange = currentGuesses.length > oldGuessesCount;
 
-        if (didMyGuessChange) {
-            state.resetHasUserStartedTyping();
-        }
+        if (didMyGuessChange) state.resetHasUserStartedTyping();
 
-        // Hakkı bitenler için sayaç durdurma
+        // Yerel 6 hak kontrolü (Klavye kilidi)
         if (gameData.status === 'playing') {
-            const myGuesses = gameData.players[currentUserId]?.guesses || [];
-            if (myGuesses.length >= gameData.GUESS_COUNT) {
+            if (currentGuesses.length >= gameData.GUESS_COUNT) {
                 stopTurnTimer(); 
                 if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
             }
         }
         
-        // 8. OYUN BİTİŞ VE EKRAN ÇİZİMİ
+        // Oyun BİTTİ (Finished) Sinyali Geldiyse
         if (gameData.status === 'finished') {
             console.log("🏁 Oyun Bitti Sinyali. Sonuç ekranına gidiliyor...");
             stopTurnTimer();
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
 
+            // Son tahminleri çiz ve tabloyu aç
             renderGameState(gameData, didMyGuessChange).then(() => {
                 const delay = (gameData.gameType === 'multiplayer-br') ? 2500 : 1500;
-                
                 setTimeout(() => {
+                    // Zaten açıksa tekrar açma (Titreşimi önle)
                     const currentScreen = document.getElementById('scoreboard-screen');
                     if (currentScreen && !currentScreen.classList.contains('hidden')) return;
                     showScoreboard(gameData);
                 }, delay);
             });
         } else {
+            // Oyun devam ediyorsa normal çizim
             renderGameState(gameData, didMyGuessChange);
         }
 
