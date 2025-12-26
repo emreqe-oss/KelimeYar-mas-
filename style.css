@@ -682,3 +682,76 @@ body.theme-light .dictionary-meaning {
     box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     z-index: 20; /* Resmin üzerinde dursun */
 }
+
+/* --- Ana Kutu Ayarı (Taşmaya İzin Ver) --- */
+.tile {
+    /* İkon kutunun dışına taşacağı için visible olmalı */
+    overflow: visible !important; 
+    position: relative; /* İkon buna göre hizalanacak */
+}
+
+
+
+/* --- Soru İşareti İkonu (Ortalanmış ve Küçültülmüş) --- */
+.meaning-icon {
+    position: absolute;
+    
+    /* YATAY KONUM: Kutunun sağından 26px dışarı itiyoruz */
+    /* Böylece ızgaranın hemen yanında, satırın sonunda durur */
+    right: -26px; 
+    
+    /* DİKEY KONUM: Kutunun tam ortasına hizalıyoruz */
+    top: 50%;
+    
+    /* BOYUT: Biraz daha kibar olsun (28px -> 22px) */
+    width: 22px;
+    height: 22px;
+    
+    /* Yazı Boyutu */
+    font-size: 14px;
+    font-weight: 900;
+    font-family: sans-serif;
+    
+    /* Renk ve Stil */
+    background-color: #3B82F6; /* Mavi */
+    color: white;
+    border: 2px solid #1f2937; /* Koyu kenarlık */
+    border-radius: 50%;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    
+    /* TRANSFORM: 
+       translateY(-50%) -> Dikey ortalamayı sağlar.
+       translateZ(20px) -> İkonun 3D dönüşte kaybolmamasını sağlar. 
+    */
+    transform: translateY(-50%) translateZ(20px); 
+    pointer-events: auto;
+}
+
+/* Light Mode için kenarlık */
+body.theme-light .meaning-icon {
+    border-color: #ffffff;
+}
+
+/* Tıklama efekti (Ortalamayı bozmadan küçültme) */
+.meaning-icon:active {
+    transform: translateY(-50%) translateZ(20px) scale(0.9);
+}
+
+
+/* --- Soru İşareti Dönme Düzeltmesi (3D Flip Fix) --- */
+
+/* Kutu döndüğünde (flip olduğunda), ikonu da ters yöne döndür ki düz dursun */
+.tile.flip .meaning-icon {
+    /* Kutu rotateX(180deg) yaptığı için, ikona rotateX(-180deg) veriyoruz.
+       Böylece ikonun toplam açısı 0 derece (Düz) oluyor.
+       translateZ(100px) ise ikonu önde tutmaya devam ediyor.
+    */
+    transform: rotateX(-180deg) translateZ(100px) !important;
+}

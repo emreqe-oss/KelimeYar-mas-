@@ -762,120 +762,105 @@ export async function renderGameState(gameData, didMyGuessChange = false) {
     import('./game.js').then(m => m.updateTurnDisplay(gameData)); 
     import('./ui.js').then(ui => ui.updateKeyboard(gameData));
 
-    // --- TAHTAYI GÜNCELLE (SORU İŞARETİ DÜZELTMESİ BURADA) ---
+    // --- TAHTAYI GÜNCELLE (KESİN ÇÖZÜM: IKON DIŞARIDA) ---
     const playerGuesses = gameData.players[currentUserId]?.guesses || [];
     const currentRow = playerGuesses.length;
     const wordLength = gameData.wordLength || 5;
     const GUESS_COUNT = gameData.GUESS_COUNT || 6;
     
-    // 1. Önce tüm tahtayı temizle/boya
     for (let i = 0; i < GUESS_COUNT; i++) {
         for (let j = 0; j < wordLength; j++) {
-            const tile = document.getElementById(`tile-${i}-${j}`);
+            const tileId = `tile-${i}-${j}`;
+            const tile = document.getElementById(tileId);
             if (!tile) continue;
             
             const front = tile.querySelector('.front');
             const back = tile.querySelector('.back');
             
-            // Eski ikonları temizle (Çakışmayı önlemek için)
-            const oldIcon = back.querySelector('.meaning-icon');
-            if (oldIcon) oldIcon.remove(); 
+            // 1. BOŞ VE GELECEK SATIRLAR (TEMİZLİK)
+            if (i >= currentRow) { 
+                 tile.className = 'tile'; 
+                 // İkon varsa temizle (Çünkü burası boş satır)
+                 const existingIcon = tile.querySelector('.meaning-icon');
+                 if(existingIcon) existingIcon.remove();
 
-            // Stil temizliği
-            if (i !== currentRow) { 
-                 tile.classList.remove('flip', 'correct', 'present', 'absent', 'shake', 'static');
-                 if(!playerGuesses[i]) {
-                    front.textContent = ''; back.textContent = ''; back.className = 'tile-inner back';
+                 if (i === currentRow && gameData.status === 'playing') {
+                     // Aktif satır (Yazılanlar)
+                     import('./state.js').then(stateMod => {
+                        const knownPositions = stateMod.getKnownCorrectPositions();
+                        if (knownPositions && knownPositions[j]) {
+                            front.textContent = knownPositions[j]; 
+                            back.textContent = knownPositions[j];
+                            tile.classList.add('static', 'correct');
+                            back.className = 'tile-inner back correct';
+                        } else {
+                            if(tile.classList.contains('static')) {
+                                front.textContent = ''; back.textContent = '';
+                                back.className = 'tile-inner back';
+                            }
+                        }
+                     });
+                 } else {
+                    front.textContent = ''; back.textContent = '';
+                    back.className = 'tile-inner back';
                  }
+                 continue; 
             }
 
-            // Dolu satırları boya
-            if (playerGuesses[i]) {
-                const guess = playerGuesses[i];
-                front.textContent = guess.word[j];
-                back.textContent = guess.word[j];
-                back.className = 'tile-inner back ' + guess.colors[j];
+            // 2. DOLU SATIRLAR (GEÇMİŞ TAHMİNLER)
+            const guess = playerGuesses[i];
+            if (guess) {
+                const letter = guess.word[j];
+                const color = guess.colors[j];
+
+                // Animasyon
+                if (!tile.classList.contains('flip')) {
+                    if (didMyGuessChange && i === currentRow - 1) {
+                        setTimeout(() => tile.classList.add(color, 'flip'), j * 250);
+                    } else {
+                        tile.classList.add(color, 'flip');
+                    }
+                }
                 
-                // Animasyon kontrolü (Yeni tahminse animasyonlu, değilse direkt)
-                if (didMyGuessChange && i === currentRow - 1) {
-                    setTimeout(() => { tile.classList.add(guess.colors[j], 'flip'); }, j * 250);
-                } else {
-                    tile.classList.add(guess.colors[j], 'flip');
+                // Renk ve Yazı (Sadece Text güncelliyoruz, HTML bozulmaz)
+                if (!back.classList.contains(color)) back.className = 'tile-inner back ' + color;
+                if (back.textContent !== letter) back.textContent = letter;
+                if (front.textContent !== letter) front.textContent = letter;
+
+                // 3. SORU İŞARETİ (TILE'A EKLİYORUZ, BACK'E DEĞİL)
+                // Bu satırın son harfi mi? Ve kelime geçerli mi?
+                if (j === wordLength - 1 && guess.colors.indexOf('failed') === -1) {
+                    
+                    // İkon TILE elementinde var mı?
+                    let icon = tile.querySelector('.meaning-icon');
+                    
+                    if (!icon) {
+                        icon = document.createElement('div');
+                        icon.className = 'meaning-icon';
+                        icon.textContent = '?';
+                        // Data attribute ile kelimeyi sakla
+                        icon.dataset.word = guess.word;
+                        
+                        icon.onclick = (e) => {
+                            e.stopPropagation(); 
+                            const targetWord = e.target.dataset.word;
+                            import('./game.js').then(g => g.fetchWordMeaning(targetWord).then(meaning => {
+                                if(confirm(`${targetWord}\n\n${meaning}\n\nSözlüğe eklemek ister misin?`)) {
+                                    import('./game.js').then(m => m.addWordToDictionary(targetWord));
+                                }
+                            }));
+                        };
+                        // DİKKAT: back.appendChild DEĞİL, tile.appendChild yapıyoruz!
+                        tile.appendChild(icon);
+                    } else {
+                        // Varsa datasını güncelle (Garanti olsun)
+                        icon.dataset.word = guess.word;
+                    }
                 }
             } 
-            // Aktif satır (Yazılanlar)
-            else if (i === currentRow && gameData.status === 'playing') {
-                import('./state.js').then(stateMod => {
-                    const knownPositions = stateMod.getKnownCorrectPositions();
-                    if (knownPositions && knownPositions[j]) {
-                        front.textContent = knownPositions[j]; back.textContent = knownPositions[j];
-                        back.className = 'tile-inner back correct'; tile.className = 'tile static correct';
-                    }
-                });
-            }
-        }
-        
-        // 2. SATIR SONUNA SORU İŞARETİ EKLEME (FIXED)
-        // Eğer bu satır tamamlanmış bir tahminse (ve başarısız değilse/failed yoksa)
-        if (playerGuesses[i] && playerGuesses[i].colors.indexOf('failed') === -1) {
-            const guessWord = playerGuesses[i].word;
-            const lastTileInRow = document.getElementById(`tile-${i}-${wordLength - 1}`);
-            
-            if (lastTileInRow) {
-                // Front değil, parent elemente (tile) ekliyoruz ki dönse bile görünsün.
-                // Veya 'back' yüzüne ekliyoruz ama z-index ile öne çıkarıyoruz.
-                const backFace = lastTileInRow.querySelector('.back');
-                
-                // Soru işareti butonu oluştur
-                const meaningIcon = document.createElement('div');
-                meaningIcon.className = 'meaning-icon';
-                meaningIcon.textContent = '?';
-                
-                // CSS ile Stil Ver (Tailwind yerine garanti olsun diye inline)
-                Object.assign(meaningIcon.style, {
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    width: '20px',
-                    height: '20px',
-                    backgroundColor: '#3b82f6', // Mavi
-                    color: 'white',
-                    borderRadius: '50%',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: '50', // En üstte
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                    border: '2px solid #1f2937' // Koyu kenarlık
-                });
-
-                // Tıklama Olayı
-                meaningIcon.onclick = (e) => {
-                    e.stopPropagation(); // Tile tıklamasını engelle
-                    import('./game.js').then(g => g.fetchWordMeaning(guessWord).then(meaning => {
-                        // Basit Alert yerine Custom Modal da yapılabilir ama şimdilik alert + sözlük butonu mantığı
-                        // Burayı daha şık yapmak için ui.js'de bir modal açtırabilirsin.
-                        // Şimdilik istek üzerine "Baloncuk ve Ekle Butonu" mantığını simüle edelim:
-                        if(confirm(`${guessWord}\n\n${meaning}\n\nSözlüğe eklemek ister misin?`)) {
-                            import('./game.js').then(m => m.addWordToDictionary(guessWord));
-                        }
-                    }));
-                };
-
-                // Eğer yeni tahminse animasyon bitince ekle, yoksa hemen ekle
-                if (didMyGuessChange && i === currentRow - 1) {
-                    setTimeout(() => { 
-                        if(backFace) backFace.appendChild(meaningIcon); 
-                    }, (wordLength * 250) + 100);
-                } else {
-                    if(backFace) backFace.appendChild(meaningIcon);
-                }
-            }
         }
     }
+    
     
     // RAKİP KÜÇÜK IZGARASI
     const isVersusMode = (actualGameType === 'multiplayer' || actualGameType === 'vsCPU' || actualGameType === 'friend' || actualGameType === 'random_series' || actualGameType === 'random_loose') && !isBR;
@@ -954,7 +939,6 @@ export function listenToGameUpdates(gameId) {
         const isGameJustStarted = (oldGameData?.status === 'waiting' || oldGameData?.status === 'invited') && gameData.status === 'playing';
 
         if (isNewRound || isGameJustStarted) {
-            console.log(`♻️ SENKRONİZASYON: Sunucu Turu: ${gameData.currentRound}, Yerel Tur: ${oldGameData?.currentRound || 0}`);
             
             // a) Eski sayacı ve zaman aşımlarını DERHAL durdur.
             stopTurnTimer(); 
@@ -981,6 +965,8 @@ export function listenToGameUpdates(gameId) {
 
             // f) Klavye Kilidini Aç
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'auto';
+
+            renderGameState(gameData);
 
             // g) Sayacı Yeni Verilerle Başlat (Biraz gecikmeli ki UI otursun)
             setTimeout(() => {
@@ -2881,7 +2867,7 @@ function startBRTimer() {
 
             // 1. ÖNCE ARAYÜZÜ KİLİTLE
             if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-            if (brTimerDisplay) brTimerDisplay.textContent = "0"; // Ekranda 0 olduğundan emin ol
+            if (brTimerDisplay) brTimerDisplay.textContent = "0"; 
             
             showToast("Süre doldu!", true);
 
@@ -2892,7 +2878,7 @@ function startBRTimer() {
                 console.error("Süre bitimi sunucuya bildirilemedi:", error);
             }
         }
-    }, 100); // <-- BURASI DEĞİŞTİ: 1000 yerine 100 yaptık.
+    }, 1000); // DÜZELTME: Performans için 100 yerine 1000 (1 saniye) yaptık.
     
     state.setTurnTimerInterval(interval);
 }

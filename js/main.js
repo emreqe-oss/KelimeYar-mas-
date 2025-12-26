@@ -75,6 +75,13 @@ import {
 
 import { showToast, playSound } from './utils.js';
 
+// --- PRODUCTION MODE: Konsol Loglarını Gizle ---
+// Google Play sürümü için logları kapatıyoruz. Hata ayıklamak istersen bu bloğu yorum satırı yap.
+if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    console.log = function() {}; // Tüm logları boş fonksiyona çevir
+    // console.error ve console.warn açık kalsın ki kritik hataları görebilelim
+}
+
 // 2. GLOBAL DEĞİŞKENLER
 let lastVisibleRankDoc = null; 
 let currentRankCount = 1;      
@@ -509,9 +516,21 @@ function initAuthListener() {
             if(authLoading) authLoading.classList.add('hidden');
             setUserId(user.uid);
             
-            checkAndGenerateDailyQuests().then(() => {
+            // --- OPTİMİZASYON: Günde sadece 1 kez sunucuya sor ---
+            const lastCheckDate = localStorage.getItem('lastQuestCheckDate');
+            const todayStr = new Date().toISOString().split('T')[0]; // "2024-01-01" formatı
+
+            if (lastCheckDate !== todayStr) {
+                // Bugün henüz sormamışız, sunucuya soralım
+                checkAndGenerateDailyQuests().then(() => {
+                    localStorage.setItem('lastQuestCheckDate', todayStr);
+                    import('./ui.js').then(ui => ui.updateQuestBadge());
+                });
+            } else {
+                // Bugün zaten sormuşuz, sadece UI güncelle (Sunucuyu yorma)
+                console.log("Bugün görev kontrolü zaten yapıldı.");
                 import('./ui.js').then(ui => ui.updateQuestBadge());
-            });
+            }
             
             startGlobalGamesListener();
 
