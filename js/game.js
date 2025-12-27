@@ -272,7 +272,28 @@ export async function showScoreboard(gameData) {
                     checkLeagueStatus(); // Fikstürü yeniden çeker
                 };
             }
-            // SENARYO 3: DİĞER MODLAR (vsCPU, Arkadaş vb.) -> ANA MENÜ BUTONU
+
+            // SENARYO 3: vsCPU İSE -> TEKRAR OYNA (YENİ)
+            else if (gameData.gameType === 'vsCPU') {
+                newRoundBtn.textContent = "Tekrar Oyna 🔄";
+                newRoundBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
+                
+                newRoundBtn.onclick = () => {
+                    newRoundBtn.disabled = true;
+                    newRoundBtn.textContent = "Başlatılıyor...";
+                    
+                    // Eski oyunun zorluk seviyesini al, yoksa 'average' yap
+                    const currentDifficulty = gameData.difficulty || 'average';
+                    
+                    // Yeni oyunu başlat (Mevcut zorlukla)
+                    import('./game.js').then(m => m.startNewGame({ 
+                        mode: 'vsCPU', 
+                        difficulty: currentDifficulty 
+                    }));
+                };
+            }
+
+            // SENARYO 4: DİĞER MODLAR (vsCPU, Arkadaş vb.) -> ANA MENÜ BUTONU
             else {
                 newRoundBtn.textContent = "Ana Menü";
                 newRoundBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transition";
@@ -2196,19 +2217,41 @@ async function submitGuess() {
          const matchId = localGameData.leagueMatchId;
          const tier = localGameData.leagueTier;
          const groupId = localGameData.leagueGroupId;
-         if (weekID && matchId && tier && groupId) {
+         const side = localGameData.leaguePlayerSide; // 'p1' veya 'p2'
+
+         if (weekID && matchId && tier && groupId && side) {
              const matchRef = doc(db, "leagues", weekID, "tiers", tier, "groups", groupId, "matches", matchId);
-             const playerKey = (localGameData.players[currentUserId].role === 'p1' || localGameData.leaguePlayerSide === 'p1') ? 'p1_data' : 'p2_data';
+             
+             // Hangi alanın güncelleneceğini belirle (p1_data veya p2_data)
+             const playerKey = (side === 'p1') ? 'p1_data' : 'p2_data';
+             
              const updates = {};
+             // Tahminleri güncelle
              updates[`${playerKey}.guesses`] = localGameData.players[currentUserId].guesses;
-             if (isWinner) { updates[`${playerKey}.completed`] = true; updates[`${playerKey}.failed`] = false; }
-             else if (guessCount >= localGameData.GUESS_COUNT) { updates[`${playerKey}.completed`] = true; updates[`${playerKey}.failed`] = true; }
-             try { await updateDoc(matchRef, updates); 
-                 if (isWinner || guessCount >= localGameData.GUESS_COUNT) {
-                     localGameData.status = 'finished'; localGameData.roundWinner = isWinner ? currentUserId : null;
-                     state.setLocalGameData(localGameData); stopTurnTimer(); setTimeout(() => showScoreboard(localGameData), 1000);
-                 }
-             } catch (e) {}
+             
+             // Eğer kazandıysa veya hakları bittiyse MAÇI BİTİR
+             if (isWinner || guessCount >= localGameData.GUESS_COUNT) {
+                 const finalScore = isWinner ? calculateRoundScore(guessCount, true) : 0;
+                 
+                 updates[`${playerKey}.completed`] = true;       // ARTIK TAMAMLANDI GÖRÜNECEK
+                 updates[`${playerKey}.failed`] = !isWinner;     // Kazandı mı yandı mı?
+                 updates[`${playerKey}.score`] = finalScore;     // Puanı da yazalım (İstatistik için)
+                 
+                 // Yerel durumu bitir
+                 localGameData.status = 'finished'; 
+                 localGameData.roundWinner = isWinner ? currentUserId : null;
+                 state.setLocalGameData(localGameData); 
+                 
+                 stopTurnTimer(); 
+                 setTimeout(() => showScoreboard(localGameData), 1000);
+             }
+
+             try { 
+                 await updateDoc(matchRef, updates); 
+                 console.log("✅ Lig maçı sonucu kaydedildi:", updates);
+             } catch (e) {
+                 console.error("❌ Lig sonucu kaydedilemedi:", e);
+             }
          }
     }
     else if (gameMode === 'vsCPU') {
@@ -2261,21 +2304,20 @@ export async function failTurn(guessWord = '') {
     else if (gameMode === 'league') {
         const weekID = localGameData.leagueWeekID;
         const matchId = localGameData.leagueMatchId;
+        const tier = localGameData.leagueTier;
+        const groupId = localGameData.leagueGroupId;
+        const side = localGameData.leaguePlayerSide; // 'p1' veya 'p2'
         
-        if (weekID && matchId) {
-            const matchRef = doc(db, "leagues", weekID, "matches", matchId);
+        if (weekID && matchId && side) {
+            const matchRef = doc(db, "leagues", weekID, "tiers", tier, "groups", groupId, "matches", matchId);
+            const playerKey = (side === 'p1') ? 'p1_data' : 'p2_data';
+            
             try {
-                await runTransaction(db, async (transaction) => {
-                    const mDoc = await transaction.get(matchRef);
-                    if (!mDoc.exists()) return;
-                    const mData = mDoc.data();
-                    const playerKey = (mData.p1 === currentUserId) ? 'p1_data' : 'p2_data';
-                    
-                    transaction.update(matchRef, {
-                        [`${playerKey}.guesses`]: localGameData.players[currentUserId].guesses || [],
-                        [`${playerKey}.completed`]: true,
-                        [`${playerKey}.failed`]: true
-                    });
+                await updateDoc(matchRef, {
+                    [`${playerKey}.guesses`]: localGameData.players[currentUserId].guesses || [],
+                    [`${playerKey}.completed`]: true, // Maçı bitir
+                    [`${playerKey}.failed`]: true,    // Başarısız oldu
+                    [`${playerKey}.score`]: 0         // 0 Puan
                 });
                 
                 localGameData.status = 'finished';
@@ -4059,11 +4101,11 @@ export async function startLeagueMatch(matchId, opponentId, opponentName) {
     localData.leagueMatchId = matchId;
     localData.leagueWeekID = weekID;
     
-    // --- ÖNEMLİ: Lig Verilerini Local'e Kaydet ---
-    // submitGuess yaparken nereye yazacağını bilsin
-    localData.leagueTier = tier;       
+// --- ÖNEMLİ DÜZELTME: Tarafını (Side) Kaydet ---
+    // submitGuess yaparken P1 miyiz P2 miyiz bilmeliyiz
+    localData.leagueTier = tier;        
     localData.leagueGroupId = groupId;
-    // ---------------------------------------------
+    localData.leaguePlayerSide = (matchData.p1 === userId) ? 'p1' : 'p2';
     
     localData.turnStartTime = startTime; 
     localData.currentPlayerId = userId; 
@@ -5167,9 +5209,24 @@ export async function handleVsCpuClick() {
                 // YENİ OYUN
                 btnNew.onclick = async () => {
                     modal.classList.add('hidden');
-                    // Eski oyunu sil (Veya finished yap)
-                    await deleteDoc(doc(db, "games", gameId)); 
-                    // Yeni zorluk seçimi
+                    
+                    // *** DÜZELTME: Dinleyiciyi (Listener) Önce Durdur ***
+                    // Bunu yapmazsak, deleteDoc çalıştığı an "Oyun Silindi" sinyali tetiklenir
+                    // ve leaveGame() çalışıp bizi ana menüye atar (Göz kırpma sorunu).
+                    const currentUnsub = state.getGameUnsubscribe();
+                    if (currentUnsub) {
+                        currentUnsub(); // Dinlemeyi durdur
+                        state.setGameUnsubscribe(null); // State'i temizle
+                    }
+
+                    // Şimdi eski oyunu güvenle silebiliriz, kimse panik yapmaz.
+                    try {
+                        await deleteDoc(doc(db, "games", gameId)); 
+                    } catch (e) {
+                        console.log("Eski oyun silinirken hata (önemsiz):", e);
+                    }
+                    
+                    // Yeni zorluk seçimi modalını aç
                     document.getElementById('cpu-difficulty-modal').classList.remove('hidden');
                 };
             }
