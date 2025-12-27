@@ -929,6 +929,9 @@ export function listenToGameUpdates(gameId) {
         const currentUserId = state.getUserId();
         const oldGameData = state.getLocalGameData(); // Önceki yerel durum
 
+        if (oldGameData && JSON.stringify(oldGameData) === JSON.stringify(gameData)) {
+            return; // Veri değişmemiş, gereksiz işlem yapma.
+        }
         // ============================================================
         // 1. KRİTİK: YENİ TUR / OYUN SENKRONİZASYONU (İTAAT MODU)
         // ============================================================
@@ -1385,8 +1388,7 @@ export async function createBRGame(visibility = 'public') {
                 userId: currentUserId, 
                 username, 
                 avatarUrl: myAvatar,
-                leagueTier: myTier, // <--- YENİ EKLENDİ
-                guesses: [], 
+                leagueTier: myTier || 'rookie',                guesses: [], 
                 isEliminated: false, 
                 hasSolved: false, 
                 isWinner: false, 
@@ -1976,7 +1978,11 @@ async function saveDailyResultToDatabase(userId, username, word, win, guesses, s
 
         // 2. Okuma İşlemi (İzin/İndeks hatası en çok burada olur)
         try {
+            // OPTİMİZASYON: Sadece tarih bazlı basit sorgu yapıyoruz.
+            // orderBy kullanmıyoruz ki "Index Required" hatası almayalım.
+            // Sıralamayı aşağıda kod içinde (JavaScript ile) yapacağız.
             const q = query(collection(db, "daily_results"), where("date", "==", todayStr));
+            
             const querySnapshot = await getDocs(q);
 
             let totalScore = 0;
@@ -2028,9 +2034,17 @@ async function saveDailyResultToDatabase(userId, username, word, win, guesses, s
 
 // js/game.js -> submitGuess fonksiyonunun TAMAMI
 
+let isSubmitting = false; 
+
 async function submitGuess() {
-    const localGameData = state.getLocalGameData();
-    if (!localGameData || localGameData.status !== 'playing') return;
+    // Kilit kontrolü: Eğer zaten işlem yapılıyorsa dur.
+    if (isSubmitting) return; 
+    
+    isSubmitting = true; // Kapıyı kilitle
+
+    try {
+        const localGameData = state.getLocalGameData();
+        if (!localGameData || localGameData.status !== 'playing') return;
 
     const gameMode = state.getGameMode();
     const currentUserId = state.getUserId();
@@ -2213,6 +2227,12 @@ async function submitGuess() {
     }
 
     renderGameState(localGameData, true);
+    } catch (error) {
+        console.error("Tahmin hatası:", error);
+    } finally {
+        // İşlem bitince (başarılı veya hatalı) 0.5 saniye sonra kilidi aç
+        setTimeout(() => { isSubmitting = false; }, 500);
+    }
 }
 
 export async function failTurn(guessWord = '') {
@@ -2825,8 +2845,24 @@ export function startTurnTimer() {
         }
     };
 
-    updateTimer(); // Gecikme olmasın diye hemen çalıştır
-    const interval = setInterval(updateTimer, 1000); // Saniyede bir güncelle
+    updateTimer(); // Hemen çalıştır
+    
+    let lastTime = Date.now();
+    
+    const interval = setInterval(() => {
+        const now = Date.now();
+        const delta = now - lastTime;
+        lastTime = now;
+
+        // Eğer tarayıcı 2 saniyeden fazla uyuduysa (ekran kapandıysa)
+        // Sayacı hemen güncelle ki atlama olmasın
+        if (delta > 2000) {
+            updateTimer(); 
+        } else {
+            updateTimer();
+        }
+    }, 1000);
+    
     state.setTurnTimerInterval(interval);
 }
 
@@ -5031,7 +5067,13 @@ async function resolvePendingBotMatches(weekID, tier, groupId) {
 
             if (updateNeeded) {
                 const matchRef = doc(db, groupPath, "matches", docSnap.id);
-                updateDoc(matchRef, updates); // await kullanmadık ki döngü hızlı aksın
+                
+                // Güvenli güncelleme için Transaction kullanıyoruz
+                runTransaction(db, async (transaction) => {
+                    const mDoc = await transaction.get(matchRef);
+                    if (!mDoc.exists()) return;
+                    transaction.update(matchRef, updates);
+                }).catch(err => console.log("Bot maç güncelleme çakışması (önemsiz):", err));
             }
         });
 

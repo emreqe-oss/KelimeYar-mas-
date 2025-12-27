@@ -23,8 +23,8 @@
 23-->
 24<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 25    package="com.klig.oyun"
-26    android:versionCode="12"
-27    android:versionName="12" >
+26    android:versionCode="16"
+27    android:versionName="16" >
 28
 29    <uses-sdk
 30        android:minSdkVersion="21"

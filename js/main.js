@@ -209,7 +209,7 @@ async function fetchAndDisplayGlobalRanking(loadMore = false) {
         if (loadMore && lastVisibleRankDoc) {
             q = query(usersRef, orderBy("stats.wins", "desc"), orderBy("stats.played", "asc"), startAfter(lastVisibleRankDoc), limit(50));
         } else {
-            q = query(usersRef, orderBy("stats.wins", "desc"), orderBy("stats.played", "asc"), limit(50));
+            q = query(usersRef, orderBy("stats.wins", "desc"), orderBy("stats.played", "asc"), limit(20));
         }
 
         const querySnapshot = await getDocs(q);

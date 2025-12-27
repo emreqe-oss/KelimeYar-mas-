@@ -23,8 +23,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.klig.oyun"
-    android:versionCode="12"
-    android:versionName="12" >
+    android:versionCode="16"
+    android:versionName="16" >
 
     <uses-sdk
         android:minSdkVersion="21"

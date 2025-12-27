@@ -444,8 +444,7 @@ export function updateMultiplayerScoreBoard(gameData) {
                 const p1 = gameData.players[p1Id];
                 if (p1) {
                     const tierClass = getTierColorClass(p1.leagueTier);
-                    const avatar = p1.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
-                    
+                    const avatar = (p1 && p1.avatarUrl) ? p1.avatarUrl : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";                    
                     // DİKEY HİZALAMA (flex-col)
                     p1ScoreEl.innerHTML = `
                         <div class="flex flex-col items-center justify-center min-w-[70px]">
@@ -462,8 +461,7 @@ export function updateMultiplayerScoreBoard(gameData) {
                 if (p2Id && gameData.players[p2Id]) {
                     const p2 = gameData.players[p2Id];
                     const tierClass = getTierColorClass(p2.leagueTier);
-                    const avatar = p2.avatarUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
-
+                    const avatar = (p2 && p2.avatarUrl) ? p2.avatarUrl : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%236B7280'/%3E%3C/svg%3E";
                     // DİKEY HİZALAMA (flex-col)
                     p2ScoreEl.innerHTML = `
                         <div class="flex flex-col items-center justify-center min-w-[70px]">
