@@ -398,13 +398,15 @@ function getDaysSinceEpoch() {
 
 
 export function initializeGameUI(gameData) {
-    // 1. Kelime Uzunluğu Ayarı
+    // 1. Kelime Uzunluğu Ayarı - DÜZELTME
     if (gameData.secretWord && gameData.secretWord.length > 0) {
-        if (gameData.wordLength !== gameData.secretWord.length) {
-            gameData.wordLength = gameData.secretWord.length;
-        }
+        gameData.wordLength = gameData.secretWord.length; // Her zaman secretWord'den al
     }
-    wordLength = gameData.wordLength;
+    
+    // Global wordLength değişkenini güncelle
+    wordLength = gameData.wordLength || 5; // Fallback olarak 5
+    
+    console.log("🎮 UI Başlatılıyor - Kelime Uzunluğu:", wordLength); // Debug için
     
     // 2. Ana Izgara (Grid) Ayarı
     if (guessGrid) {
@@ -2378,11 +2380,14 @@ function addLetter(letter) {
     const currentRow = (localGameData.players[state.getUserId()]?.guesses || []).length;
     if (currentRow >= GUESS_COUNT) return;
 
+    // DÜZELTME: wordLength'i oyun verisinden al
+    const currentWordLength = localGameData.wordLength || wordLength || 5;
+
     if (!state.getHasUserStartedTyping()) {
         state.setHasUserStartedTyping(true);
     }
 
-    for (let i = 0; i < wordLength; i++) {
+    for (let i = 0; i < currentWordLength; i++) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
         
         if (tile) {
@@ -2416,7 +2421,10 @@ function deleteLetter() {
 
     if (!state.getHasUserStartedTyping()) return; 
 
-    for (let i = wordLength - 1; i >= 0; i--) {
+    // DÜZELTME: wordLength'i oyun verisinden al
+    const currentWordLength = localGameData.wordLength || wordLength || 5;
+
+    for (let i = currentWordLength - 1; i >= 0; i--) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
         
         if (tile && tile.querySelector('.front').textContent !== '' && !tile.classList.contains('static')) {

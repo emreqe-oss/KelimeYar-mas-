@@ -231,6 +231,9 @@ export function showScreen(screenId, isBackNavigation = false) {
 }
 
 export function createGrid(wordLength, GUESS_COUNT) {
+    console.log("📐 Grid Oluşturuluyor:", wordLength, "harf,", GUESS_COUNT, "satır");
+    if (!wordLength || wordLength < 4 || wordLength > 6) wordLength = 5; // Güvenlik kontrolü
+    if (!GUESS_COUNT || GUESS_COUNT < 5 || GUESS_COUNT > 8) GUESS_COUNT = 6;
     if (!guessGrid) return;
     guessGrid.innerHTML = '';
     guessGrid.className = 'grid gap-1 w-full';
