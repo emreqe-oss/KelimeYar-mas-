@@ -231,9 +231,21 @@ export function showScreen(screenId, isBackNavigation = false) {
 }
 
 export function createGrid(wordLength, GUESS_COUNT) {
+    // 🆕 YENİ EKLENEN GÜVENLİK KONTROLLERI
     console.log("📐 Grid Oluşturuluyor:", wordLength, "harf,", GUESS_COUNT, "satır");
-    if (!wordLength || wordLength < 4 || wordLength > 6) wordLength = 5; // Güvenlik kontrolü
-    if (!GUESS_COUNT || GUESS_COUNT < 5 || GUESS_COUNT > 8) GUESS_COUNT = 6;
+    
+    // Eğer wordLength geçersizse varsayılan 5 yap
+    if (!wordLength || wordLength < 4 || wordLength > 6) {
+        console.warn("⚠️ Geçersiz wordLength:", wordLength, "→ 5'e ayarlandı");
+        wordLength = 5;
+    }
+    
+    // Eğer GUESS_COUNT geçersizse varsayılan 6 yap
+    if (!GUESS_COUNT || GUESS_COUNT < 5 || GUESS_COUNT > 8) {
+        console.warn("⚠️ Geçersiz GUESS_COUNT:", GUESS_COUNT, "→ 6'ya ayarlandı");
+        GUESS_COUNT = 6;
+    }
+    
     if (!guessGrid) return;
     guessGrid.innerHTML = '';
     guessGrid.className = 'grid gap-1 w-full';
