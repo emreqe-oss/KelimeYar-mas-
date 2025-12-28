@@ -1098,11 +1098,16 @@ export function listenToGameUpdates(gameId) {
                 
                 // --- KRİTİK DEĞİŞİKLİK: Toleransı 15sn'den 3sn'ye düşürdük ---
                 // Eğer süre bittikten sonra 3 saniye geçmişse "Acil Durum" ilan et
-                const isEmergency = elapsed > (timeLimit + 3); 
+                const isEmergency = elapsed > (timeLimit + 1); 
                 
                 // KURAL: Kurucu bitirebilir VEYA Süre çoktan dolduysa HERHANGİ BİRİ bitirebilir
-                if (gameData.creatorId === currentUserId || isEmergency) {
-                    console.log(`🏁 Tur Bitiyor... (Yetkili: ${gameData.creatorId === currentUserId ? 'Kurucu' : 'Acil Durum Protokolü'})`);
+                // KURAL: Kurucu bitirebilir VEYA Süre çoktan dolduysa HERHANGİ BİRİ bitirebilir
+// 🆕 EK KONTROL: Eğer oyun hala bitmemişse VE süre aştıysa, BU KULLANICI bitirsin
+const needsEmergencyFinish = (gameData.status === 'playing') && isEmergency;
+
+if (gameData.creatorId === currentUserId || needsEmergencyFinish) {
+    const authority = gameData.creatorId === currentUserId ? 'Kurucu' : 'Acil Durum Protokolü (Arka Plan Fix)';
+    console.log(`🏁 Tur Bitiyor... (Yetkili: ${authority})`);
                     
                     // --- PUANLAMA VE BİTİRME İŞLEMLERİ ---
                     const updates = { status: 'finished' };
@@ -1189,7 +1194,64 @@ export function listenToGameUpdates(gameId) {
     });
     
     state.setGameUnsubscribe(unsubscribe);
+    // ===== YENİ EKLENEN KOD BURADAN BAŞLIYOR =====
+    
+    // Sayfa Görünürlük Kontrolü
+    const handleVisibilityChange = async () => {
+        if (!document.hidden) {
+            // Kullanıcı geri döndü, oyun durumunu kontrol et
+            console.log("👁️ Kullanıcı geri döndü, oyun durumu kontrol ediliyor...");
+            
+            try {
+                const freshDoc = await getDoc(gameRef);
+                if (freshDoc.exists()) {
+                    const freshData = freshDoc.data();
+                    
+                    // Oyun bitmişse ve hala oyun ekranındaysak
+                    if (freshData.status === 'finished') {
+                        const currentScreen = document.getElementById('game-screen');
+                        const scoreboardScreen = document.getElementById('scoreboard-screen');
+                        
+                        if (currentScreen && !currentScreen.classList.contains('hidden')) {
+                            console.log("🎯 Oyun bitmişti! Sonuç ekranına yönlendiriliyor...");
+                            stopTurnTimer();
+                            
+                            // State'i güncelle
+                            state.setLocalGameData(freshData);
+                            
+                            // Render et
+                            await renderGameState(freshData, false);
+                            
+                            // Scoreboard'u aç (kısa gecikme ile)
+                            setTimeout(() => {
+                                if (scoreboardScreen && scoreboardScreen.classList.contains('hidden')) {
+                                    showScoreboard(freshData);
+                                }
+                            }, 500);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Oyun durumu kontrolü hatası:", error);
+            }
+        }
+    };
+    
+    // Dinleyiciyi ekle
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup: Oyun bittiğinde dinleyiciyi kaldır
+    const originalUnsubscribe = unsubscribe;
+    const enhancedUnsubscribe = () => {
+        originalUnsubscribe();
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+    
+    state.setGameUnsubscribe(enhancedUnsubscribe);
+    
+    // ===== YENİ KOD BURADA BİTİYOR =====
 }
+
 
 // ===================================================
 // === OYUN KURMA VE KATILMA ===
@@ -4588,20 +4650,51 @@ async function getGlobalWeeklyStats() {
 // ===================================================
 
 export function setupVisibilityHandler(gameId) {
-    // Tarayıcı sekmesi gizlendiğinde/açıldığında çalışır
-    document.addEventListener("visibilitychange", () => {
+    const visibilityHandler = async () => {
         const userId = state.getUserId();
         if (!userId || !gameId) return;
 
         const status = document.hidden ? 'away' : 'online';
         const gameRef = doc(db, "games", gameId);
 
-        // Durumu güncelle (Hata olsa bile devam et, kritik değil)
+        // Durum güncelle
         updateDoc(gameRef, {
             [`players.${userId}.status`]: status,
             [`players.${userId}.lastActive`]: serverTimestamp()
         }).catch(err => console.log("Durum güncellenemedi:", err));
-    });
+        
+        // 🆕 EKLENEN: Kullanıcı geri döndüyse, oyun durumunu kontrol et
+        if (!document.hidden) {
+            try {
+                const freshDoc = await getDoc(gameRef);
+                if (freshDoc.exists()) {
+                    const freshData = freshDoc.data();
+                    
+                    // Oyun bitmişse skor ekranına yönlendir
+                    if (freshData.status === 'finished') {
+                        const gameScreen = document.getElementById('game-screen');
+                        const scoreboardScreen = document.getElementById('scoreboard-screen');
+                        
+                        if (gameScreen && !gameScreen.classList.contains('hidden') && 
+                            scoreboardScreen && scoreboardScreen.classList.contains('hidden')) {
+                            
+                            console.log("🔔 Oyun arka planda bitmişti! Sonuç ekranı açılıyor...");
+                            stopTurnTimer();
+                            state.setLocalGameData(freshData);
+                            
+                            setTimeout(() => {
+                                showScoreboard(freshData);
+                            }, 500);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Oyun durumu senkronizasyon hatası:", error);
+            }
+        }
+    };
+    
+    document.addEventListener("visibilitychange", visibilityHandler);
 }
 
 // ==========================================
