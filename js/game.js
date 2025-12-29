@@ -1031,48 +1031,6 @@ export function listenToGameUpdates(gameId) {
         });
 
 // ============================================================
-        // 3. ZAMAN AŞIMI POLİSİ (DEMOKRASİ MODU)
-        // ============================================================
-        if (gameData.status === 'playing' && gameData.timeLimit !== null) {
-            const timeLimit = (gameData.gameType === 'league' ? 120 : (gameData.timeLimit || 120));
-            
-            let startTime = gameData.turnStartTime;
-            if (startTime && startTime.toDate) startTime = startTime.toDate();
-            else if (!(startTime instanceof Date)) startTime = new Date();
-
-            const now = new Date();
-            const elapsedSeconds = (now - startTime) / 1000;
-
-            // --- DEĞİŞİKLİK: Toleransı 5sn'den 2sn'ye düşürdük ---
-            if (elapsedSeconds > (timeLimit + 2)) { 
-                
-                const updates = {};
-                let needUpdate = false;
-
-                Object.keys(gameData.players).forEach(playerId => {
-                    const p = gameData.players[playerId];
-                    // Botları elleme, sadece gerçek oyuncuları yak
-                    if (!p.isBot && !p.hasSolved && !p.hasFailed && !p.isEliminated) {
-                        console.warn(`⚠️ ZAMAN AŞIMI: ${p.username} (${playerId}) yakıldı.`);
-                        updates[`players.${playerId}.hasFailed`] = true;
-                        needUpdate = true;
-                    }
-                });
-
-                if (needUpdate) {
-                    // Eğer yanan kişi Bensem, yerel sayacı durdur
-                    if (updates[`players.${currentUserId}.hasFailed`]) {
-                        stopTurnTimer();
-                        if (keyboardContainer) keyboardContainer.style.pointerEvents = 'none';
-                        import('./utils.js').then(u => u.showToast("Süre doldu!", true));
-                    }
-                    // Veritabanına yaz
-                    updateDoc(gameRef, updates).catch(e => console.log("Zaman aşımı güncelleme çakışması (Normal):", e));
-                }
-            }
-        }
-
-// ============================================================
         // 4. OYUN BİTİRME KONTROLÜ (KESİN ÇÖZÜM: AFK & SÜRE BİTİMİ)
         // ============================================================
         if (gameData.status === 'playing') {
