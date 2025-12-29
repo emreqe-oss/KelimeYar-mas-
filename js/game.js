@@ -1073,52 +1073,53 @@ export function listenToGameUpdates(gameId) {
         }
 
 // ============================================================
-        // 4. OYUN BİTİRME KONTROLÜ (DEMOKRASİ MODU - BR DÜZELTMESİ)
+        // 4. OYUN BİTİRME KONTROLÜ (KESİN ÇÖZÜM: AFK & SÜRE BİTİMİ)
         // ============================================================
         if (gameData.status === 'playing') {
             const allPlayerIds = Object.keys(gameData.players);
             
-            // Herkes işini bitirdi mi? (Bildiyse, Yandıysa veya Elendiyse)
+            // 1. Herkes hamlesini yaptı mı?
             const isEveryoneDone = allPlayerIds.every(pid => {
                 const p = gameData.players[pid];
                 if (!p) return false;
-                if (pid === 'cpu') return true; // CPU'yu sayma
+                if (pid === 'cpu') return true; 
                 return p.isEliminated || p.hasSolved || p.hasFailed; 
             });
 
-            if (isEveryoneDone) {
-                // SÜRE HESABI
-                const timeLimit = (gameData.timeLimit || 120);
-                
-                let startTime = gameData.turnStartTime;
-                if (startTime && startTime.toDate) startTime = startTime.toDate();
-                else startTime = new Date(); // Hata varsa şu anı al
-                
-                const elapsed = (new Date() - startTime) / 1000;
-                
-                // --- KRİTİK DEĞİŞİKLİK: Toleransı 15sn'den 3sn'ye düşürdük ---
-                // Eğer süre bittikten sonra 3 saniye geçmişse "Acil Durum" ilan et
-                const isEmergency = elapsed > (timeLimit + 1); 
-                
-                // KURAL: Kurucu bitirebilir VEYA Süre çoktan dolduysa HERHANGİ BİRİ bitirebilir
-                // KURAL: Kurucu bitirebilir VEYA Süre çoktan dolduysa HERHANGİ BİRİ bitirebilir
-// 🆕 EK KONTROL: Eğer oyun hala bitmemişse VE süre aştıysa, BU KULLANICI bitirsin
-const needsEmergencyFinish = (gameData.status === 'playing') && isEmergency;
+            // 2. Süre Hesabı (Bunu IF'in dışına çıkardık)
+            const timeLimit = (gameData.timeLimit || 120);
+            let startTime = gameData.turnStartTime;
+            if (startTime && startTime.toDate) startTime = startTime.toDate();
+            else startTime = new Date(); 
+            
+            const elapsed = (new Date() - startTime) / 1000;
+            
+            // Toleransı 3 saniye olarak belirledik
+            const isTimeUp = elapsed > (timeLimit + 3);
 
-if (gameData.creatorId === currentUserId || needsEmergencyFinish) {
-    const authority = gameData.creatorId === currentUserId ? 'Kurucu' : 'Acil Durum Protokolü (Arka Plan Fix)';
-    console.log(`🏁 Tur Bitiyor... (Yetkili: ${authority})`);
+            // --- ANA DEĞİŞİKLİK BURADA ---
+            // Herkes bitirdiyse VEYA Süre dolduysa içeri gir
+            if (isEveryoneDone || isTimeUp) {
+                
+                // Bitirme Yetkisi: Kurucuysam VEYA Süre dolduysa (Demokrasi)
+                if (gameData.creatorId === currentUserId || isTimeUp) {
+                    console.log(`🏁 Oyun Bitiyor... Sebebi: ${isTimeUp ? 'Süre Doldu' : 'Herkes Tamamladı'}`);
                     
-                    // --- PUANLAMA VE BİTİRME İŞLEMLERİ ---
                     const updates = { status: 'finished' };
                     
-                    // Kazananı Belirle (En az tahminle bilen)
+                    // Kazananı Belirle
                     let winnerId = null;
                     let minGuesses = 999;
                     
-                    // Sadece çözenler arasında kazananı ara
                     allPlayerIds.forEach(pid => {
                         const p = gameData.players[pid];
+                        
+                        // Eğer süre bittiyse ve oyuncu hala bitirmediyse onu 'hasFailed' yap
+                        if (isTimeUp && !p.hasSolved && !p.hasFailed && !p.isEliminated) {
+                            updates[`players.${pid}.hasFailed`] = true;
+                        }
+
+                        // Sadece çözenler arasında kazananı ara
                         if (p.hasSolved && !p.isEliminated) {
                             const guessCount = p.guesses ? p.guesses.length : 6;
                             if (guessCount < minGuesses) {
@@ -1128,23 +1129,23 @@ if (gameData.creatorId === currentUserId || needsEmergencyFinish) {
                         }
                     });
 
-                    // Kazananı kaydet
                     updates.roundWinner = winnerId;
                     
-                    // Eğer Battle Royale ise kaybedenleri ele
+                    // Battle Royale ise kaybedenleri ele
                     if (isBattleRoyale(gameData.gameMode)) {
                         allPlayerIds.forEach(pid => {
                             const p = gameData.players[pid];
-                            // Çözemediyse veya başarısız olduysa elenir
-                            if ((p.hasFailed || !p.hasSolved) && !p.isEliminated) {
+                            // Çözemeyen, Başarısız olan veya Süreden yanan elenir
+                            const isFailedNow = updates[`players.${pid}.hasFailed`] === true;
+                            if ((p.hasFailed || !p.hasSolved || isFailedNow) && !p.isEliminated) {
                                 updates[`players.${pid}.isEliminated`] = true;
                             }
                         });
                     }
 
-                    // Veritabanını güncelle ve oyunu bitir
+                    // Veritabanını güncelle
                     updateDoc(gameRef, updates).catch(err => {
-                        console.error("Oyun bitirme güncellenirken hata (Çakışma olabilir, önemsiz):", err);
+                        console.log("Oyun bitirme güncellenirken çakışma (normal):", err);
                     });
                 }
             }
